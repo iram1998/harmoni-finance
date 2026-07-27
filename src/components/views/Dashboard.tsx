@@ -16,7 +16,7 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
   const [isLoading, setIsLoading] = useState(true);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
   const { workspace, transactions, envelopes, goals, bills, paymentAccounts, markBillPaid, openTransactionModal, openTransferModal, openEnvelopeModal, openBillModal, assets, user } = useFinance();
-  const { t } = useThemeLanguage();
+  const { language, t } = useThemeLanguage();
 
   useEffect(() => {
     setIsLoading(true);
@@ -33,18 +33,33 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
   const totalExpense = wsTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
   const balance = totalIncome - totalExpense;
 
-  // Liquid Cash & Asset values for Net Worth calculation
+  const today = new Date();
+  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+  const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+  const currentMonthTransactions = wsTransactions.filter(t => {
+    const tTime = new Date(t.date).getTime();
+    return tTime >= currentMonthStart && tTime <= currentMonthEnd;
+  });
+
+  // Liquid Cash, Investment, Asset, and Debt values for Net Worth calculation
   const wsPaymentAccounts = (paymentAccounts || []).filter(acc => (acc.workspaceId || 'keluarga') === workspace);
-  const totalLiquidCash = wsPaymentAccounts.reduce((sum, acc) => sum + acc.balance, 0);
+  const totalLiquidCash = wsPaymentAccounts.filter(acc => acc.type !== 'investment').reduce((sum, acc) => sum + acc.balance, 0);
+  const totalInvestmentAccounts = wsPaymentAccounts.filter(acc => acc.type === 'investment').reduce((sum, acc) => sum + acc.balance, 0);
+  
   const wsAssets = (assets || []).filter(a => (a.workspaceId || 'keluarga') === workspace && a.status === 'owned');
   const totalAssetsValue = wsAssets.reduce((sum, a) => sum + getAssetEffectiveValue(a), 0);
-  const netWorth = totalLiquidCash + totalAssetsValue;
+  
+  const totalInvestasiDanAset = totalInvestmentAccounts + totalAssetsValue;
+  
+  const totalDebt = bills.filter(b => b.workspaceId === workspace && !b.isPaid).reduce((sum, b) => sum + b.amount, 0);
+  
+  const netWorth = totalLiquidCash + totalInvestasiDanAset - totalDebt;
   const userName = user?.displayName || user?.email?.split('@')[0] || 'Budi Santoso';
 
   // Calculate budget alerts across ALL envelopes in the workspace
   const allWorkspaceEnvelopes = envelopes.filter(e => e.workspaceId === workspace);
   const budgetAlerts = allWorkspaceEnvelopes.map(env => {
-    const spent = wsTransactions
+    const spent = currentMonthTransactions
       .filter(t => t.category === env.category && t.type === 'expense')
       .reduce((acc, t) => acc + t.amount, 0);
     const ratio = env.allocatedAmount > 0 ? spent / env.allocatedAmount : 0;
@@ -272,14 +287,18 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mt-auto border-t border-white/20 pt-4">
+              <div className="grid grid-cols-3 gap-3 mt-auto border-t border-white/20 pt-4">
                 <div>
-                  <div className="font-label-sm text-white/80 uppercase mb-1">{t('cashBalance')}</div>
-                  <div className="font-body-lg text-white truncate font-extrabold" title={formatCurrency(balance)}>{formatCurrency(balance)}</div>
+                  <div className="font-label-sm text-white/80 uppercase mb-1 text-[10px] sm:text-xs truncate" title={t('cashBalance') || 'Total Saldo'}>{t('cashBalance') || 'Total Saldo'}</div>
+                  <div className="font-body-md sm:font-body-lg text-white truncate font-extrabold" title={formatCurrency(totalLiquidCash)}>{formatCurrency(totalLiquidCash)}</div>
                 </div>
                 <div>
-                  <div className="font-label-sm text-white/80 uppercase mb-1">{t('registeredAssets')}</div>
-                  <div className="font-body-lg text-white truncate font-extrabold" title={formatCurrency(totalAssetsValue)}>{formatCurrency(totalAssetsValue)}</div>
+                  <div className="font-label-sm text-white/80 uppercase mb-1 text-[10px] sm:text-xs truncate" title="Total Investasi & Aset">Investasi & Aset</div>
+                  <div className="font-body-md sm:font-body-lg text-white truncate font-extrabold" title={formatCurrency(totalInvestasiDanAset)}>{formatCurrency(totalInvestasiDanAset)}</div>
+                </div>
+                <div>
+                  <div className="font-label-sm text-white/80 uppercase mb-1 text-[10px] sm:text-xs truncate" title="Total Utang">Total Utang</div>
+                  <div className="font-body-md sm:font-body-lg text-red-200 truncate font-extrabold" title={formatCurrency(totalDebt)}>{formatCurrency(totalDebt)}</div>
                 </div>
               </div>
             </div>
@@ -513,14 +532,14 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                 <h3 className="font-headline-sm text-on-surface">{t('budgetEnvelopes')}</h3>
                 <p className="font-body-sm text-on-surface-variant mt-0.5 hidden md:block">{t('budgetingSubtitle')}</p>
               </div>
-              <Button variant="secondary" size="sm" icon="add" onClick={openEnvelopeModal}>
+              <Button variant="secondary" size="sm" icon="add" onClick={() => openEnvelopeModal()}>
                 {t('addEnvelope')}
               </Button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
               {wsEnvelopes.map((env, i) => {
-                const spent = wsTransactions.filter(t => t.category === env.category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+                const spent = currentMonthTransactions.filter(t => t.category === env.category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
                 const ratio = env.allocatedAmount > 0 ? spent / env.allocatedAmount : 0;
                 const remaining = env.allocatedAmount - spent;
                 const isOver = remaining < 0;
@@ -536,7 +555,7 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                   remainingColor = 'text-amber-600 font-semibold';
                 }
 
-                return (
+                 return (
                   <Card key={env.id} variant="default" className={`flex flex-col gap-3 p-4 md:p-5 border bg-surface-container-lowest shadow-2xs transition-all relative overflow-hidden ${isOver ? 'border-error/30' : isWarning ? 'border-amber-500/30' : 'border-outline-variant'}`}>
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 ${isOver ? 'bg-error-container text-error' : isWarning ? 'bg-amber-500/10 text-amber-600' : 'bg-primary-container text-on-primary-container'}`}>
@@ -544,10 +563,20 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                            {isOver ? 'warning' : isWarning ? 'gpp_maybe' : (i === 0 ? 'shopping_cart' : i === 1 ? 'payments' : 'school')}
                          </span>
                       </div>
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 pr-8">
                         <div className="font-label-lg text-on-surface truncate">{env.category}</div>
                         <div className="font-body-sm text-on-surface-variant truncate">{t('allocated')}: {formatCurrency(env.allocatedAmount)}</div>
                       </div>
+                    </div>
+                    
+                    <div className="absolute top-4 right-4">
+                      <button
+                        onClick={() => openTransactionModal(env.category)}
+                        className="w-8 h-8 rounded-full bg-surface-container-high hover:bg-primary hover:text-on-primary border border-outline-variant text-on-surface flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
+                        title={language === 'id' ? 'Catat Pengeluaran' : 'Log Expense'}
+                      >
+                        <span className="material-symbols-outlined text-sm">add</span>
+                      </button>
                     </div>
                     
                     <div className="flex justify-between items-baseline pt-2">

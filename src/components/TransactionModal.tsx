@@ -38,7 +38,7 @@ const INCOME_CATEGORIES = [
 ];
 
 export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
-  const { workspace, addTransaction, customCategories, familyMembers } = useFinance();
+  const { workspace, addTransaction, customCategories, familyMembers, transactionDefaultCategory } = useFinance();
   const { language, t } = useThemeLanguage();
   const { showToast } = useToast();
   const [type, setType] = useState<TransactionType>('expense');
@@ -49,6 +49,19 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
   const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>('fixed');
   const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto select budget category if opened from budget section
+  useEffect(() => {
+    if (isOpen) {
+      if (transactionDefaultCategory) {
+        setType('expense');
+        setCategory(transactionDefaultCategory);
+      } else {
+        // Reset category/type if not coming from budget selection so it doesn't carry over
+        setCategory('');
+      }
+    }
+  }, [isOpen, transactionDefaultCategory]);
 
   // Scanner State Variables
   const [scanState, setScanState] = useState<'idle' | 'camera_active' | 'analyzing' | 'success' | 'error'>('idle');

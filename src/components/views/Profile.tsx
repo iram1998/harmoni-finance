@@ -8,8 +8,8 @@ import { formatCurrency } from '../../utils';
 import { Plus, Pencil, Trash2, X, Users, CreditCard, Mail } from 'lucide-react';
 
 export function Profile() {
-  const { user, loginWithGoogle, logout, familyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember } = useFinance();
-  const { t } = useThemeLanguage();
+  const { user, superAdminId, loginWithGoogle, logout, familyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember } = useFinance();
+  const { t, language } = useThemeLanguage();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -26,16 +26,18 @@ export function Profile() {
     return () => clearTimeout(timer);
   }, []);
 
-  const rolesList = [
-    'Kepala Keluarga',
-    'Pasangan (Istri/Suami)',
-    'Anak Pertama',
-    'Anak Kedua',
-    'Anak Ketiga',
-    'Orang Tua',
-    'Saudara',
-    'Asisten Rumah Tangga',
-    'Anggota Lainnya'
+  const FAMILY_ROLES = [
+    { id: 'Kepala Keluarga', labelId: 'Kepala Keluarga', labelEn: 'Head of Household' },
+    { id: 'Suami', labelId: 'Suami', labelEn: 'Husband' },
+    { id: 'Istri', labelId: 'Istri', labelEn: 'Wife' },
+    { id: 'Anak Laki-laki', labelId: 'Anak Laki-laki', labelEn: 'Son' },
+    { id: 'Anak Perempuan', labelId: 'Anak Perempuan', labelEn: 'Daughter' },
+    { id: 'Ayah', labelId: 'Ayah (Orang Tua)', labelEn: 'Father' },
+    { id: 'Ibu', labelId: 'Ibu (Orang Tua)', labelEn: 'Mother' },
+    { id: 'Saudara Laki-laki', labelId: 'Saudara Laki-laki', labelEn: 'Brother' },
+    { id: 'Saudara Perempuan', labelId: 'Saudara Perempuan', labelEn: 'Sister' },
+    { id: 'Kakek / Nenek', labelId: 'Kakek / Nenek', labelEn: 'Grandparent' },
+    { id: 'Kerabat / Lainnya', labelId: 'Kerabat / Lainnya', labelEn: 'Relative / Other' }
   ];
 
   if (isLoading) {
@@ -108,9 +110,20 @@ export function Profile() {
                   Akses Tamu (Tersimpan di Cloud)
                 </span>
               ) : (
-                <span className="w-fit mx-auto md:mx-0 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  Akun Terverifikasi Google
-                </span>
+                <div className="flex gap-2 flex-wrap justify-center md:justify-start">
+                  <span className="w-fit px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Akun Terverifikasi Google
+                  </span>
+                  {user?.uid === superAdminId ? (
+                    <span className="w-fit px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                      Kepala Keluarga (Super Admin)
+                    </span>
+                  ) : (
+                    <span className="w-fit px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                      Anggota Keluarga
+                    </span>
+                  )}
+                </div>
               )}
             </div>
             <p className="font-body-md text-on-surface-variant">{email}</p>
@@ -192,8 +205,10 @@ export function Profile() {
                   onChange={(e) => setRoleInput(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-surface text-on-surface border border-outline-variant rounded-xl focus:outline-none focus:border-primary font-body-md transition-all"
                 >
-                  {rolesList.map((role) => (
-                    <option key={role} value={role}>{role}</option>
+                  {FAMILY_ROLES.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {language === 'id' ? role.labelId : (role.labelEn || role.labelId)}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -252,7 +267,7 @@ export function Profile() {
                   <div className="flex items-center flex-wrap gap-2">
                     <h4 className="font-headline-xs font-bold text-on-surface leading-tight">{member.name}</h4>
                     <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
-                      {member.role}
+                      {language === 'id' ? (FAMILY_ROLES.find(r => r.id === member.role)?.labelId || member.role) : (FAMILY_ROLES.find(r => r.id === member.role)?.labelEn || member.role)}
                     </span>
                   </div>
                   

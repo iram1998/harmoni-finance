@@ -18,7 +18,7 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
     workspace, transactions, envelopes, bills,
     isTransactionModalOpen, openTransactionModal, closeTransactionModal, 
     isTransferModalOpen, closeTransferModal,
-    isEnvelopeModalOpen, closeEnvelopeModal,
+    isEnvelopeModalOpen, closeEnvelopeModal, envelopeEditTarget,
     isGoalModalOpen, closeGoalModal,
     isBillModalOpen, closeBillModal
   } = useFinance();
@@ -536,7 +536,7 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
 
       <TransactionModal isOpen={isTransactionModalOpen} onClose={closeTransactionModal} />
       <TransferModal isOpen={isTransferModalOpen} onClose={closeTransferModal} />
-      <EnvelopeModal isOpen={isEnvelopeModalOpen} onClose={closeEnvelopeModal} />
+      <EnvelopeModal isOpen={isEnvelopeModalOpen} onClose={closeEnvelopeModal} editTarget={envelopeEditTarget} />
       <GoalModal isOpen={isGoalModalOpen} onClose={closeGoalModal} />
       <BillModal isOpen={isBillModalOpen} onClose={closeBillModal} />
     </div>

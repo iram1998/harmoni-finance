@@ -29,6 +29,7 @@ interface FinanceState {
   deleteTransaction: (id: string) => Promise<void>;
   envelopes: Envelope[];
   addEnvelope: (e: Omit<Envelope, 'id'>) => Promise<void>;
+  updateEnvelope: (id: string, e: Partial<Envelope>) => Promise<void>;
   deleteEnvelope: (id: string) => Promise<void>;
   goals: Goal[];
   addGoal: (g: Omit<Goal, 'id'>) => Promise<void>;
@@ -100,18 +101,21 @@ interface FinanceState {
   clearActivityLogs: () => Promise<void>;
   autoCleanActivityLogs: (daysThreshold: number) => Promise<number>;
   user: User | null;
+  superAdminId: string | null;
   isAuthLoading: boolean;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   isTransactionModalOpen: boolean;
-  openTransactionModal: () => void;
+  openTransactionModal: (defaultCategory?: string) => void;
   closeTransactionModal: () => void;
+  transactionDefaultCategory?: string;
   isTransferModalOpen: boolean;
   openTransferModal: () => void;
   closeTransferModal: () => void;
   isEnvelopeModalOpen: boolean;
-  openEnvelopeModal: () => void;
+  openEnvelopeModal: (target?: Envelope) => void;
   closeEnvelopeModal: () => void;
+  envelopeEditTarget: Envelope | null;
   isGoalModalOpen: boolean;
   openGoalModal: () => void;
   closeGoalModal: () => void;
@@ -190,6 +194,7 @@ const DEFAULT_CATEGORIES = [
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [workspace, setWorkspace] = useState<WorkspaceType>('keluarga');
   const [user, setUser] = useState<User | null>(null);
+  const [superAdminId, setSuperAdminId] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -202,6 +207,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
 
+  // Helper to determine which userId to use for writing based on workspace
+  const getTargetUserId = (wsId?: WorkspaceType) => {
+    if (!user) return '';
+    return (wsId === 'keluarga' && superAdminId) ? superAdminId : user.uid;
+  };
+
   // Activity Log Writer Helper
   const logActivity = async (
     action: 'CREATE' | 'UPDATE' | 'DELETE',
@@ -212,8 +223,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   ) => {
     if (!user) return;
     try {
+      const targetUid = getTargetUserId(wsId || workspace);
       await addDoc(collection(db, 'activity_logs'), {
-        userId: user.uid,
+        userId: targetUid,
         workspaceId: wsId || workspace,
         action,
         entityType,
@@ -231,25 +243,44 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+        // Find if user is a family member to get superAdminId
+        if (currentUser.email) {
+          const fmQuery = query(collection(db, 'family_members'), where('email', '==', currentUser.email));
+          try {
+            const fmSnapshot = await getDocs(fmQuery);
+            if (!fmSnapshot.empty) {
+              setSuperAdminId(fmSnapshot.docs[0].data().userId);
+            } else {
+              setSuperAdminId(currentUser.uid);
+            }
+          } catch (e) {
+             setSuperAdminId(currentUser.uid);
+          }
+        } else {
+          setSuperAdminId(currentUser.uid);
+        }
         setIsAuthLoading(false);
       } else {
         // Try anonymous sign-in, or fallback to guest user session if disabled on project
         try {
           const anonCred = await signInAnonymously(auth);
           setUser(anonCred.user);
+          setSuperAdminId(anonCred.user.uid);
         } catch (err) {
           let guestId = localStorage.getItem('harmoni_guest_uid');
           if (!guestId) {
             guestId = 'guest_' + Math.random().toString(36).substring(2, 11);
             localStorage.setItem('harmoni_guest_uid', guestId);
           }
-          setUser({
+          const guestUser = {
             uid: guestId,
             isAnonymous: true,
             displayName: 'Pengguna Tamu',
             email: null,
             photoURL: null,
-          } as unknown as User);
+          } as unknown as User;
+          setUser(guestUser);
+          setSuperAdminId(guestUser.uid);
         } finally {
           setIsAuthLoading(false);
         }
@@ -261,7 +292,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   // 2. Real-time Firestore Listeners for User Data
   useEffect(() => {
-    if (!user) {
+    if (!user || !superAdminId) {
       setTransactions([]);
       setEnvelopes([]);
       setGoals([]);
@@ -270,9 +301,23 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
 
     const userId = user.uid;
+    const userIds = userId === superAdminId ? [userId] : [userId, superAdminId];
+    
+    // Helper to filter documents so users only see their private stuff and superadmin's family stuff
+    const isDocAllowed = (docData: any) => {
+       if (userId === superAdminId) return true; // Superadmin sees all their own stuff
+       if (docData.userId === userId) return true; // Family member sees all their own stuff
+       // Family member can see superadmin's stuff IF it is for the 'keluarga' workspace
+       if (docData.userId === superAdminId) {
+          if (docData.workspaceId === 'keluarga') return true;
+          // For entities without workspaceId (like categories or family members), let them see it if they are family
+          if (!docData.workspaceId) return true; 
+       }
+       return false;
+    };
 
     // Transactions listener
-    const qTx = query(collection(db, 'transactions'), where('userId', '==', userId));
+    const qTx = query(collection(db, 'transactions'), where('userId', 'in', userIds));
     const unSubTx = onSnapshot(qTx, (snapshot) => {
       const seededKey = `harmoni_seeded_tx_${userId}`;
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
@@ -282,16 +327,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           addDoc(collection(db, 'transactions'), { ...t, userId });
         });
       } else {
-        const list: Transaction[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as Omit<Transaction, 'id'>)
-        }));
+        const list: Transaction[] = snapshot.docs
+          .map(doc => ({ id: doc.id, ...(doc.data() as Omit<Transaction, 'id'>) }))
+          .filter(isDocAllowed) as Transaction[];
         setTransactions(list);
       }
     });
 
     // Envelopes listener
-    const qEnv = query(collection(db, 'envelopes'), where('userId', '==', userId));
+    const qEnv = query(collection(db, 'envelopes'), where('userId', 'in', userIds));
     const unSubEnv = onSnapshot(qEnv, (snapshot) => {
       const seededKey = `harmoni_seeded_env_${userId}`;
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
@@ -300,16 +344,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           addDoc(collection(db, 'envelopes'), { ...e, userId });
         });
       } else {
-        const list: Envelope[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as Omit<Envelope, 'id'>)
-        }));
+        const list: Envelope[] = snapshot.docs
+          .map(doc => ({ id: doc.id, ...(doc.data() as Omit<Envelope, 'id'>) }))
+          .filter(isDocAllowed) as Envelope[];
         setEnvelopes(list);
       }
     });
 
     // Goals listener
-    const qGoals = query(collection(db, 'goals'), where('userId', '==', userId));
+    const qGoals = query(collection(db, 'goals'), where('userId', 'in', userIds));
     const unSubGoals = onSnapshot(qGoals, (snapshot) => {
       const seededKey = `harmoni_seeded_goals_${userId}`;
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
@@ -318,16 +361,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           addDoc(collection(db, 'goals'), { ...g, userId });
         });
       } else {
-        const list: Goal[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as Omit<Goal, 'id'>)
-        }));
+        const list: Goal[] = snapshot.docs
+          .map(doc => ({ id: doc.id, ...(doc.data() as Omit<Goal, 'id'>) }))
+          .filter(isDocAllowed) as Goal[];
         setGoals(list);
       }
     });
 
     // Bills listener
-    const qBills = query(collection(db, 'bills'), where('userId', '==', userId));
+    const qBills = query(collection(db, 'bills'), where('userId', 'in', userIds));
     const unSubBills = onSnapshot(qBills, (snapshot) => {
       const seededKey = `harmoni_seeded_bills_${userId}`;
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
@@ -336,16 +378,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           addDoc(collection(db, 'bills'), { ...b, userId });
         });
       } else {
-        const list: Bill[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as Omit<Bill, 'id'>)
-        }));
+        const list: Bill[] = snapshot.docs
+          .map(doc => ({ id: doc.id, ...(doc.data() as Omit<Bill, 'id'>) }))
+          .filter(isDocAllowed) as Bill[];
         setBills(list);
       }
     });
 
     // Categories listener
-    const qCat = query(collection(db, 'categories'), where('userId', '==', userId));
+    const qCat = query(collection(db, 'categories'), where('userId', 'in', userIds));
     const unSubCat = onSnapshot(qCat, (snapshot) => {
       const seededKey = `harmoni_seeded_categories_${userId}`;
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
@@ -354,16 +395,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           addDoc(collection(db, 'categories'), { ...c, userId });
         });
       } else {
-        const list: TransactionCategory[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as Omit<TransactionCategory, 'id'>)
-        }));
+        const list: TransactionCategory[] = snapshot.docs
+          .map(doc => ({ id: doc.id, ...(doc.data() as Omit<TransactionCategory, 'id'>) }))
+          .filter(isDocAllowed) as TransactionCategory[];
         setCustomCategories(list);
       }
     });
 
     // Family Members listener
-    const qFamily = query(collection(db, 'family_members'), where('userId', '==', userId));
+    const qFamily = query(collection(db, 'family_members'), where('userId', 'in', userIds));
     const unSubFamily = onSnapshot(qFamily, (snapshot) => {
       const seededKey = `harmoni_seeded_family_${userId}`;
       const DEFAULT_FAMILY_MEMBERS = [
@@ -378,16 +418,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           addDoc(collection(db, 'family_members'), { ...m, userId });
         });
       } else {
-        const list: FamilyMember[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as Omit<FamilyMember, 'id'>)
-        }));
+        const list: FamilyMember[] = snapshot.docs
+          .map(doc => ({ id: doc.id, ...(doc.data() as Omit<FamilyMember, 'id'>) }))
+          .filter(isDocAllowed) as FamilyMember[];
         setFamilyMembers(list);
       }
     });
 
     // Assets listener
-    const qAssets = query(collection(db, 'assets'), where('userId', '==', userId));
+    const qAssets = query(collection(db, 'assets'), where('userId', 'in', userIds));
     const unSubAssets = onSnapshot(qAssets, (snapshot) => {
       const seededKey = `harmoni_seeded_assets_${userId}`;
       const DEFAULT_ASSETS = [
@@ -441,16 +480,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           addDoc(collection(db, 'assets'), { ...a, userId });
         });
       } else {
-        const list: Asset[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as Omit<Asset, 'id'>)
-        }));
+        const list: Asset[] = snapshot.docs
+          .map(doc => ({ id: doc.id, ...(doc.data() as Omit<Asset, 'id'>) }))
+          .filter(isDocAllowed) as Asset[];
         setAssets(list);
       }
     });
 
     // Payment Accounts listener
-    const qPayAcc = query(collection(db, 'payment_accounts'), where('userId', '==', userId));
+    const qPayAcc = query(collection(db, 'payment_accounts'), where('userId', 'in', userIds));
     const unSubPayAcc = onSnapshot(qPayAcc, (snapshot) => {
       const seededKey = `harmoni_seeded_pay_acc_${userId}`;
       const DEFAULT_PAYMENT_ACCOUNTS = [
@@ -466,21 +504,20 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           addDoc(collection(db, 'payment_accounts'), { ...acc, userId });
         });
       } else {
-        const list: PaymentAccount[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as Omit<PaymentAccount, 'id'>)
-        }));
+        const list: PaymentAccount[] = snapshot.docs
+          .map(doc => ({ id: doc.id, ...(doc.data() as Omit<PaymentAccount, 'id'>) }))
+          .filter(isDocAllowed) as PaymentAccount[];
         setPaymentAccounts(list);
       }
     });
 
     // 8. Activity Logs
-    const qLogs = query(collection(db, 'activity_logs'), where('userId', '==', userId));
+    const qLogs = query(collection(db, 'activity_logs'), where('userId', 'in', userIds));
     const unSubLogs = onSnapshot(qLogs, (snapshot) => {
-      const list: ActivityLog[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...(doc.data() as Omit<ActivityLog, 'id'>)
-      })).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      const list: ActivityLog[] = snapshot.docs
+        .map(doc => ({ id: doc.id, ...(doc.data() as Omit<ActivityLog, 'id'>) }))
+        .filter(isDocAllowed)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) as ActivityLog[];
       setActivityLogs(list);
     });
 
@@ -495,14 +532,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       unSubPayAcc();
       unSubLogs();
     };
-  }, [user]);
+  }, [user, superAdminId]);
 
   // Firestore Write Operations
   const addTransaction = async (t: Omit<Transaction, 'id'>) => {
     if (!user) return;
+    const targetUid = getTargetUserId(t.workspaceId);
     await addDoc(collection(db, 'transactions'), {
       ...t,
-      userId: user.uid,
+      userId: targetUid,
       createdAt: new Date().toISOString()
     });
     await logActivity(
@@ -531,11 +569,28 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addEnvelope = async (e: Omit<Envelope, 'id'>) => {
     if (!user) return;
+    const targetUid = getTargetUserId(e.workspaceId);
     await addDoc(collection(db, 'envelopes'), {
       ...e,
-      userId: user.uid
+      userId: targetUid
     });
     await logActivity('CREATE', 'ENVELOPE', `Amplop Anggaran Baru: ${e.category}`, `Alokasi Rp ${e.allocatedAmount.toLocaleString('id-ID')}`, e.workspaceId);
+  };
+
+  const updateEnvelope = async (id: string, e: Partial<Envelope>) => {
+    if (!user) return;
+    const target = envelopes.find(env => env.id === id);
+    if (!target) return;
+    const targetUid = getTargetUserId(e.workspaceId || target.workspaceId);
+    
+    await updateDoc(doc(db, 'envelopes', id), {
+      ...e,
+      ...(e.workspaceId !== undefined && { userId: targetUid })
+    });
+    
+    if (e.allocatedAmount !== undefined && e.allocatedAmount !== target.allocatedAmount) {
+      await logActivity('UPDATE', 'ENVELOPE', `Ubah Pos Anggaran: ${target.category}`, `Alokasi Rp ${e.allocatedAmount.toLocaleString('id-ID')}`, target.workspaceId);
+    }
   };
 
   const deleteEnvelope = async (id: string) => {
@@ -549,9 +604,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addGoal = async (g: Omit<Goal, 'id'>) => {
     if (!user) return;
+    const targetUid = getTargetUserId(g.workspaceId);
     await addDoc(collection(db, 'goals'), {
       ...g,
-      userId: user.uid
+      userId: targetUid
     });
     await logActivity('CREATE', 'GOAL', `Target Finansial Baru: ${g.name}`, `Target Rp ${g.targetAmount.toLocaleString('id-ID')} (Deadline: ${g.deadline})`, g.workspaceId);
   };
@@ -572,9 +628,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     await updateDoc(doc(db, 'goals', goalId), { currentAmount: goal.currentAmount + amount });
 
+    const targetUid = getTargetUserId(goal.workspaceId);
     // Auto-create expense transaction for the contribution
     await addDoc(collection(db, 'transactions'), {
-      userId: user.uid,
+      userId: targetUid,
       workspaceId: goal.workspaceId,
       type: 'expense',
       amount: amount,
@@ -589,9 +646,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addBill = async (b: Omit<Bill, 'id'>) => {
     if (!user) return;
+    const targetUid = getTargetUserId(b.workspaceId);
     await addDoc(collection(db, 'bills'), {
       ...b,
-      userId: user.uid
+      userId: targetUid
     });
     await logActivity('CREATE', 'BILL', `Tagihan Baru: ${b.name}`, `Nominal Rp ${b.amount.toLocaleString('id-ID')}`, b.workspaceId);
   };
@@ -612,9 +670,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     await updateDoc(doc(db, 'bills', id), { isPaid: true });
 
+    const targetUid = getTargetUserId(bill.workspaceId);
     // Auto-create expense transaction for the bill
     await addDoc(collection(db, 'transactions'), {
-      userId: user.uid,
+      userId: targetUid,
       workspaceId: bill.workspaceId,
       type: 'expense',
       amount: bill.amount,
@@ -629,11 +688,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addCategory = async (name: string, type: 'income' | 'expense', color?: string) => {
     if (!user) return;
+    const targetUid = getTargetUserId(workspace); // Categories are global, assume added for current active workspace scope
     await addDoc(collection(db, 'categories'), {
       name,
       type,
       color: color || '#2563eb',
-      userId: user.uid,
+      userId: targetUid,
       createdAt: new Date().toISOString()
     });
     await logActivity('CREATE', 'CATEGORY', `Kategori Baru: ${name}`, `Tipe: ${type}`, workspace);
@@ -660,12 +720,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addFamilyMember = async (name: string, role: string, monthlyBudget: number, email?: string) => {
     if (!user) return;
+    const targetUid = getTargetUserId('keluarga');
     await addDoc(collection(db, 'family_members'), {
       name,
       role,
       monthlyBudget,
       email: email || '',
-      userId: user.uid,
+      userId: targetUid,
       createdAt: new Date().toISOString()
     });
     await logActivity('CREATE', 'FAMILY_MEMBER', `Anggota Keluarga Baru: ${name}`, `Peran: ${role}, Anggaran: Rp ${monthlyBudget.toLocaleString('id-ID')}`, 'keluarga');
@@ -712,6 +773,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   ) => {
     if (!user) return;
+    const targetUid = getTargetUserId(workspaceId || workspace);
     await addDoc(collection(db, 'assets'), {
       name,
       category,
@@ -721,7 +783,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       notes: notes || '',
       status: 'owned',
       workspaceId: workspaceId || workspace,
-      userId: user.uid,
+      userId: targetUid,
       depreciationMethod,
       depreciationUsefulLife,
       depreciationSalvageValue,
@@ -805,8 +867,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     wsId?: WorkspaceType
   ) => {
     if (!user) return;
+    const targetUid = getTargetUserId(wsId || workspace);
     const newAcc = {
-      userId: user.uid,
+      userId: targetUid,
       workspaceId: wsId || workspace,
       name,
       type,
@@ -953,19 +1016,33 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [transactionDefaultCategory, setTransactionDefaultCategory] = useState<string | undefined>(undefined);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isEnvelopeModalOpen, setIsEnvelopeModalOpen] = useState(false);
+  const [envelopeEditTarget, setEnvelopeEditTarget] = useState<Envelope | null>(null);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
 
-  const openTransactionModal = () => setIsTransactionModalOpen(true);
-  const closeTransactionModal = () => setIsTransactionModalOpen(false);
+  const openTransactionModal = (defaultCategory?: string) => {
+    setTransactionDefaultCategory(defaultCategory);
+    setIsTransactionModalOpen(true);
+  };
+  const closeTransactionModal = () => {
+    setIsTransactionModalOpen(false);
+    setTimeout(() => setTransactionDefaultCategory(undefined), 300);
+  };
 
   const openTransferModal = () => setIsTransferModalOpen(true);
   const closeTransferModal = () => setIsTransferModalOpen(false);
 
-  const openEnvelopeModal = () => setIsEnvelopeModalOpen(true);
-  const closeEnvelopeModal = () => setIsEnvelopeModalOpen(false);
+  const openEnvelopeModal = (target?: Envelope) => {
+    setEnvelopeEditTarget(target || null);
+    setIsEnvelopeModalOpen(true);
+  };
+  const closeEnvelopeModal = () => {
+    setIsEnvelopeModalOpen(false);
+    setTimeout(() => setEnvelopeEditTarget(null), 300);
+  };
 
   const openGoalModal = () => setIsGoalModalOpen(true);
   const closeGoalModal = () => setIsGoalModalOpen(false);
@@ -977,7 +1054,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     <FinanceContext.Provider value={{
       workspace, setWorkspace,
       transactions, addTransaction, deleteTransaction,
-      envelopes, addEnvelope, deleteEnvelope,
+      envelopes, addEnvelope, updateEnvelope, deleteEnvelope,
       goals, addGoal, deleteGoal, addGoalContribution,
       bills, addBill, deleteBill, markBillPaid,
       customCategories, addCategory, updateCategory, deleteCategory,
@@ -985,11 +1062,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       paymentAccounts, addPaymentAccount, updatePaymentAccount, deletePaymentAccount,
       assets, addAsset, updateAsset, deleteAsset,
       activityLogs, logActivity, deleteActivityLog, clearActivityLogs, autoCleanActivityLogs,
-      user, isAuthLoading,
+      user, superAdminId, isAuthLoading,
       loginWithGoogle, logout,
-      isTransactionModalOpen, openTransactionModal, closeTransactionModal,
+      isTransactionModalOpen, openTransactionModal, closeTransactionModal, transactionDefaultCategory,
       isTransferModalOpen, openTransferModal, closeTransferModal,
-      isEnvelopeModalOpen, openEnvelopeModal, closeEnvelopeModal,
+      isEnvelopeModalOpen, openEnvelopeModal, closeEnvelopeModal, envelopeEditTarget,
       isGoalModalOpen, openGoalModal, closeGoalModal,
       isBillModalOpen, openBillModal, closeBillModal
     }}>

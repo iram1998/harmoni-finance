@@ -6,9 +6,12 @@ import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Card, CardTitle } from './ui/Card';
 
+import { Envelope } from '../types';
+
 interface EnvelopeModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editTarget?: Envelope | null;
 }
 
 const PRESET_ENVELOPES = [
@@ -24,12 +27,27 @@ const PRESET_ENVELOPES = [
   'Tabungan & Investasi'
 ];
 
-export function EnvelopeModal({ isOpen, onClose }: EnvelopeModalProps) {
-  const { workspace, addEnvelope, customCategories } = useFinance();
+export function EnvelopeModal({ isOpen, onClose, editTarget }: EnvelopeModalProps) {
+  const { workspace, addEnvelope, updateEnvelope, customCategories } = useFinance();
   const { showToast } = useToast();
   const [category, setCategory] = useState('');
   const [allocatedAmount, setAllocatedAmount] = useState('');
+  const [targetWorkspace, setTargetWorkspace] = useState<'pribadi' | 'keluarga'>('pribadi');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      if (editTarget) {
+        setCategory(editTarget.category);
+        setAllocatedAmount(editTarget.allocatedAmount.toString());
+        setTargetWorkspace(editTarget.workspaceId || 'keluarga');
+      } else {
+        setCategory('');
+        setAllocatedAmount('');
+        setTargetWorkspace(workspace);
+      }
+    }
+  }, [isOpen, editTarget, workspace]);
 
   if (!isOpen) return null;
 
@@ -40,23 +58,34 @@ export function EnvelopeModal({ isOpen, onClose }: EnvelopeModalProps) {
     setIsSubmitting(true);
     try {
       const parsedAmount = parseFloat(allocatedAmount);
-      await addEnvelope({
-        workspaceId: workspace,
-        category: category.trim(),
-        allocatedAmount: parsedAmount
-      });
-      showToast(
-        `Amplop Anggaran "${category.trim()}" (Rp ${parsedAmount.toLocaleString('id-ID')}) berhasil dibuat!`,
-        'success',
-        'Amplop Berhasil Ditambahkan'
-      );
-      setCategory('');
-      setAllocatedAmount('');
+      if (editTarget) {
+        await updateEnvelope(editTarget.id, {
+          category: category.trim(),
+          allocatedAmount: parsedAmount,
+          workspaceId: targetWorkspace
+        });
+        showToast(
+          `Amplop Anggaran "${category.trim()}" berhasil diubah!`,
+          'success',
+          'Amplop Diperbarui'
+        );
+      } else {
+        await addEnvelope({
+          workspaceId: targetWorkspace,
+          category: category.trim(),
+          allocatedAmount: parsedAmount
+        });
+        showToast(
+          `Amplop Anggaran "${category.trim()}" (Rp ${parsedAmount.toLocaleString('id-ID')}) berhasil dibuat!`,
+          'success',
+          'Amplop Berhasil Ditambahkan'
+        );
+      }
       onClose();
     } catch (err: any) {
-      console.error("Error adding budget envelope:", err);
+      console.error("Error saving budget envelope:", err);
       showToast(
-        err.message || 'Gagal menambahkan amplop anggaran.',
+        err.message || 'Gagal menyimpan amplop anggaran.',
         'error',
         'Gagal Menyimpan'
       );
@@ -82,7 +111,7 @@ export function EnvelopeModal({ isOpen, onClose }: EnvelopeModalProps) {
         <div className="flex justify-between items-center px-5 py-4 sm:p-5 border-b border-outline-variant bg-surface-container-low shrink-0">
           <CardTitle className="flex items-center gap-2 text-on-surface text-base sm:text-lg font-bold">
             <span className="material-symbols-outlined text-primary font-bold">mail</span>
-            Tambah Pos Anggaran (Envelope)
+            {editTarget ? 'Ubah Pos Anggaran' : 'Tambah Pos Anggaran (Envelope)'}
           </CardTitle>
           <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface bg-surface-container-highest p-1.5 rounded-full transition-colors">
             <X className="w-5 h-5" />
@@ -133,10 +162,43 @@ export function EnvelopeModal({ isOpen, onClose }: EnvelopeModalProps) {
             min="1"
           />
 
+          {/* Workspace Selection */}
+          <div className="flex flex-col gap-1.5">
+            <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+              Tipe Pos Anggaran (Workspace)
+            </label>
+            <div className="grid grid-cols-2 gap-2 bg-surface-container-low p-1.5 rounded-xl border border-outline-variant">
+              <button
+                type="button"
+                onClick={() => setTargetWorkspace('pribadi')}
+                className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                  targetWorkspace === 'pribadi'
+                    ? 'bg-primary text-on-primary shadow-sm font-bold'
+                    : 'text-on-surface hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">person</span>
+                Pribadi
+              </button>
+              <button
+                type="button"
+                onClick={() => setTargetWorkspace('keluarga')}
+                className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                  targetWorkspace === 'keluarga'
+                    ? 'bg-primary text-on-primary shadow-sm font-bold'
+                    : 'text-on-surface hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">groups</span>
+                Keluarga
+              </button>
+            </div>
+          </div>
+
           <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/60 flex items-center gap-3">
             <span className="material-symbols-outlined text-primary text-lg">info</span>
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              Pos anggaran ini akan diterapkan pada workspace <strong className="text-primary capitalize">{workspace}</strong>.
+              Pos anggaran ini akan diterapkan pada workspace <strong className="text-primary capitalize">{targetWorkspace}</strong>.
             </p>
           </div>
 

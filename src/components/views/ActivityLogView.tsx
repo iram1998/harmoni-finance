@@ -175,22 +175,19 @@ export function ActivityLogView() {
     switch (action) {
       case 'CREATE':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1 w-fit">
-            <span className="material-symbols-outlined text-[14px]">add_circle</span>
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-wider w-fit">
             {language === 'id' ? 'TAMBAH' : 'ADD'}
           </span>
         );
       case 'UPDATE':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center gap-1 w-fit">
-            <span className="material-symbols-outlined text-[14px]">edit</span>
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase tracking-wider w-fit">
             {language === 'id' ? 'UBAH' : 'EDIT'}
           </span>
         );
       case 'DELETE':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1 w-fit">
-            <span className="material-symbols-outlined text-[14px]">delete</span>
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 uppercase tracking-wider w-fit">
             {language === 'id' ? 'HAPUS' : 'DELETE'}
           </span>
         );
@@ -351,7 +348,7 @@ export function ActivityLogView() {
       </Card>
 
       {/* Log List Card */}
-      <Card variant="default" className="p-6 flex flex-col justify-between min-h-[420px]">
+      <Card variant="default" className="p-4 sm:p-6 flex flex-col justify-between">
         <div>
           {/* Header Range Summary */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-outline-variant/60">
@@ -396,53 +393,56 @@ export function ActivityLogView() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {paginatedLogs.map(log => (
+            <div className="relative before:absolute before:inset-y-3 before:left-[19px] sm:before:left-[23px] before:w-[2px] before:bg-outline-variant/30 space-y-0.5">
+              {paginatedLogs.map((log) => (
                 <div 
                   key={log.id}
-                  className="p-4 rounded-xl border border-outline-variant/70 bg-surface-container-low hover:bg-surface-container-high/60 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                  className="relative py-3 pl-12 pr-3 sm:pl-14 sm:pr-4 rounded-xl hover:bg-surface-container-lowest transition-all flex flex-col sm:flex-row sm:items-start justify-between gap-3 group"
                 >
-                  <div className="flex items-start gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-surface-container-high border border-outline-variant flex items-center justify-center text-primary shrink-0 mt-0.5">
-                      <span className="material-symbols-outlined text-[20px]">
-                        {getEntityIcon(log.entityType)}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {getActionBadge(log.action)}
-                        <h4 className="font-headline-sm font-bold text-on-surface text-sm">{log.title}</h4>
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-surface-container text-on-surface-variant uppercase">
-                          {log.workspaceId}
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-on-surface-variant leading-relaxed font-medium">
-                        {log.details}
-                      </p>
-
-                      <p className="text-[11px] text-outline flex items-center gap-1 pt-0.5">
-                        <span className="material-symbols-outlined text-[13px]">schedule</span>
-                        {new Date(log.timestamp).toLocaleString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit'
-                        })}
-                      </p>
-                    </div>
+                  {/* Timeline Node */}
+                  <div className="absolute left-[11px] sm:left-[15px] top-3.5 w-[18px] h-[18px] rounded-full bg-surface border-4 border-surface z-10 flex items-center justify-center">
+                    <div className={`w-2.5 h-2.5 rounded-full ${
+                      log.action === 'CREATE' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' :
+                      log.action === 'UPDATE' ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]' :
+                      'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]'
+                    }`} />
                   </div>
 
-                  <button
-                    onClick={() => setDeleteTarget(log)}
-                    className="text-on-surface-variant hover:text-rose-600 transition-colors p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 opacity-80 sm:opacity-0 group-hover:opacity-100 self-end sm:self-center cursor-pointer"
-                    title={language === 'id' ? 'Hapus Log Ini' : 'Delete this log'}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                  </button>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                      {getActionBadge(log.action)}
+                      <h4 className="font-bold text-on-surface text-sm truncate max-w-[200px] sm:max-w-sm">{log.title}</h4>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded text-on-surface-variant flex items-center gap-1 border border-outline-variant/40 bg-surface-container-high/50">
+                        <span className="material-symbols-outlined text-[12px] opacity-70">
+                          {getEntityIcon(log.entityType)}
+                        </span>
+                        {log.workspaceId === 'personal' ? 'Personal' : log.workspaceId === 'keluarga' ? 'Keluarga' : log.workspaceId}
+                      </span>
+                    </div>
+                    <p className="text-[12px] text-on-surface-variant leading-relaxed">
+                      {log.details}
+                    </p>
+                  </div>
+                  
+                  {/* Timestamp & Action */}
+                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-1 shrink-0 pt-0.5">
+                    <span className="text-[11px] text-outline font-medium tracking-wide">
+                      {new Date(log.timestamp).toLocaleString(language === 'id' ? 'id-ID' : 'en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                    <button
+                      onClick={() => setDeleteTarget(log)}
+                      className="text-on-surface-variant hover:text-rose-600 transition-colors p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 opacity-100 sm:opacity-0 group-hover:opacity-100 cursor-pointer"
+                      title={language === 'id' ? 'Hapus Log Ini' : 'Delete this log'}
+                    >
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

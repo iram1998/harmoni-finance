@@ -1054,7 +1054,7 @@ export function Settings() {
                             </td>
                             <td className="py-3 px-4">
                               <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-secondary-container text-on-secondary-container font-label-sm text-xs font-medium">
-                                {member.role}
+                                {language === 'id' ? (FAMILY_ROLES.find(r => r.id === member.role)?.labelId || member.role) : (FAMILY_ROLES.find(r => r.id === member.role)?.labelEn || member.role)}
                               </span>
                             </td>
                             <td className="py-3 px-4">
@@ -1384,7 +1384,7 @@ export function Settings() {
         }
         itemDetails={deleteFamilyTarget ? [
           { label: 'Nama', value: deleteFamilyTarget.name },
-          { label: 'Peran', value: deleteFamilyTarget.role },
+          { label: language === 'id' ? 'Peran' : 'Role', value: language === 'id' ? (FAMILY_ROLES.find(r => r.id === deleteFamilyTarget.role)?.labelId || deleteFamilyTarget.role) : (FAMILY_ROLES.find(r => r.id === deleteFamilyTarget.role)?.labelEn || deleteFamilyTarget.role) },
           { label: 'Anggaran Bulanan', value: deleteFamilyTarget.monthlyBudget ? formatCurrency(deleteFamilyTarget.monthlyBudget) : '-' }
         ] : []}
         confirmText={language === 'id' ? 'Hapus Anggota' : 'Delete Member'}

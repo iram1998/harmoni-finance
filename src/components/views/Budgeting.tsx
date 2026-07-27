@@ -28,9 +28,17 @@ export function Budgeting() {
 
   const wsEnvelopes = envelopes.filter(e => budgetWsFilter === 'all' ? true : (e.workspaceId || 'keluarga') === budgetWsFilter);
   const wsTransactions = transactions.filter(t => budgetWsFilter === 'all' ? true : (t.workspaceId || 'keluarga') === budgetWsFilter);
+  
+  const today = new Date();
+  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+  const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+  const currentMonthTransactions = wsTransactions.filter(t => {
+    const tTime = new Date(t.date).getTime();
+    return tTime >= currentMonthStart && tTime <= currentMonthEnd;
+  });
 
   const envelopeSpending = wsEnvelopes.map(env => {
-    const spent = wsTransactions.filter(t => t.category === env.category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+    const spent = currentMonthTransactions.filter(t => t.category === env.category && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
     return { ...env, spent, ratio: env.allocatedAmount > 0 ? spent / env.allocatedAmount : 0 };
   });
 
@@ -42,7 +50,6 @@ export function Budgeting() {
   const attentionNeeded = [...envelopeSpending].sort((a, b) => b.ratio - a.ratio).slice(0, 2);
 
   // Date calculation for days left
-  const today = new Date();
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   const daysLeft = lastDay.getDate() - today.getDate();
 
@@ -119,7 +126,7 @@ export function Budgeting() {
               </button>
             </div>
 
-            <Button variant="primary" icon="add" onClick={openEnvelopeModal} className="shadow-md">
+            <Button variant="primary" icon="add" onClick={() => openEnvelopeModal()} className="shadow-md">
               {t('addEnvelope')}
             </Button>
           </div>
@@ -214,13 +221,22 @@ export function Budgeting() {
                       </span>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setDeleteTarget(env)}
-                    className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-full hover:bg-error/10 cursor-pointer"
-                    title={t('delete')}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                  </button>
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={() => openEnvelopeModal(env)}
+                      className="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-primary/10 cursor-pointer"
+                      title={language === 'id' ? 'Ubah' : 'Edit'}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                    <button 
+                      onClick={() => setDeleteTarget(env)}
+                      className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-full hover:bg-error/10 cursor-pointer"
+                      title={t('delete')}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mb-4">
@@ -238,7 +254,7 @@ export function Budgeting() {
                 </div>
 
                 <div className="flex gap-2 mt-4 pt-4 border-t border-outline-variant">
-                  <Button variant="outline" fullWidth onClick={openTransactionModal}>
+                  <Button variant="outline" fullWidth onClick={() => openTransactionModal(env.category)}>
                     {t('logExpense')}
                   </Button>
                 </div>
@@ -266,7 +282,7 @@ export function Budgeting() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {familyMembers.map((member) => {
-                const memberSpent = wsTransactions
+                const memberSpent = currentMonthTransactions
                   .filter(t => t.type === 'expense' && t.familyMember === member.name)
                   .reduce((acc, t) => acc + t.amount, 0);
                 const budgetLimit = member.monthlyBudget || 0;
@@ -335,7 +351,7 @@ export function Budgeting() {
             <h2 className="font-headline-sm font-bold text-on-surface">{t('budgetingTitle')}</h2>
             <p className="font-body-sm text-on-surface-variant">{workspace.toUpperCase()}</p>
           </div>
-          <Button variant="primary" size="sm" icon="add" onClick={openEnvelopeModal}>
+          <Button variant="primary" size="sm" icon="add" onClick={() => openEnvelopeModal()}>
             {t('addEnvelope')}
           </Button>
         </div>
@@ -407,13 +423,22 @@ export function Budgeting() {
                     <div className={`font-body-lg font-semibold text-right ${env.ratio > 1 ? 'text-error' : 'text-on-surface'}`}>
                       {Math.round(env.ratio * 100)}%
                     </div>
-                    <button
-                      onClick={() => setDeleteTarget(env)}
-                      className="text-on-surface-variant hover:text-error p-1 rounded transition-colors cursor-pointer"
-                      title="Hapus Amplop"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => openEnvelopeModal(env)}
+                        className="text-on-surface-variant hover:text-primary p-1 rounded transition-colors cursor-pointer"
+                        title={language === 'id' ? 'Ubah Amplop' : 'Edit Envelope'}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(env)}
+                        className="text-on-surface-variant hover:text-error p-1 rounded transition-colors cursor-pointer"
+                        title={language === 'id' ? 'Hapus Amplop' : 'Delete Envelope'}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </Card>
