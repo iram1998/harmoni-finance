@@ -33,10 +33,12 @@ interface FinanceState {
   deleteEnvelope: (id: string) => Promise<void>;
   goals: Goal[];
   addGoal: (g: Omit<Goal, 'id'>) => Promise<void>;
+  updateGoal: (id: string, g: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
-  addGoalContribution: (goalId: string, amount: number) => Promise<void>;
+  addGoalContribution: (goalId: string, amount: number, isWithdraw?: boolean) => Promise<void>;
   bills: Bill[];
   addBill: (b: Omit<Bill, 'id'>) => Promise<void>;
+  updateBill: (id: string, b: Partial<Bill>) => Promise<void>;
   deleteBill: (id: string) => Promise<void>;
   markBillPaid: (id: string) => Promise<void>;
   customCategories: TransactionCategory[];
@@ -117,11 +119,19 @@ interface FinanceState {
   closeEnvelopeModal: () => void;
   envelopeEditTarget: Envelope | null;
   isGoalModalOpen: boolean;
-  openGoalModal: () => void;
+  openGoalModal: (target?: Goal) => void;
   closeGoalModal: () => void;
+  goalEditTarget: Goal | null;
   isBillModalOpen: boolean;
-  openBillModal: () => void;
+  openBillModal: (target?: Bill) => void;
   closeBillModal: () => void;
+  billEditTarget: Bill | null;
+  isDemo: boolean;
+  showDemoLimitModal: boolean;
+  setShowDemoLimitModal: (show: boolean) => void;
+  demoModalReason: 'timeout' | 'assets' | 'reports' | 'activity-logs' | null;
+  setDemoModalReason: (reason: 'timeout' | 'assets' | 'reports' | 'activity-logs' | null) => void;
+  resetDemoTimer: () => void;
 }
 
 const FinanceContext = createContext<FinanceState | undefined>(undefined);
@@ -191,6 +201,101 @@ const DEFAULT_CATEGORIES = [
   { name: 'Cashback & Dividen', type: 'income', color: '#8b5cf6' }
 ];
 
+const DEFAULT_FAMILY_MEMBERS = [
+  { name: 'Ahmad Ramli (Anda)', role: 'Kepala Keluarga', monthlyBudget: 5000000 },
+  { name: 'Siti Aminah', role: 'Pasangan (Istri)', monthlyBudget: 4000000 },
+  { name: 'Rizky', role: 'Anak Pertama', monthlyBudget: 1500000 },
+  { name: 'Aisyah', role: 'Anak Kedua', monthlyBudget: 1000000 }
+];
+
+const DEFAULT_ASSETS = [
+  { 
+    name: 'Tanah Kavling Bogor', 
+    category: 'Properti / Lahan', 
+    purchasePrice: 150000000, 
+    currentValue: 175000000, 
+    purchaseDate: '2024-05-12', 
+    notes: 'Investasi masa depan keluarga', 
+    status: 'owned' as const, 
+    workspaceId: 'keluarga' as const,
+    locationName: 'Kavling Harmoni Asri, Cijeruk, Bogor',
+    areaSize: 250,
+    latitude: -6.5971,
+    longitude: 106.8060,
+    imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
+    depreciationMethod: 'none' as const,
+    depreciationUsefulLife: 5,
+    depreciationSalvageValue: 0,
+    useAutoDepreciation: false
+  },
+  { 
+    name: 'Mobil Honda Brio', 
+    category: 'Kendaraan', 
+    purchasePrice: 165000000, 
+    currentValue: 145000000, 
+    purchaseDate: '2025-02-20', 
+    notes: 'Kendaraan harian keluarga', 
+    status: 'owned' as const, 
+    workspaceId: 'keluarga' as const,
+    locationName: 'Garasi Rumah Utama, Tebet, Jakarta Selatan',
+    latitude: -6.2297,
+    longitude: 106.8471,
+    imageUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
+    depreciationMethod: 'none' as const,
+    depreciationUsefulLife: 5,
+    depreciationSalvageValue: 0,
+    useAutoDepreciation: false
+  },
+  { 
+    name: 'Logam Mulia Antam 10g', 
+    category: 'Emas / Logam Mulia', 
+    purchasePrice: 12000000, 
+    currentValue: 13500000, 
+    purchaseDate: '2024-08-05', 
+    notes: 'Tabungan dana darurat di SDB Bank', 
+    status: 'owned' as const, 
+    workspaceId: 'keluarga' as const,
+    locationName: 'Safe Deposit Box, Bank Mandiri Cab. Thamrin',
+    latitude: -6.1865,
+    longitude: 106.8234,
+    imageUrl: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=800&q=80',
+    depreciationMethod: 'none' as const,
+    depreciationUsefulLife: 5,
+    depreciationSalvageValue: 0,
+    useAutoDepreciation: false
+  }
+];
+
+const DEFAULT_PAYMENT_ACCOUNTS = [
+  { workspaceId: 'keluarga' as const, name: 'Bank BCA Utama', type: 'bank' as const, accountNumber: '8830192831', holderName: 'Ahmad Ramli', balance: 24500000, color: '#2563eb' },
+  { workspaceId: 'keluarga' as const, name: 'Bank Mandiri Tabungan', type: 'bank' as const, accountNumber: '1370018293012', holderName: 'Siti Aminah', balance: 18200000, color: '#0284c7' },
+  { workspaceId: 'keluarga' as const, name: 'GoPay Keluarga', type: 'ewallet' as const, accountNumber: '081298765432', holderName: 'Ahmad Ramli', balance: 1250000, color: '#059669' },
+  { workspaceId: 'pribadi' as const, name: 'OVO / ShopeePay', type: 'ewallet' as const, accountNumber: '081298765432', holderName: 'Ahmad Ramli', balance: 650000, color: '#7c3aed' },
+  { workspaceId: 'keluarga' as const, name: 'Kas Tunai Dompet', type: 'cash' as const, accountNumber: '-', holderName: 'Kas Rumah', balance: 850000, color: '#d97706' }
+];
+
+const seedDemoTransactions = () => DEFAULT_TRANSACTIONS.map((t, idx) => ({ id: `demo-tx-${idx}`, ...t } as Transaction));
+const seedDemoEnvelopes = () => DEFAULT_ENVELOPES.map((e, idx) => ({ id: `demo-env-${idx}`, ...e } as Envelope));
+const seedDemoGoals = () => DEFAULT_GOALS.map((g, idx) => ({ id: `demo-goal-${idx}`, ...g } as Goal));
+const seedDemoBills = () => DEFAULT_BILLS.map((b, idx) => ({ id: `demo-bill-${idx}`, ...b } as Bill));
+const seedDemoCategories = () => DEFAULT_CATEGORIES.map((c, idx) => ({ id: `demo-cat-${idx}`, ...c } as TransactionCategory));
+const seedDemoFamilyMembers = () => DEFAULT_FAMILY_MEMBERS.map((m, idx) => ({ id: `demo-fm-${idx}`, ...m } as FamilyMember));
+const seedDemoAssets = () => DEFAULT_ASSETS.map((a, idx) => ({ id: `demo-asset-${idx}`, ...a } as Asset));
+const seedDemoPaymentAccounts = () => DEFAULT_PAYMENT_ACCOUNTS.map((p, idx) => ({ id: `demo-pa-${idx}`, ...p } as PaymentAccount));
+const seedDemoActivityLogs = () => [
+  {
+    id: 'demo-log-0',
+    userId: 'demo-user',
+    workspaceId: 'keluarga' as const,
+    action: 'CREATE' as const,
+    entityType: 'SYSTEM' as const,
+    title: 'Sesi Demo Dimulai',
+    details: 'Anda sedang berada dalam mode demo. Data disimpan secara lokal di memori browser Anda.',
+    timestamp: new Date().toISOString()
+  } as ActivityLog
+];
+
+
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [workspace, setWorkspace] = useState<WorkspaceType>('keluarga');
   const [user, setUser] = useState<User | null>(null);
@@ -206,6 +311,37 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+
+  const [showDemoLimitModal, setShowDemoLimitModal] = useState(false);
+  const [demoModalReason, setDemoModalReason] = useState<'timeout' | 'assets' | 'reports' | 'activity-logs' | null>(null);
+
+  const isDemo = !user || user.isAnonymous;
+
+  const resetDemoTimer = () => {
+    sessionStorage.setItem('harmoni_demo_start_time', Date.now().toString());
+  };
+
+  const addDemoActivity = (
+    action: 'CREATE' | 'UPDATE' | 'DELETE',
+    entityType: ActivityLog['entityType'],
+    title: string,
+    details: string,
+    wsId?: WorkspaceType
+  ) => {
+    const newLog: ActivityLog = {
+      id: 'demo-log-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5),
+      userId: user?.uid || 'guest',
+      workspaceId: wsId || workspace,
+      action,
+      entityType,
+      title,
+      details,
+      timestamp: new Date().toISOString()
+    };
+    const updated = [newLog, ...activityLogs];
+    setActivityLogs(updated);
+    sessionStorage.setItem(`demo_logs_${user?.uid || 'guest'}`, JSON.stringify(updated));
+  };
 
   // Helper to determine which userId to use for writing based on workspace
   const getTargetUserId = (wsId?: WorkspaceType) => {
@@ -290,8 +426,67 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
+  // 1b. Timer for demo mode limits
+  useEffect(() => {
+    if (isAuthLoading || !isDemo) {
+      setShowDemoLimitModal(false);
+      return;
+    }
+
+    let start = sessionStorage.getItem('harmoni_demo_start_time');
+    if (!start) {
+      sessionStorage.setItem('harmoni_demo_start_time', Date.now().toString());
+    }
+
+    const interval = setInterval(() => {
+      const startTimeStr = sessionStorage.getItem('harmoni_demo_start_time');
+      if (!startTimeStr) return;
+      const startTime = parseInt(startTimeStr, 10);
+      if (startTime > 0) {
+        const elapsedMs = Date.now() - startTime;
+        const limitMs = 2 * 60 * 1000; // 2 minutes demo limit
+        if (elapsedMs >= limitMs) {
+          setDemoModalReason('timeout');
+          setShowDemoLimitModal(true);
+        }
+      }
+    }, 1000); // Check every second
+
+    return () => clearInterval(interval);
+  }, [isAuthLoading, isDemo]);
+
   // 2. Real-time Firestore Listeners for User Data
   useEffect(() => {
+    if (isAuthLoading) return;
+
+    if (isDemo) {
+      const loadFromSession = (key: string, defaultSeeder: () => any) => {
+        const stored = sessionStorage.getItem(key);
+        if (stored) {
+          try {
+            return JSON.parse(stored);
+          } catch (e) {
+            return defaultSeeder();
+          }
+        }
+        const seeded = defaultSeeder();
+        sessionStorage.setItem(key, JSON.stringify(seeded));
+        return seeded;
+      };
+
+      const uid = user?.uid || 'guest';
+      setTransactions(loadFromSession(`demo_tx_${uid}`, seedDemoTransactions));
+      setEnvelopes(loadFromSession(`demo_env_${uid}`, seedDemoEnvelopes));
+      setGoals(loadFromSession(`demo_goals_${uid}`, seedDemoGoals));
+      setBills(loadFromSession(`demo_bills_${uid}`, seedDemoBills));
+      setCustomCategories(loadFromSession(`demo_cat_${uid}`, seedDemoCategories));
+      setFamilyMembers(loadFromSession(`demo_fm_${uid}`, seedDemoFamilyMembers));
+      setAssets(loadFromSession(`demo_assets_${uid}`, seedDemoAssets));
+      setPaymentAccounts(loadFromSession(`demo_pa_${uid}`, seedDemoPaymentAccounts));
+      setActivityLogs(loadFromSession(`demo_logs_${uid}`, seedDemoActivityLogs));
+      return; // Do NOT setup Firestore listeners
+    }
+
     if (!user || !superAdminId) {
       setTransactions([]);
       setEnvelopes([]);
@@ -406,12 +601,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const qFamily = query(collection(db, 'family_members'), where('userId', 'in', userIds));
     const unSubFamily = onSnapshot(qFamily, (snapshot) => {
       const seededKey = `harmoni_seeded_family_${userId}`;
-      const DEFAULT_FAMILY_MEMBERS = [
-        { name: 'Ahmad Ramli (Anda)', role: 'Kepala Keluarga', monthlyBudget: 5000000 },
-        { name: 'Siti Aminah', role: 'Pasangan (Istri)', monthlyBudget: 4000000 },
-        { name: 'Rizky', role: 'Anak Pertama', monthlyBudget: 1500000 },
-        { name: 'Aisyah', role: 'Anak Kedua', monthlyBudget: 1000000 }
-      ];
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         DEFAULT_FAMILY_MEMBERS.forEach(m => {
@@ -429,51 +618,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const qAssets = query(collection(db, 'assets'), where('userId', 'in', userIds));
     const unSubAssets = onSnapshot(qAssets, (snapshot) => {
       const seededKey = `harmoni_seeded_assets_${userId}`;
-      const DEFAULT_ASSETS = [
-        { 
-          name: 'Tanah Kavling Bogor', 
-          category: 'Properti / Lahan', 
-          purchasePrice: 150000000, 
-          currentValue: 175000000, 
-          purchaseDate: '2024-05-12', 
-          notes: 'Investasi masa depan keluarga', 
-          status: 'owned', 
-          workspaceId: 'keluarga',
-          locationName: 'Kavling Harmoni Asri, Cijeruk, Bogor',
-          areaSize: 250,
-          latitude: -6.5971,
-          longitude: 106.8060,
-          imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'
-        },
-        { 
-          name: 'Mobil Honda Brio', 
-          category: 'Kendaraan', 
-          purchasePrice: 165000000, 
-          currentValue: 145000000, 
-          purchaseDate: '2025-02-20', 
-          notes: 'Kendaraan harian keluarga', 
-          status: 'owned', 
-          workspaceId: 'keluarga',
-          locationName: 'Garasi Rumah Utama, Tebet, Jakarta Selatan',
-          latitude: -6.2297,
-          longitude: 106.8471,
-          imageUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80'
-        },
-        { 
-          name: 'Logam Mulia Antam 10g', 
-          category: 'Emas / Logam Mulia', 
-          purchasePrice: 12000000, 
-          currentValue: 13500000, 
-          purchaseDate: '2024-08-05', 
-          notes: 'Tabungan dana darurat di SDB Bank', 
-          status: 'owned', 
-          workspaceId: 'keluarga',
-          locationName: 'Safe Deposit Box, Bank Mandiri Cab. Thamrin',
-          latitude: -6.1865,
-          longitude: 106.8234,
-          imageUrl: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=800&q=80'
-        }
-      ];
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         DEFAULT_ASSETS.forEach(a => {
@@ -491,13 +635,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const qPayAcc = query(collection(db, 'payment_accounts'), where('userId', 'in', userIds));
     const unSubPayAcc = onSnapshot(qPayAcc, (snapshot) => {
       const seededKey = `harmoni_seeded_pay_acc_${userId}`;
-      const DEFAULT_PAYMENT_ACCOUNTS = [
-        { workspaceId: 'keluarga', name: 'Bank BCA Utama', type: 'bank', accountNumber: '8830192831', holderName: 'Ahmad Ramli', balance: 24500000, color: '#2563eb' },
-        { workspaceId: 'keluarga', name: 'Bank Mandiri Tabungan', type: 'bank', accountNumber: '1370018293012', holderName: 'Siti Aminah', balance: 18200000, color: '#0284c7' },
-        { workspaceId: 'keluarga', name: 'GoPay Keluarga', type: 'ewallet', accountNumber: '081298765432', holderName: 'Ahmad Ramli', balance: 1250000, color: '#059669' },
-        { workspaceId: 'pribadi', name: 'OVO / ShopeePay', type: 'ewallet', accountNumber: '081298765432', holderName: 'Ahmad Ramli', balance: 650000, color: '#7c3aed' },
-        { workspaceId: 'keluarga', name: 'Kas Tunai Dompet', type: 'cash', accountNumber: '-', holderName: 'Kas Rumah', balance: 850000, color: '#d97706' }
-      ];
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         DEFAULT_PAYMENT_ACCOUNTS.forEach(acc => {
@@ -536,6 +673,33 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   // Firestore Write Operations
   const addTransaction = async (t: Omit<Transaction, 'id'>) => {
+    if (isDemo) {
+      const newId = 'demo-tx-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+      const newT: Transaction = { id: newId, ...t, createdAt: new Date().toISOString() };
+      const updated = [newT, ...transactions];
+      setTransactions(updated);
+      sessionStorage.setItem(`demo_tx_${user?.uid || 'guest'}`, JSON.stringify(updated));
+
+      // Handle linked goal update
+      if (t.goalId) {
+        const goal = goals.find(g => g.id === t.goalId);
+        if (goal) {
+          const adjustment = t.type === 'expense' ? t.amount : -t.amount;
+          const updatedGoals = goals.map(g => g.id === t.goalId ? { ...g, currentAmount: Math.max(0, g.currentAmount + adjustment) } : g);
+          setGoals(updatedGoals);
+          sessionStorage.setItem(`demo_goals_${user?.uid || 'guest'}`, JSON.stringify(updatedGoals));
+        }
+      }
+
+      addDemoActivity(
+        'CREATE', 
+        'TRANSACTION', 
+        `Transaksi Baru: ${t.description || t.category}`, 
+        `${t.type === 'income' ? 'Pemasukan' : 'Pengeluaran'} Rp ${t.amount.toLocaleString('id-ID')} (${t.category})`, 
+        t.workspaceId
+      );
+      return;
+    }
     if (!user) return;
     const targetUid = getTargetUserId(t.workspaceId);
     await addDoc(collection(db, 'transactions'), {
@@ -543,6 +707,18 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       userId: targetUid,
       createdAt: new Date().toISOString()
     });
+
+    // Handle linked goal update in DB
+    if (t.goalId) {
+      const goal = goals.find(g => g.id === t.goalId);
+      if (goal) {
+        const adjustment = t.type === 'expense' ? t.amount : -t.amount;
+        await updateDoc(doc(db, 'goals', t.goalId), {
+          currentAmount: Math.max(0, goal.currentAmount + adjustment)
+        });
+      }
+    }
+
     await logActivity(
       'CREATE', 
       'TRANSACTION', 
@@ -553,10 +729,49 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteTransaction = async (id: string) => {
+    if (isDemo) {
+      const target = transactions.find(t => t.id === id);
+      const updated = transactions.filter(t => t.id !== id);
+      setTransactions(updated);
+      sessionStorage.setItem(`demo_tx_${user?.uid || 'guest'}`, JSON.stringify(updated));
+
+      if (target) {
+        // Adjust linked goal amount
+        if (target.goalId) {
+          const goal = goals.find(g => g.id === target.goalId);
+          if (goal) {
+            const adjustment = target.type === 'expense' ? -target.amount : target.amount;
+            const updatedGoals = goals.map(g => g.id === target.goalId ? { ...g, currentAmount: Math.max(0, g.currentAmount + adjustment) } : g);
+            setGoals(updatedGoals);
+            sessionStorage.setItem(`demo_goals_${user?.uid || 'guest'}`, JSON.stringify(updatedGoals));
+          }
+        }
+
+        addDemoActivity(
+          'DELETE', 
+          'TRANSACTION', 
+          `Hapus Transaksi: ${target.description || target.category}`, 
+          `Nominal Rp ${target.amount.toLocaleString('id-ID')} (${target.type})`, 
+          target.workspaceId
+        );
+      }
+      return;
+    }
     if (!user) return;
     const target = transactions.find(t => t.id === id);
     await deleteDoc(doc(db, 'transactions', id));
     if (target) {
+      // Adjust linked goal amount in DB
+      if (target.goalId) {
+        const goal = goals.find(g => g.id === target.goalId);
+        if (goal) {
+          const adjustment = target.type === 'expense' ? -target.amount : target.amount;
+          await updateDoc(doc(db, 'goals', target.goalId), {
+            currentAmount: Math.max(0, goal.currentAmount + adjustment)
+          });
+        }
+      }
+
       await logActivity(
         'DELETE', 
         'TRANSACTION', 
@@ -568,6 +783,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addEnvelope = async (e: Omit<Envelope, 'id'>) => {
+    if (isDemo) {
+      const newId = 'demo-env-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+      const newE: Envelope = { id: newId, ...e };
+      const updated = [...envelopes, newE];
+      setEnvelopes(updated);
+      sessionStorage.setItem(`demo_env_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('CREATE', 'ENVELOPE', `Amplop Anggaran Baru: ${e.category}`, `Alokasi Rp ${e.allocatedAmount.toLocaleString('id-ID')}`, e.workspaceId);
+      return;
+    }
     if (!user) return;
     const targetUid = getTargetUserId(e.workspaceId);
     await addDoc(collection(db, 'envelopes'), {
@@ -578,6 +802,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateEnvelope = async (id: string, e: Partial<Envelope>) => {
+    if (isDemo) {
+      const target = envelopes.find(env => env.id === id);
+      if (!target) return;
+      const updated = envelopes.map(env => env.id === id ? { ...env, ...e } as Envelope : env);
+      setEnvelopes(updated);
+      sessionStorage.setItem(`demo_env_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      if (e.allocatedAmount !== undefined && e.allocatedAmount !== target.allocatedAmount) {
+        addDemoActivity('UPDATE', 'ENVELOPE', `Ubah Pos Anggaran: ${target.category}`, `Alokasi Rp ${e.allocatedAmount.toLocaleString('id-ID')}`, target.workspaceId);
+      }
+      return;
+    }
     if (!user) return;
     const target = envelopes.find(env => env.id === id);
     if (!target) return;
@@ -594,6 +829,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteEnvelope = async (id: string) => {
+    if (isDemo) {
+      const target = envelopes.find(e => e.id === id);
+      const updated = envelopes.filter(e => e.id !== id);
+      setEnvelopes(updated);
+      sessionStorage.setItem(`demo_env_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      if (target) {
+        addDemoActivity('DELETE', 'ENVELOPE', `Hapus Amplop Anggaran: ${target.category}`, `Alokasi Rp ${target.allocatedAmount.toLocaleString('id-ID')}`, target.workspaceId);
+      }
+      return;
+    }
     if (!user) return;
     const target = envelopes.find(e => e.id === id);
     await deleteDoc(doc(db, 'envelopes', id));
@@ -603,6 +848,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addGoal = async (g: Omit<Goal, 'id'>) => {
+    if (isDemo) {
+      const newId = 'demo-goal-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+      const newG: Goal = { id: newId, ...g };
+      const updated = [...goals, newG];
+      setGoals(updated);
+      sessionStorage.setItem(`demo_goals_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('CREATE', 'GOAL', `Target Finansial Baru: ${g.name}`, `Target Rp ${g.targetAmount.toLocaleString('id-ID')} (Deadline: ${g.deadline})`, g.workspaceId);
+      return;
+    }
     if (!user) return;
     const targetUid = getTargetUserId(g.workspaceId);
     await addDoc(collection(db, 'goals'), {
@@ -612,7 +866,36 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     await logActivity('CREATE', 'GOAL', `Target Finansial Baru: ${g.name}`, `Target Rp ${g.targetAmount.toLocaleString('id-ID')} (Deadline: ${g.deadline})`, g.workspaceId);
   };
 
+  const updateGoal = async (id: string, g: Partial<Goal>) => {
+    if (isDemo) {
+      const target = goals.find(goal => goal.id === id);
+      if (!target) return;
+      const updated = goals.map(goal => goal.id === id ? { ...goal, ...g } as Goal : goal);
+      setGoals(updated);
+      sessionStorage.setItem(`demo_goals_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('UPDATE', 'GOAL', `Ubah Target Finansial: ${g.name || target.name}`, `Workspace: ${g.workspaceId || target.workspaceId}`, g.workspaceId || target.workspaceId || workspace);
+      return;
+    }
+    if (!user) return;
+    const updatePayload: any = { ...g };
+    if (g.workspaceId) {
+      updatePayload.userId = getTargetUserId(g.workspaceId);
+    }
+    await updateDoc(doc(db, 'goals', id), updatePayload);
+    await logActivity('UPDATE', 'GOAL', `Ubah Target Finansial: ${g.name || ''}`, `Workspace: ${g.workspaceId || ''}`, g.workspaceId || workspace);
+  };
+
   const deleteGoal = async (id: string) => {
+    if (isDemo) {
+      const target = goals.find(g => g.id === id);
+      const updated = goals.filter(g => g.id !== id);
+      setGoals(updated);
+      sessionStorage.setItem(`demo_goals_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      if (target) {
+        addDemoActivity('DELETE', 'GOAL', `Hapus Target Finansial: ${target.name}`, `Terkumpul Rp ${target.currentAmount.toLocaleString('id-ID')}`, target.workspaceId);
+      }
+      return;
+    }
     if (!user) return;
     const target = goals.find(g => g.id === id);
     await deleteDoc(doc(db, 'goals', id));
@@ -621,30 +904,82 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const addGoalContribution = async (goalId: string, amount: number) => {
+  const addGoalContribution = async (goalId: string, amount: number, isWithdraw = false) => {
+    if (isDemo) {
+      const goal = goals.find(g => g.id === goalId);
+      if (!goal) return;
+      
+      const finalAmount = isWithdraw ? -amount : amount;
+      const newAmount = Math.max(0, goal.currentAmount + finalAmount);
+      const updatedGoals = goals.map(g => g.id === goalId ? { ...g, currentAmount: newAmount } : g);
+      setGoals(updatedGoals);
+      sessionStorage.setItem(`demo_goals_${user?.uid || 'guest'}`, JSON.stringify(updatedGoals));
+
+      const newTxId = 'demo-tx-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+      const newTx: Transaction = {
+        id: newTxId,
+        workspaceId: goal.workspaceId,
+        type: isWithdraw ? 'income' : 'expense',
+        amount: amount,
+        category: 'Investasi & Tabungan',
+        date: new Date().toISOString(),
+        description: isWithdraw ? `Tarik/Pakai dana: ${goal.name}` : `Menabung untuk: ${goal.name}`,
+        createdAt: new Date().toISOString(),
+        goalId: goalId
+      };
+      const updatedTx = [newTx, ...transactions];
+      setTransactions(updatedTx);
+      sessionStorage.setItem(`demo_tx_${user?.uid || 'guest'}`, JSON.stringify(updatedTx));
+
+      addDemoActivity(
+        isWithdraw ? 'DELETE' : 'UPDATE', 
+        'GOAL', 
+        isWithdraw ? `Tarik Tabungan: ${goal.name}` : `Setoran Tabungan: ${goal.name}`, 
+        isWithdraw ? `Penarikan nominal Rp ${amount.toLocaleString('id-ID')}` : `Setoran nominal Rp ${amount.toLocaleString('id-ID')}`, 
+        goal.workspaceId
+      );
+      return;
+    }
     if (!user) return;
     const goal = goals.find(g => g.id === goalId);
     if (!goal) return;
 
-    await updateDoc(doc(db, 'goals', goalId), { currentAmount: goal.currentAmount + amount });
+    const finalAmount = isWithdraw ? -amount : amount;
+    const newAmount = Math.max(0, goal.currentAmount + finalAmount);
+    await updateDoc(doc(db, 'goals', goalId), { currentAmount: newAmount });
 
     const targetUid = getTargetUserId(goal.workspaceId);
-    // Auto-create expense transaction for the contribution
     await addDoc(collection(db, 'transactions'), {
       userId: targetUid,
       workspaceId: goal.workspaceId,
-      type: 'expense',
+      type: isWithdraw ? 'income' : 'expense',
       amount: amount,
       category: 'Investasi & Tabungan',
       date: new Date().toISOString(),
-      description: `Menabung untuk: ${goal.name}`,
-      createdAt: new Date().toISOString()
+      description: isWithdraw ? `Tarik/Pakai dana: ${goal.name}` : `Menabung untuk: ${goal.name}`,
+      createdAt: new Date().toISOString(),
+      goalId: goalId
     });
 
-    await logActivity('UPDATE', 'GOAL', `Setoran Tabungan: ${goal.name}`, `Setoran nominal Rp ${amount.toLocaleString('id-ID')}`, goal.workspaceId);
+    await logActivity(
+      isWithdraw ? 'DELETE' : 'UPDATE', 
+      'GOAL', 
+      isWithdraw ? `Tarik Tabungan: ${goal.name}` : `Setoran Tabungan: ${goal.name}`, 
+      isWithdraw ? `Penarikan nominal Rp ${amount.toLocaleString('id-ID')}` : `Setoran nominal Rp ${amount.toLocaleString('id-ID')}`, 
+      goal.workspaceId
+    );
   };
 
   const addBill = async (b: Omit<Bill, 'id'>) => {
+    if (isDemo) {
+      const newId = 'demo-bill-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+      const newB: Bill = { id: newId, ...b };
+      const updated = [...bills, newB];
+      setBills(updated);
+      sessionStorage.setItem(`demo_bills_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('CREATE', 'BILL', `Tagihan Baru: ${b.name}`, `Nominal Rp ${b.amount.toLocaleString('id-ID')}`, b.workspaceId);
+      return;
+    }
     if (!user) return;
     const targetUid = getTargetUserId(b.workspaceId);
     await addDoc(collection(db, 'bills'), {
@@ -654,7 +989,36 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     await logActivity('CREATE', 'BILL', `Tagihan Baru: ${b.name}`, `Nominal Rp ${b.amount.toLocaleString('id-ID')}`, b.workspaceId);
   };
 
+  const updateBill = async (id: string, b: Partial<Bill>) => {
+    if (isDemo) {
+      const target = bills.find(bill => bill.id === id);
+      if (!target) return;
+      const updated = bills.map(bill => bill.id === id ? { ...bill, ...b } as Bill : bill);
+      setBills(updated);
+      sessionStorage.setItem(`demo_bills_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('UPDATE', 'BILL', `Ubah Tagihan: ${b.name || target.name}`, `Workspace: ${b.workspaceId || target.workspaceId}`, b.workspaceId || target.workspaceId || workspace);
+      return;
+    }
+    if (!user) return;
+    const updatePayload: any = { ...b };
+    if (b.workspaceId) {
+      updatePayload.userId = getTargetUserId(b.workspaceId);
+    }
+    await updateDoc(doc(db, 'bills', id), updatePayload);
+    await logActivity('UPDATE', 'BILL', `Ubah Tagihan: ${b.name || ''}`, `Workspace: ${b.workspaceId || ''}`, b.workspaceId || workspace);
+  };
+
   const deleteBill = async (id: string) => {
+    if (isDemo) {
+      const target = bills.find(b => b.id === id);
+      const updated = bills.filter(b => b.id !== id);
+      setBills(updated);
+      sessionStorage.setItem(`demo_bills_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      if (target) {
+        addDemoActivity('DELETE', 'BILL', `Hapus Tagihan: ${target.name}`, `Nominal Rp ${target.amount.toLocaleString('id-ID')}`, target.workspaceId);
+      }
+      return;
+    }
     if (!user) return;
     const target = bills.find(b => b.id === id);
     await deleteDoc(doc(db, 'bills', id));
@@ -664,6 +1028,31 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const markBillPaid = async (id: string) => {
+    if (isDemo) {
+      const bill = bills.find(b => b.id === id);
+      if (!bill) return;
+      const updatedBills = bills.map(b => b.id === id ? { ...b, isPaid: true } : b);
+      setBills(updatedBills);
+      sessionStorage.setItem(`demo_bills_${user?.uid || 'guest'}`, JSON.stringify(updatedBills));
+
+      const newTxId = 'demo-tx-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+      const newTx: Transaction = {
+        id: newTxId,
+        workspaceId: bill.workspaceId,
+        type: 'expense',
+        amount: bill.amount,
+        category: bill.name,
+        date: new Date().toISOString(),
+        description: `Pembayaran tagihan: ${bill.name}`,
+        createdAt: new Date().toISOString()
+      };
+      const updatedTx = [newTx, ...transactions];
+      setTransactions(updatedTx);
+      sessionStorage.setItem(`demo_tx_${user?.uid || 'guest'}`, JSON.stringify(updatedTx));
+
+      addDemoActivity('UPDATE', 'BILL', `Pelunasan Tagihan: ${bill.name}`, `Lunas sebesar Rp ${bill.amount.toLocaleString('id-ID')}`, bill.workspaceId);
+      return;
+    }
     if (!user) return;
     const bill = bills.find(b => b.id === id);
     if (!bill) return;
@@ -671,7 +1060,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     await updateDoc(doc(db, 'bills', id), { isPaid: true });
 
     const targetUid = getTargetUserId(bill.workspaceId);
-    // Auto-create expense transaction for the bill
     await addDoc(collection(db, 'transactions'), {
       userId: targetUid,
       workspaceId: bill.workspaceId,
@@ -687,6 +1075,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addCategory = async (name: string, type: 'income' | 'expense', color?: string) => {
+    if (isDemo) {
+      const newId = 'demo-cat-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+      const newC: TransactionCategory = { id: newId, userId: user?.uid || 'guest', name, type, color: color || '#2563eb' };
+      const updated = [...customCategories, newC];
+      setCustomCategories(updated);
+      sessionStorage.setItem(`demo_cat_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('CREATE', 'CATEGORY', `Kategori Baru: ${name}`, `Tipe: ${type}`, workspace);
+      return;
+    }
     if (!user) return;
     const targetUid = getTargetUserId(workspace); // Categories are global, assume added for current active workspace scope
     await addDoc(collection(db, 'categories'), {
@@ -700,6 +1097,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateCategory = async (id: string, name: string, type: 'income' | 'expense', color?: string) => {
+    if (isDemo) {
+      const updated = customCategories.map(c => c.id === id ? { ...c, name, type, color: color || '#2563eb' } : c);
+      setCustomCategories(updated);
+      sessionStorage.setItem(`demo_cat_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('UPDATE', 'CATEGORY', `Ubah Kategori: ${name}`, `Tipe: ${type}`, workspace);
+      return;
+    }
     if (!user) return;
     await updateDoc(doc(db, 'categories', id), {
       name,
@@ -710,6 +1114,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteCategory = async (id: string) => {
+    if (isDemo) {
+      const target = customCategories.find(c => c.id === id);
+      const updated = customCategories.filter(c => c.id !== id);
+      setCustomCategories(updated);
+      sessionStorage.setItem(`demo_cat_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      if (target) {
+        addDemoActivity('DELETE', 'CATEGORY', `Hapus Kategori: ${target.name}`, `Tipe: ${target.type}`, workspace);
+      }
+      return;
+    }
     if (!user) return;
     const target = customCategories.find(c => c.id === id);
     await deleteDoc(doc(db, 'categories', id));
@@ -719,6 +1133,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addFamilyMember = async (name: string, role: string, monthlyBudget: number, email?: string) => {
+    if (isDemo) {
+      const newId = 'demo-fm-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+      const newF: FamilyMember = { id: newId, userId: user?.uid || 'guest', name, role, monthlyBudget, email: email || '' };
+      const updated = [...familyMembers, newF];
+      setFamilyMembers(updated);
+      sessionStorage.setItem(`demo_fm_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('CREATE', 'FAMILY_MEMBER', `Anggota Keluarga Baru: ${name}`, `Peran: ${role}, Anggaran: Rp ${monthlyBudget.toLocaleString('id-ID')}`, 'keluarga');
+      return;
+    }
     if (!user) return;
     const targetUid = getTargetUserId('keluarga');
     await addDoc(collection(db, 'family_members'), {
@@ -733,6 +1156,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateFamilyMember = async (id: string, name: string, role: string, monthlyBudget: number, email?: string) => {
+    if (isDemo) {
+      const updated = familyMembers.map(f => f.id === id ? { ...f, name, role, monthlyBudget, email: email || '' } : f);
+      setFamilyMembers(updated);
+      sessionStorage.setItem(`demo_fm_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('UPDATE', 'FAMILY_MEMBER', `Ubah Anggota Keluarga: ${name}`, `Peran: ${role}`, 'keluarga');
+      return;
+    }
     if (!user) return;
     await updateDoc(doc(db, 'family_members', id), {
       name,
@@ -744,6 +1174,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteFamilyMember = async (id: string) => {
+    if (isDemo) {
+      const target = familyMembers.find(f => f.id === id);
+      const updated = familyMembers.filter(f => f.id !== id);
+      setFamilyMembers(updated);
+      sessionStorage.setItem(`demo_fm_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      if (target) {
+        addDemoActivity('DELETE', 'FAMILY_MEMBER', `Hapus Anggota Keluarga: ${target.name}`, `Peran: ${target.role}`, 'keluarga');
+      }
+      return;
+    }
     if (!user) return;
     const target = familyMembers.find(f => f.id === id);
     await deleteDoc(doc(db, 'family_members', id));
@@ -772,6 +1212,36 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       areaSize?: number;
     }
   ) => {
+    if (isDemo) {
+      const newId = 'demo-asset-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+      const newA: Asset = {
+        id: newId,
+        userId: user?.uid || 'guest',
+        workspaceId: workspaceId || workspace,
+        name,
+        category,
+        purchasePrice,
+        currentValue,
+        purchaseDate,
+        notes: notes || '',
+        status: 'owned',
+        depreciationMethod,
+        depreciationUsefulLife,
+        depreciationSalvageValue,
+        useAutoDepreciation,
+        imageUrl: extraFields?.imageUrl || '',
+        latitude: extraFields?.latitude ?? null,
+        longitude: extraFields?.longitude ?? null,
+        locationName: extraFields?.locationName || '',
+        areaSize: extraFields?.areaSize ?? null,
+        createdAt: new Date().toISOString()
+      };
+      const updated = [...assets, newA];
+      setAssets(updated);
+      sessionStorage.setItem(`demo_assets_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('CREATE', 'ASSET', `Aset Baru: ${name}`, `Kategori ${category}, Nilai Beli Rp ${purchasePrice.toLocaleString('id-ID')}`, workspaceId || workspace);
+      return;
+    }
     if (!user) return;
     const targetUid = getTargetUserId(workspaceId || workspace);
     await addDoc(collection(db, 'assets'), {
@@ -820,6 +1290,39 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       areaSize?: number;
     }
   ) => {
+    if (isDemo) {
+      const updated = assets.map(a => {
+        if (a.id !== id) return a;
+        const extraPayload: any = {};
+        if (extraFields) {
+          if (extraFields.imageUrl !== undefined) extraPayload.imageUrl = extraFields.imageUrl;
+          if (extraFields.latitude !== undefined) extraPayload.latitude = extraFields.latitude;
+          if (extraFields.longitude !== undefined) extraPayload.longitude = extraFields.longitude;
+          if (extraFields.locationName !== undefined) extraPayload.locationName = extraFields.locationName;
+          if (extraFields.areaSize !== undefined) extraPayload.areaSize = extraFields.areaSize;
+        }
+        return {
+          ...a,
+          name,
+          category,
+          purchasePrice,
+          currentValue,
+          purchaseDate,
+          notes: notes || '',
+          status: status || 'owned',
+          workspaceId: workspaceId || workspace,
+          depreciationMethod,
+          depreciationUsefulLife,
+          depreciationSalvageValue,
+          useAutoDepreciation,
+          ...extraPayload
+        } as Asset;
+      });
+      setAssets(updated);
+      sessionStorage.setItem(`demo_assets_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('UPDATE', 'ASSET', `Perubahan Aset: ${name}`, `Nilai Saat Ini Rp ${currentValue.toLocaleString('id-ID')}, Status: ${status || 'owned'}`, workspaceId || workspace);
+      return;
+    }
     if (!user) return;
     const updateData: Record<string, any> = {
       name,
@@ -849,6 +1352,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteAsset = async (id: string) => {
+    if (isDemo) {
+      const target = assets.find(a => a.id === id);
+      const updated = assets.filter(a => a.id !== id);
+      setAssets(updated);
+      sessionStorage.setItem(`demo_assets_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      if (target) {
+        addDemoActivity('DELETE', 'ASSET', `Hapus Aset: ${target.name}`, `Nilai Rp ${target.currentValue.toLocaleString('id-ID')}`, target.workspaceId);
+      }
+      return;
+    }
     if (!user) return;
     const target = assets.find(a => a.id === id);
     await deleteDoc(doc(db, 'assets', id));
@@ -866,6 +1379,31 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     color?: string,
     wsId?: WorkspaceType
   ) => {
+    if (isDemo) {
+      const newId = 'demo-pa-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+      const newAcc: PaymentAccount = {
+        id: newId,
+        userId: user?.uid || 'guest',
+        workspaceId: wsId || workspace,
+        name,
+        type,
+        balance,
+        accountNumber: accountNumber || '',
+        holderName: holderName || '',
+        color: color || '#2563eb'
+      };
+      const updated = [...paymentAccounts, newAcc];
+      setPaymentAccounts(updated);
+      sessionStorage.setItem(`demo_pa_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity(
+        'CREATE',
+        'PAYMENT_ACCOUNT',
+        `Rekening Baru: ${name}`,
+        `Jenis: ${type.toUpperCase()}, Saldo Awal: Rp ${balance.toLocaleString('id-ID')}`,
+        wsId || workspace
+      );
+      return;
+    }
     if (!user) return;
     const targetUid = getTargetUserId(wsId || workspace);
     const newAcc = {
@@ -899,6 +1437,31 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     color?: string,
     wsId?: WorkspaceType
   ) => {
+    if (isDemo) {
+      const updated = paymentAccounts.map(a => {
+        if (a.id !== id) return a;
+        return {
+          ...a,
+          name,
+          type,
+          balance,
+          accountNumber: accountNumber || '',
+          holderName: holderName || '',
+          color: color || '#2563eb',
+          workspaceId: wsId || workspace
+        };
+      });
+      setPaymentAccounts(updated);
+      sessionStorage.setItem(`demo_pa_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity(
+        'UPDATE',
+        'PAYMENT_ACCOUNT',
+        `Perubahan Rekening: ${name}`,
+        `Saldo: Rp ${balance.toLocaleString('id-ID')}`,
+        wsId || workspace
+      );
+      return;
+    }
     if (!user) return;
     await updateDoc(doc(db, 'payment_accounts', id), {
       name,
@@ -919,6 +1482,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deletePaymentAccount = async (id: string) => {
+    if (isDemo) {
+      const target = paymentAccounts.find(a => a.id === id);
+      const updated = paymentAccounts.filter(a => a.id !== id);
+      setPaymentAccounts(updated);
+      sessionStorage.setItem(`demo_pa_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      if (target) {
+        addDemoActivity(
+          'DELETE',
+          'PAYMENT_ACCOUNT',
+          `Hapus Rekening: ${target.name}`,
+          `Saldo: Rp ${target.balance.toLocaleString('id-ID')}`,
+          target.workspaceId
+        );
+      }
+      return;
+    }
     if (!user) return;
     const target = paymentAccounts.find(a => a.id === id);
     await deleteDoc(doc(db, 'payment_accounts', id));
@@ -934,11 +1513,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteActivityLog = async (id: string) => {
+    if (isDemo) {
+      const updated = activityLogs.filter(log => log.id !== id);
+      setActivityLogs(updated);
+      sessionStorage.setItem(`demo_logs_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      return;
+    }
     if (!user) return;
     await deleteDoc(doc(db, 'activity_logs', id));
   };
 
   const clearActivityLogs = async () => {
+    if (isDemo) {
+      setActivityLogs([]);
+      sessionStorage.setItem(`demo_logs_${user?.uid || 'guest'}`, JSON.stringify([]));
+      return;
+    }
     if (!user) return;
     const snap = await getDocs(query(collection(db, 'activity_logs'), where('userId', '==', user.uid)));
     const promises = snap.docs.map(d => deleteDoc(doc(db, 'activity_logs', d.id)));
@@ -946,6 +1536,24 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const autoCleanActivityLogs = async (daysThreshold: number): Promise<number> => {
+    if (isDemo) {
+      if (daysThreshold <= 0) return 0;
+      const cutoffTime = Date.now() - (daysThreshold * 24 * 60 * 60 * 1000);
+      const docsToDelete = activityLogs.filter(log => {
+        if (!log.timestamp) return false;
+        const logTime = new Date(log.timestamp).getTime();
+        return !isNaN(logTime) && logTime < cutoffTime;
+      });
+      if (docsToDelete.length === 0) return 0;
+      const updated = activityLogs.filter(log => {
+        if (!log.timestamp) return true;
+        const logTime = new Date(log.timestamp).getTime();
+        return isNaN(logTime) || logTime >= cutoffTime;
+      });
+      setActivityLogs(updated);
+      sessionStorage.setItem(`demo_logs_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      return docsToDelete.length;
+    }
     if (!user || daysThreshold <= 0) return 0;
     const cutoffTime = Date.now() - (daysThreshold * 24 * 60 * 60 * 1000);
     const snap = await getDocs(query(collection(db, 'activity_logs'), where('userId', '==', user.uid)));
@@ -1021,10 +1629,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [isEnvelopeModalOpen, setIsEnvelopeModalOpen] = useState(false);
   const [envelopeEditTarget, setEnvelopeEditTarget] = useState<Envelope | null>(null);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [goalEditTarget, setGoalEditTarget] = useState<Goal | null>(null);
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+  const [billEditTarget, setBillEditTarget] = useState<Bill | null>(null);
 
   const openTransactionModal = (defaultCategory?: string) => {
-    setTransactionDefaultCategory(defaultCategory);
+    const validCategory = typeof defaultCategory === 'string' ? defaultCategory : undefined;
+    setTransactionDefaultCategory(validCategory);
     setIsTransactionModalOpen(true);
   };
   const closeTransactionModal = () => {
@@ -1036,7 +1647,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const closeTransferModal = () => setIsTransferModalOpen(false);
 
   const openEnvelopeModal = (target?: Envelope) => {
-    setEnvelopeEditTarget(target || null);
+    const isEnvelope = target && typeof target === 'object' && 'allocatedAmount' in target;
+    setEnvelopeEditTarget(isEnvelope ? target : null);
     setIsEnvelopeModalOpen(true);
   };
   const closeEnvelopeModal = () => {
@@ -1044,19 +1656,33 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => setEnvelopeEditTarget(null), 300);
   };
 
-  const openGoalModal = () => setIsGoalModalOpen(true);
-  const closeGoalModal = () => setIsGoalModalOpen(false);
+  const openGoalModal = (target?: Goal) => {
+    const isGoal = target && typeof target === 'object' && 'targetAmount' in target;
+    setGoalEditTarget(isGoal ? target : null);
+    setIsGoalModalOpen(true);
+  };
+  const closeGoalModal = () => {
+    setIsGoalModalOpen(false);
+    setTimeout(() => setGoalEditTarget(null), 300);
+  };
 
-  const openBillModal = () => setIsBillModalOpen(true);
-  const closeBillModal = () => setIsBillModalOpen(false);
+  const openBillModal = (target?: Bill) => {
+    const isBill = target && typeof target === 'object' && 'amount' in target;
+    setBillEditTarget(isBill ? target : null);
+    setIsBillModalOpen(true);
+  };
+  const closeBillModal = () => {
+    setIsBillModalOpen(false);
+    setTimeout(() => setBillEditTarget(null), 300);
+  };
 
   return (
     <FinanceContext.Provider value={{
       workspace, setWorkspace,
       transactions, addTransaction, deleteTransaction,
       envelopes, addEnvelope, updateEnvelope, deleteEnvelope,
-      goals, addGoal, deleteGoal, addGoalContribution,
-      bills, addBill, deleteBill, markBillPaid,
+      goals, addGoal, updateGoal, deleteGoal, addGoalContribution,
+      bills, addBill, updateBill, deleteBill, markBillPaid,
       customCategories, addCategory, updateCategory, deleteCategory,
       familyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember,
       paymentAccounts, addPaymentAccount, updatePaymentAccount, deletePaymentAccount,
@@ -1067,8 +1693,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       isTransactionModalOpen, openTransactionModal, closeTransactionModal, transactionDefaultCategory,
       isTransferModalOpen, openTransferModal, closeTransferModal,
       isEnvelopeModalOpen, openEnvelopeModal, closeEnvelopeModal, envelopeEditTarget,
-      isGoalModalOpen, openGoalModal, closeGoalModal,
-      isBillModalOpen, openBillModal, closeBillModal
+      isGoalModalOpen, openGoalModal, closeGoalModal, goalEditTarget,
+      isBillModalOpen, openBillModal, closeBillModal, billEditTarget,
+      isDemo, showDemoLimitModal, setShowDemoLimitModal, demoModalReason, setDemoModalReason, resetDemoTimer
     }}>
       {children}
     </FinanceContext.Provider>

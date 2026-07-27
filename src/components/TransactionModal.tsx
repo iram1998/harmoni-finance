@@ -38,7 +38,7 @@ const INCOME_CATEGORIES = [
 ];
 
 export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
-  const { workspace, addTransaction, customCategories, familyMembers, transactionDefaultCategory } = useFinance();
+  const { workspace, addTransaction, customCategories, familyMembers, transactionDefaultCategory, goals } = useFinance();
   const { language, t } = useThemeLanguage();
   const { showToast } = useToast();
   const [type, setType] = useState<TransactionType>('expense');
@@ -48,6 +48,7 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>('fixed');
   const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>('');
+  const [linkedGoalId, setLinkedGoalId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Auto select budget category if opened from budget section
@@ -93,6 +94,7 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
       setScanState('idle');
       setScannerError('');
       setScannedSummary(null);
+      setLinkedGoalId('');
     }
   }, [isOpen]);
 
@@ -240,7 +242,8 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
         description,
         date: new Date(date).toISOString(),
         ...(type === 'income' ? { incomeCategory } : {}),
-        ...(selectedFamilyMember ? { familyMember: selectedFamilyMember } : {})
+        ...(selectedFamilyMember ? { familyMember: selectedFamilyMember } : {}),
+        ...(linkedGoalId ? { goalId: linkedGoalId } : {})
       });
       
       showToast(
@@ -257,6 +260,7 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
       setDescription('');
       setSelectedFamilyMember('');
       setDate(new Date().toISOString().split('T')[0]);
+      setLinkedGoalId('');
       onClose();
     } catch (err: any) {
       console.error("Error adding transaction:", err);
@@ -547,6 +551,37 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
             >
               <option value="fixed">{t('fixedIncome')}</option>
               <option value="variable">{t('variableIncome')}</option>
+            </Select>
+          )}
+
+          {/* Linked Goal Dropdown */}
+          {goals && goals.length > 0 && (
+            <Select
+              label={isId ? 'Hubungkan ke Target Tabungan (Opsional)' : 'Link to Saving Goal (Optional)'}
+              value={linkedGoalId}
+              onChange={e => {
+                const selectedId = e.target.value;
+                setLinkedGoalId(selectedId);
+                if (selectedId) {
+                  const targetGoal = goals.find(g => g.id === selectedId);
+                  if (targetGoal) {
+                    setCategory('Investasi & Tabungan');
+                    if (!description) {
+                      setDescription(isId ? `Menabung untuk: ${targetGoal.name}` : `Saving for: ${targetGoal.name}`);
+                    }
+                  }
+                }
+              }}
+              icon="savings"
+            >
+              <option value="">{isId ? '-- Tidak Dihubungkan --' : '-- Not Linked --'}</option>
+              {goals
+                .filter(g => g.workspaceId === workspace)
+                .map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.name} (Terkumpul: Rp {g.currentAmount.toLocaleString('id-ID')} / Rp {g.targetAmount.toLocaleString('id-ID')})
+                  </option>
+                ))}
             </Select>
           )}
 

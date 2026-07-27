@@ -293,11 +293,15 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                   <div className="font-body-md sm:font-body-lg text-white truncate font-extrabold" title={formatCurrency(totalLiquidCash)}>{formatCurrency(totalLiquidCash)}</div>
                 </div>
                 <div>
-                  <div className="font-label-sm text-white/80 uppercase mb-1 text-[10px] sm:text-xs truncate" title="Total Investasi & Aset">Investasi & Aset</div>
+                  <div className="font-label-sm text-white/80 uppercase mb-1 text-[10px] sm:text-xs truncate" title={language === 'id' ? 'Total Investasi & Aset' : 'Total Investments & Assets'}>
+                    {language === 'id' ? 'Investasi & Aset' : 'Investments & Assets'}
+                  </div>
                   <div className="font-body-md sm:font-body-lg text-white truncate font-extrabold" title={formatCurrency(totalInvestasiDanAset)}>{formatCurrency(totalInvestasiDanAset)}</div>
                 </div>
                 <div>
-                  <div className="font-label-sm text-white/80 uppercase mb-1 text-[10px] sm:text-xs truncate" title="Total Utang">Total Utang</div>
+                  <div className="font-label-sm text-white/80 uppercase mb-1 text-[10px] sm:text-xs truncate" title={language === 'id' ? 'Total Utang' : 'Total Debt'}>
+                    {language === 'id' ? 'Total Utang' : 'Total Debt'}
+                  </div>
                   <div className="font-body-md sm:font-body-lg text-red-200 truncate font-extrabold" title={formatCurrency(totalDebt)}>{formatCurrency(totalDebt)}</div>
                 </div>
               </div>
@@ -309,7 +313,7 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
             <CardHeader className="flex justify-between items-center pb-2 border-b border-outline-variant">
               <CardTitle>{t('upcomingBills')}</CardTitle>
               <button 
-                onClick={openBillModal} 
+                onClick={() => openBillModal()} 
                 className="text-xs text-primary font-semibold hover:underline flex items-center gap-1 bg-primary-container/30 px-2 py-1 rounded-md"
               >
                 <span className="material-symbols-outlined text-[16px]">add</span>
@@ -330,7 +334,7 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                       <div className="flex flex-col min-w-0">
                         <span className="font-label-lg text-on-surface truncate">{bill.name}</span>
                         <span className={`font-body-sm truncate ${isSoon ? 'text-error font-medium' : 'text-on-surface-variant'}`}>
-                          {t('dueDate')}: {daysLeft}d
+                          {t('dueDate')}: {daysLeft}{language === 'id' ? ' hari lagi' : 'd left'}
                         </span>
                       </div>
                     </div>
@@ -397,7 +401,7 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
             </div>
             <span className="font-label-sm text-center text-on-surface">{t('transferFunds')}</span>
           </button>
-          <button onClick={openBillModal} className="flex flex-col items-center justify-center gap-2 p-3 bg-surface rounded-xl border border-outline-variant hover:bg-surface-container transition-colors shadow-2xs active:scale-95">
+          <button onClick={() => openBillModal()} className="flex flex-col items-center justify-center gap-2 p-3 bg-surface rounded-xl border border-outline-variant hover:bg-surface-container transition-colors shadow-2xs active:scale-95">
             <div className="w-10 h-10 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center">
               <span className="material-symbols-outlined">receipt_long</span>
             </div>

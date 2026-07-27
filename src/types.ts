@@ -12,6 +12,8 @@ export interface Transaction {
   description: string;
   incomeCategory?: IncomeCategory;
   familyMember?: string;
+  createdAt?: string;
+  goalId?: string;
 }
 
 export interface Envelope {
@@ -28,6 +30,7 @@ export interface Goal {
   targetAmount: number;
   currentAmount: number;
   deadline: string;
+  startDate?: string;
 }
 
 export interface Bill {
@@ -76,6 +79,7 @@ export interface Asset {
   longitude?: number;
   locationName?: string;
   areaSize?: number;
+  createdAt?: string;
 }
 
 export interface PaymentAccount {
@@ -95,7 +99,7 @@ export interface ActivityLog {
   userId: string;
   workspaceId: WorkspaceType;
   action: 'CREATE' | 'UPDATE' | 'DELETE';
-  entityType: 'TRANSACTION' | 'ASSET' | 'BILL' | 'ENVELOPE' | 'GOAL' | 'CATEGORY' | 'FAMILY_MEMBER' | 'PAYMENT_ACCOUNT';
+  entityType: 'TRANSACTION' | 'ASSET' | 'BILL' | 'ENVELOPE' | 'GOAL' | 'CATEGORY' | 'FAMILY_MEMBER' | 'PAYMENT_ACCOUNT' | 'SYSTEM';
   title: string;
   details: string;
   timestamp: string;

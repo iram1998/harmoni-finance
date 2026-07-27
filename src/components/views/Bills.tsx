@@ -132,7 +132,7 @@ export function Bills() {
             </button>
           </div>
 
-          <Button variant="primary" icon="add" onClick={openBillModal} className="shadow-md">
+          <Button variant="primary" icon="add" onClick={() => openBillModal()} className="shadow-md">
             {t('addBill')}
           </Button>
         </div>
@@ -218,7 +218,7 @@ export function Bills() {
             <p className="font-body-md text-on-surface-variant mb-4">
               {filter === 'unpaid' ? 'Semua tagihan bulan ini sudah lunas!' : 'Belum ada tagihan terdaftar.'}
             </p>
-            <Button variant="outline" size="sm" icon="add" onClick={openBillModal}>
+            <Button variant="outline" size="sm" icon="add" onClick={() => openBillModal()}>
               {t('addBill')}
             </Button>
           </div>
@@ -243,13 +243,22 @@ export function Bills() {
                       {bill.isPaid ? t('paid') : t('unpaid')}
                     </span>
 
-                    <button
-                      onClick={() => setDeleteTarget(bill)}
-                      className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-full hover:bg-error/10 cursor-pointer"
-                      title="Hapus Tagihan"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => openBillModal(bill)}
+                        className="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-primary/10 cursor-pointer"
+                        title="Edit Tagihan"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(bill)}
+                        className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-full hover:bg-error/10 cursor-pointer"
+                        title="Hapus Tagihan"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
                   </div>
 
                   <h4 className="font-headline-sm font-semibold text-on-surface mb-1">{bill.name}</h4>

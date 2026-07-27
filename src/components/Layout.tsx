@@ -20,11 +20,21 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
     isTransferModalOpen, closeTransferModal,
     isEnvelopeModalOpen, closeEnvelopeModal, envelopeEditTarget,
     isGoalModalOpen, closeGoalModal,
-    isBillModalOpen, closeBillModal
+    isBillModalOpen, closeBillModal,
+    isDemo, setShowDemoLimitModal, setDemoModalReason
   } = useFinance();
   const { language, toggleLanguage, theme, toggleTheme, t } = useThemeLanguage();
 
   const isId = language === 'id';
+
+  const handleViewNavigation = (view: string) => {
+    if (isDemo && (view === 'reports' || view === 'activity-logs')) {
+      setDemoModalReason(view === 'reports' ? 'reports' : 'activity-logs');
+      setShowDemoLimitModal(true);
+      return;
+    }
+    setCurrentView(view);
+  };
 
   // Generate dynamic alerts based on live database data
   const unpaidBills = bills.filter(b => b.workspaceId === workspace && !b.isPaid);
@@ -155,8 +165,8 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
           ) : (
             <div className="border-t border-slate-700/50 my-1 w-full" />
           )}
-          <NavItem icon="home_work" label={t('assetsAndGoods')} active={currentView === 'assets'} onClick={() => setCurrentView('assets')} isOpen={isSidebarOpen} />
-          <NavItem icon="assessment" label={t('reports')} active={currentView === 'reports'} onClick={() => setCurrentView('reports')} isOpen={isSidebarOpen} />
+          <NavItem icon="home_work" label={t('assetsAndGoods')} active={currentView === 'assets'} onClick={() => handleViewNavigation('assets')} isOpen={isSidebarOpen} />
+          <NavItem icon="assessment" label={t('reports')} active={currentView === 'reports'} onClick={() => handleViewNavigation('reports')} isOpen={isSidebarOpen} />
 
           {/* Kelompok 4: Aplikasi */}
           {isSidebarOpen ? (
@@ -166,7 +176,7 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
           ) : (
             <div className="border-t border-slate-700/50 my-1 w-full" />
           )}
-          <NavItem icon="history_edu" label={isId ? 'Log Aktivitas' : 'Activity Logs'} active={currentView === 'activity-logs'} onClick={() => setCurrentView('activity-logs')} isOpen={isSidebarOpen} />
+          <NavItem icon="history_edu" label={isId ? 'Log Aktivitas' : 'Activity Logs'} active={currentView === 'activity-logs'} onClick={() => handleViewNavigation('activity-logs')} isOpen={isSidebarOpen} />
           <NavItem icon="settings" label={t('settings')} active={currentView === 'settings'} onClick={() => setCurrentView('settings')} isOpen={isSidebarOpen} />
           <NavItem icon="help" label={isId ? 'Bantuan' : 'Help'} active={currentView === 'help'} onClick={() => setCurrentView('help')} isOpen={isSidebarOpen} />
         </div>
@@ -509,13 +519,13 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
                 icon="assessment" 
                 label={t('reports')} 
                 active={currentView === 'reports'} 
-                onClick={() => { setCurrentView('reports'); setIsMobileMenuOpen(false); }} 
+                onClick={() => { handleViewNavigation('reports'); setIsMobileMenuOpen(false); }} 
               />
               <MenuGridItem 
                 icon="history_edu" 
                 label={isId ? 'Log Aktivitas' : 'Activity Logs'} 
                 active={currentView === 'activity-logs'} 
-                onClick={() => { setCurrentView('activity-logs'); setIsMobileMenuOpen(false); }} 
+                onClick={() => { handleViewNavigation('activity-logs'); setIsMobileMenuOpen(false); }} 
               />
               <MenuGridItem 
                 icon="settings" 

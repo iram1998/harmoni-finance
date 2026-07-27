@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useFinance } from '../../store';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { useToast } from '../../context/ToastContext';
-import { formatCurrency } from '../../utils';
+import { formatCurrency, getRemainingTimeAndSavings, formatRemainingTime, formatDateFriendly } from '../../utils';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { GoalContributionModal } from '../GoalContributionModal';
@@ -123,7 +123,7 @@ export function Goals() {
               </button>
             </div>
 
-            <Button variant="primary" className="hidden md:flex shadow-md" icon="add" onClick={openGoalModal}>
+            <Button variant="primary" className="hidden md:flex shadow-md" icon="add" onClick={() => openGoalModal()}>
               {t('addGoal')}
             </Button>
           </div>
@@ -134,12 +134,12 @@ export function Goals() {
           {/* Total Savings Widget */}
           <Card variant="elevated" className="md:col-span-4 p-6 flex flex-col justify-between">
             <div>
-              <p className="font-label-md text-outline uppercase tracking-wider mb-1">Total Saved</p>
+              <p className="font-label-md text-outline uppercase tracking-wider mb-1">{t('totalSaved')}</p>
               <h3 className="font-headline-lg text-on-surface">{formatCurrency(totalSaved)}</h3>
             </div>
             <div className="mt-4 flex items-center gap-2 text-primary">
               <span className="material-symbols-outlined text-[16px]">trending_up</span>
-              <span className="font-label-sm">+4.2% from last month</span>
+              <span className="font-label-sm">{language === 'id' ? '+4.2% dari bulan lalu' : '+4.2% from last month'}</span>
             </div>
           </Card>
 
@@ -161,8 +161,14 @@ export function Goals() {
               </div>
             </div>
             <div>
-              <h3 className="font-headline-sm text-on-surface mb-2">Overall Goal Completion</h3>
-              <p className="font-body-sm text-on-surface-variant">You are on track to meet your active goals. Keep up the consistent contributions.</p>
+              <h3 className="font-headline-sm text-on-surface mb-2">
+                {language === 'id' ? 'Penyelesaian Target Keseluruhan' : 'Overall Goal Completion'}
+              </h3>
+              <p className="font-body-sm text-on-surface-variant">
+                {language === 'id' 
+                  ? 'Anda berada di jalur yang tepat untuk memenuhi target aktif Anda. Pertahankan tabungan konsisten Anda.' 
+                  : 'You are on track to meet your active goals. Keep up the consistent contributions.'}
+              </p>
             </div>
           </div>
         </div>
@@ -177,12 +183,19 @@ export function Goals() {
             const iconName = i % 3 === 0 ? 'health_and_safety' : i % 3 === 1 ? 'directions_car' : 'flight_takeoff';
             const progressColor = i % 3 === 0 ? 'text-primary' : i % 3 === 1 ? 'text-tertiary' : 'text-on-surface';
             
-            // Generate a mock monthly value for the UI 
-            const monthlyTarget = Math.round(goal.targetAmount / 24); // mock 24 months
+            const timeAndSavings = getRemainingTimeAndSavings(goal.targetAmount, goal.currentAmount, goal.deadline);
+            const durationText = formatRemainingTime(timeAndSavings.years, timeAndSavings.months, timeAndSavings.days, language);
 
             return (
               <div key={`desktop-${goal.id}`} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-[0_4px_12px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition-shadow flex flex-col relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4">
+                <div className="absolute top-0 right-0 p-4 flex gap-1 bg-surface-container-lowest/80 backdrop-blur-xs rounded-bl-xl z-20">
+                  <button 
+                    onClick={() => openGoalModal(goal)}
+                    className="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-primary/10 cursor-pointer"
+                    title="Edit Target"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                  </button>
                   <button 
                     onClick={() => setDeleteTarget(goal)}
                     className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-full hover:bg-error/10 cursor-pointer"
@@ -198,7 +211,7 @@ export function Goals() {
                   </div>
                   <div>
                     <h4 className="font-headline-sm text-on-surface">{goal.name}</h4>
-                    <p className="font-body-sm text-on-surface-variant">{i % 3 === 0 ? 'Safety Net' : i % 3 === 1 ? 'Vehicle Replacement' : 'Family Vacation'}</p>
+                    <p className="font-body-sm text-on-surface-variant">{i % 3 === 0 ? 'Dana Darurat / Safety Net' : i % 3 === 1 ? 'Pembelian Kendaraan' : 'Liburan & Impian'}</p>
                   </div>
                 </div>
 
@@ -220,26 +233,44 @@ export function Goals() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-6 border-t border-b border-surface-variant py-4">
+                <div className="grid grid-cols-2 gap-4 mb-4 border-t border-surface-variant pt-4">
                   <div>
-                    <p className="font-label-sm text-outline uppercase mb-1">Target</p>
-                    <p className="font-label-lg text-on-surface">{formatCurrency(goal.targetAmount)}</p>
+                    <p className="font-label-sm text-outline uppercase mb-1">{language === 'id' ? 'Target Nominal' : 'Target'}</p>
+                    <p className="font-label-lg text-on-surface font-semibold">{formatCurrency(goal.targetAmount)}</p>
                   </div>
                   <div>
-                    <p className="font-label-sm text-outline uppercase mb-1">Saved</p>
-                    <p className="font-label-lg text-on-surface">{formatCurrency(goal.currentAmount)}</p>
+                    <p className="font-label-sm text-outline uppercase mb-1">{language === 'id' ? 'Terkumpul' : 'Saved'}</p>
+                    <p className="font-label-lg text-on-surface font-semibold">{formatCurrency(goal.currentAmount)}</p>
                   </div>
-                  <div>
-                    <p className="font-label-sm text-outline uppercase mb-1">Monthly</p>
-                    <p className={`font-label-lg ${ratio < 20 ? 'text-error' : 'text-on-surface'}`}>
-                      {ratio < 20 ? `Need ${formatCurrency(monthlyTarget)}` : formatCurrency(monthlyTarget)}
-                    </p>
+                </div>
+
+                {/* Estimation Details Box */}
+                <div className="mb-6 p-3 bg-surface-container-low rounded-xl border border-outline-variant/50 text-xs">
+                  {/* Timeline range */}
+                  <div className="flex items-center gap-1.5 text-[10px] text-on-surface-variant bg-surface-container-highest/60 p-2 rounded-lg mb-2 border border-outline-variant/30">
+                    <span className="material-symbols-outlined text-[14px] text-primary">timeline</span>
+                    <span className="font-semibold">{formatDateFriendly(goal.startDate || goal.createdAt || new Date().toISOString().split('T')[0], language)}</span>
+                    <span className="material-symbols-outlined text-[12px] text-outline">arrow_right_alt</span>
+                    <span className="font-semibold">{formatDateFriendly(goal.deadline, language)}</span>
                   </div>
-                  <div>
-                    <p className="font-label-sm text-outline uppercase mb-1">Est. Date</p>
-                    <p className="font-label-lg text-on-surface">
-                      {new Date(goal.deadline).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                    </p>
+
+                  <div className="flex justify-between items-center mb-2 pb-2 border-b border-outline-variant/30">
+                    <span className="font-medium text-on-surface-variant flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-tertiary">schedule</span>
+                      {language === 'id' ? 'Sisa Waktu' : 'Time Left'}
+                    </span>
+                    <span className="font-semibold text-tertiary">{durationText}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-on-surface-variant">
+                    <div>{language === 'id' ? 'Kekurangan Dana:' : 'Amount Left:'}</div>
+                    <div className="text-right font-medium text-on-surface">{formatCurrency(timeAndSavings.amountToSave)}</div>
+
+                    <div>{language === 'id' ? 'Harus Ditabung / Bulan:' : 'Savings / Month:'}</div>
+                    <div className="text-right font-semibold text-primary">{formatCurrency(timeAndSavings.monthlyNeed)}</div>
+
+                    <div>{language === 'id' ? 'Harus Ditabung / Hari:' : 'Savings / Day:'}</div>
+                    <div className="text-right font-medium text-on-surface">{formatCurrency(timeAndSavings.dailyNeed)}</div>
                   </div>
                 </div>
 
@@ -263,7 +294,7 @@ export function Goals() {
             <h1 className="font-headline-sm font-bold text-on-surface mb-1">{t('goalsTitle')}</h1>
             <p className="font-body-sm text-on-surface-variant">{t('goalsSubtitle')}</p>
           </div>
-          <button onClick={openGoalModal} className="w-full bg-primary text-on-primary hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-all duration-200 rounded-lg px-4 py-3 flex items-center justify-center gap-2 shadow-sm font-semibold">
+          <button onClick={() => openGoalModal()} className="w-full bg-primary text-on-primary hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-all duration-200 rounded-lg px-4 py-3 flex items-center justify-center gap-2 shadow-sm font-semibold">
             <span className="material-symbols-outlined">add</span>
             <span className="font-label-lg">{t('addGoal')}</span>
           </button>
@@ -273,13 +304,14 @@ export function Goals() {
         <section className="grid grid-cols-1 gap-4">
           {wsGoals.map((goal, i) => {
             const ratio = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
-            const monthlyTarget = Math.round(goal.targetAmount / 24); // mock 24 months
+            const timeAndSavings = getRemainingTimeAndSavings(goal.targetAmount, goal.currentAmount, goal.deadline);
+            const durationText = formatRemainingTime(timeAndSavings.years, timeAndSavings.months, timeAndSavings.days, language);
             
             // Varied icon styles based on index
             const iconName = i % 3 === 0 ? 'health_and_safety' : i % 3 === 1 ? 'architecture' : 'landscape';
 
             return (
-              <div key={`mob-${goal.id}`} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-5 relative overflow-hidden group">
+              <div key={`mob-${goal.id}`} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-4 relative overflow-hidden group">
                 {/* Decorative background */}
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary-fixed rounded-full blur-3xl opacity-40 group-hover:opacity-60 transition-opacity"></div>
                 
@@ -290,8 +322,15 @@ export function Goals() {
                     </div>
                     <h3 className="font-headline-sm text-on-surface">{goal.name}</h3>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-headline-md text-primary">{Math.round(ratio)}%</span>
+                  <div className="flex items-center gap-1.5 z-20">
+                    <span className="font-headline-md text-primary mr-1">{Math.round(ratio)}%</span>
+                    <button 
+                      onClick={() => openGoalModal(goal)}
+                      className="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-primary/10 cursor-pointer"
+                      title="Edit Target"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
                     <button 
                       onClick={() => setDeleteTarget(goal)}
                       className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-full hover:bg-error/10 cursor-pointer"
@@ -321,14 +360,44 @@ export function Goals() {
                   </div>
                 </div>
 
+                {/* Estimation Details Box */}
+                <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/50 text-xs z-10">
+                  {/* Timeline range */}
+                  <div className="flex items-center gap-1.5 text-[10px] text-on-surface-variant bg-surface-container-highest/60 p-2 rounded-lg mb-2 border border-outline-variant/30">
+                    <span className="material-symbols-outlined text-[14px] text-primary">timeline</span>
+                    <span className="font-semibold">{formatDateFriendly(goal.startDate || goal.createdAt || new Date().toISOString().split('T')[0], language)}</span>
+                    <span className="material-symbols-outlined text-[12px] text-outline">arrow_right_alt</span>
+                    <span className="font-semibold">{formatDateFriendly(goal.deadline, language)}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center mb-2 pb-2 border-b border-outline-variant/30">
+                    <span className="font-medium text-on-surface-variant flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-tertiary">schedule</span>
+                      {language === 'id' ? 'Sisa Waktu' : 'Time Left'}
+                    </span>
+                    <span className="font-semibold text-tertiary">{durationText}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-on-surface-variant">
+                    <div>{language === 'id' ? 'Kekurangan Dana:' : 'Amount Left:'}</div>
+                    <div className="text-right font-medium text-on-surface">{formatCurrency(timeAndSavings.amountToSave)}</div>
+
+                    <div>{language === 'id' ? 'Harus Ditabung / Bulan:' : 'Savings / Month:'}</div>
+                    <div className="text-right font-semibold text-primary">{formatCurrency(timeAndSavings.monthlyNeed)}</div>
+
+                    <div>{language === 'id' ? 'Harus Ditabung / Hari:' : 'Savings / Day:'}</div>
+                    <div className="text-right font-medium text-on-surface">{formatCurrency(timeAndSavings.dailyNeed)}</div>
+                  </div>
+                </div>
+
                 {/* Suggestion Footer */}
                 <button onClick={() => setSelectedGoal(goal)} className="w-full text-left pt-4 border-t border-outline-variant mt-1 flex justify-between items-center z-10 bg-surface -mx-5 -mb-5 px-5 py-4 rounded-b-xl hover:bg-surface-container-low transition-colors active:bg-surface-container">
                   <div className="flex items-center gap-1.5 text-on-surface-variant">
                     <span className="material-symbols-outlined text-[18px]">add_circle</span>
                     <span className="font-label-md">{t('addProgress')}</span>
                   </div>
-                  <span className="font-label-lg text-primary">
-                    +{formatCurrency(monthlyTarget)}
+                  <span className="font-label-lg text-primary font-bold">
+                    +{formatCurrency(timeAndSavings.monthlyNeed > 0 ? timeAndSavings.monthlyNeed : 100000)}
                   </span>
                 </button>
               </div>

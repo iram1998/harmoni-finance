@@ -38,8 +38,8 @@ export function EnvelopeModal({ isOpen, onClose, editTarget }: EnvelopeModalProp
   React.useEffect(() => {
     if (isOpen) {
       if (editTarget) {
-        setCategory(editTarget.category);
-        setAllocatedAmount(editTarget.allocatedAmount.toString());
+        setCategory(editTarget.category || '');
+        setAllocatedAmount(editTarget.allocatedAmount !== undefined && editTarget.allocatedAmount !== null ? editTarget.allocatedAmount.toString() : '');
         setTargetWorkspace(editTarget.workspaceId || 'keluarga');
       } else {
         setCategory('');

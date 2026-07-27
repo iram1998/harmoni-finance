@@ -266,4 +266,103 @@ export function decimalToDMS(val: number, isLat: boolean): string {
   return `${degrees}°${minutes}'${seconds}"${dir}`;
 }
 
+export interface RemainingTimeAndSavings {
+  years: number;
+  months: number;
+  days: number;
+  totalDays: number;
+  dailyNeed: number;
+  monthlyNeed: number;
+  amountToSave: number;
+}
+
+export function getRemainingTimeAndSavings(
+  targetAmount: number,
+  currentAmount: number,
+  deadlineStr: string
+): RemainingTimeAndSavings {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const deadline = new Date(deadlineStr);
+  deadline.setHours(0, 0, 0, 0);
+
+  const diffTime = deadline.getTime() - now.getTime();
+  const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+  let years = 0;
+  let months = 0;
+  let days = 0;
+
+  if (diffDays > 0) {
+    const startYear = now.getFullYear();
+    const startMonth = now.getMonth();
+    const startDate = now.getDate();
+
+    const endYear = deadline.getFullYear();
+    const endMonth = deadline.getMonth();
+    const endDate = deadline.getDate();
+
+    let diffYears = endYear - startYear;
+    let diffMonths = endMonth - startMonth;
+    let diffDates = endDate - startDate;
+
+    if (diffDates < 0) {
+      diffMonths--;
+      // Days in previous month of end date
+      const prevMonth = new Date(endYear, endMonth, 0);
+      diffDates += prevMonth.getDate();
+    }
+    if (diffMonths < 0) {
+      diffYears--;
+      diffMonths += 12;
+    }
+
+    years = Math.max(0, diffYears);
+    months = Math.max(0, diffMonths);
+    days = Math.max(0, diffDates);
+  }
+
+  const amountToSave = Math.max(0, targetAmount - currentAmount);
+
+  const dailyNeed = diffDays > 0 ? Math.ceil(amountToSave / diffDays) : amountToSave;
+  
+  // Calculate average months based on 30.4375 days in a month
+  const totalMonthsDecimal = diffDays / 30.4375;
+  const monthlyNeed = totalMonthsDecimal > 0 ? Math.ceil(amountToSave / totalMonthsDecimal) : amountToSave;
+
+  return {
+    years,
+    months,
+    days,
+    totalDays: diffDays,
+    dailyNeed: amountToSave > 0 ? dailyNeed : 0,
+    monthlyNeed: amountToSave > 0 ? monthlyNeed : 0,
+    amountToSave,
+  };
+}
+
+export function formatRemainingTime(years: number, months: number, days: number, language: 'id' | 'en'): string {
+  const parts: string[] = [];
+  if (language === 'id') {
+    if (years > 0) parts.push(`${years} Tahun`);
+    if (months > 0) parts.push(`${months} Bulan`);
+    if (days > 0 || (years === 0 && months === 0)) parts.push(`${days} Hari`);
+    return parts.join(' ') + ' lagi';
+  } else {
+    if (years > 0) parts.push(`${years} ${years > 1 ? 'Years' : 'Year'}`);
+    if (months > 0) parts.push(`${months} ${months > 1 ? 'Months' : 'Month'}`);
+    if (days > 0 || (years === 0 && months === 0)) parts.push(`${days} ${days > 1 ? 'Days' : 'Day'}`);
+    return parts.join(' ') + ' left';
+  }
+}
+
+export function formatDateFriendly(dateStr: string, language: 'id' | 'en' = 'id'): string {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return dateStr;
+  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+  return date.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', options);
+}
+
+
 
