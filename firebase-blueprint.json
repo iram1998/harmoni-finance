@@ -1,0 +1,129 @@
+{
+  "collections": {
+    "users": {
+      "description": "User profile data",
+      "documents": {
+        "{userId}": {
+          "fields": {
+            "email": { "type": "string" },
+            "displayName": { "type": "string" },
+            "photoURL": { "type": "string" },
+            "createdAt": { "type": "timestamp" }
+          }
+        }
+      }
+    },
+    "transactions": {
+      "description": "Financial income and expense transactions",
+      "documents": {
+        "{transactionId}": {
+          "fields": {
+            "userId": { "type": "string" },
+            "workspaceId": { "type": "string" },
+            "type": { "type": "string" },
+            "category": { "type": "string" },
+            "incomeCategory": { "type": "string" },
+            "amount": { "type": "number" },
+            "date": { "type": "string" },
+            "description": { "type": "string" },
+            "createdAt": { "type": "timestamp" }
+          }
+        }
+      }
+    },
+    "envelopes": {
+      "description": "Budget envelopes",
+      "documents": {
+        "{envelopeId}": {
+          "fields": {
+            "userId": { "type": "string" },
+            "workspaceId": { "type": "string" },
+            "name": { "type": "string" },
+            "allocated": { "type": "number" },
+            "spent": { "type": "number" },
+            "icon": { "type": "string" }
+          }
+        }
+      }
+    },
+    "goals": {
+      "description": "Financial goals and targets",
+      "documents": {
+        "{goalId}": {
+          "fields": {
+            "userId": { "type": "string" },
+            "workspaceId": { "type": "string" },
+            "name": { "type": "string" },
+            "targetAmount": { "type": "number" },
+            "currentAmount": { "type": "number" },
+            "targetDate": { "type": "string" }
+          }
+        }
+      }
+    },
+    "bills": {
+      "description": "Upcoming bill reminders",
+      "documents": {
+        "{billId}": {
+          "fields": {
+            "userId": { "type": "string" },
+            "workspaceId": { "type": "string" },
+            "name": { "type": "string" },
+            "amount": { "type": "number" },
+            "dueDate": { "type": "string" },
+            "isPaid": { "type": "boolean" },
+            "category": { "type": "string" }
+          }
+        }
+      }
+    },
+    "categories": {
+      "description": "Custom transaction categories",
+      "documents": {
+        "{categoryId}": {
+          "fields": {
+            "userId": { "type": "string" },
+            "name": { "type": "string" },
+            "type": { "type": "string" },
+            "color": { "type": "string" },
+            "createdAt": { "type": "string" }
+          }
+        }
+      }
+    },
+    "family_members": {
+      "description": "Family members for shared financial management",
+      "documents": {
+        "{memberId}": {
+          "fields": {
+            "userId": { "type": "string" },
+            "name": { "type": "string" },
+            "role": { "type": "string" },
+            "monthlyBudget": { "type": "number" },
+            "email": { "type": "string" },
+            "createdAt": { "type": "string" }
+          }
+        }
+      }
+    },
+    "assets": {
+      "description": "Physical, property, and investment assets owned by the user/family",
+      "documents": {
+        "{assetId}": {
+          "fields": {
+            "userId": { "type": "string" },
+            "workspaceId": { "type": "string" },
+            "name": { "type": "string" },
+            "category": { "type": "string" },
+            "purchasePrice": { "type": "number" },
+            "currentValue": { "type": "number" },
+            "purchaseDate": { "type": "string" },
+            "notes": { "type": "string" },
+            "status": { "type": "string" },
+            "createdAt": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
