@@ -20,132 +20,133 @@ export function Help({ onNavigate }: HelpProps) {
   const stepsList = [
     {
       step: '01',
-      title: isId ? 'Setup Workspace & Multi-Dompet' : 'Setup Workspace & Multi-Wallet',
-      subtitle: isId ? 'Pemisahan Keuangan Pribadi, Keluarga, & Bisnis' : 'Separate Personal, Family, & Business Finances',
+      title: isId ? 'Setup Workspace & Scope Akses' : 'Setup Workspaces & Access Scope',
+      subtitle: isId ? 'Pemisahan Transparan Keuangan Pribadi & Keluarga' : 'Transparent Separation of Personal & Family Finances',
       icon: 'account_balance_wallet',
       color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
       navTarget: 'dashboard',
       details: [
         {
-          heading: isId ? '1. Memilih / Menambah Workspace' : '1. Choosing / Adding Workspaces',
+          heading: isId ? '1. Memilih Workspace Active & Scope' : '1. Workspace Selector & Scope Filtering',
           text: isId 
-            ? 'Gunakan sakelar (Workspace Switcher) di bagian atas sidebar atau header untuk berpindah antara Dompet Pribadi dan Dompet Keluarga.'
-            : 'Use the Workspace Switcher at the top of the sidebar or header to seamlessly switch between Personal Wallet and Family Wallet.'
+            ? 'Gunakan Workspace Switcher di sidebar/header untuk memilih workspace aktif (Pribadi / Keluarga) atau manfaatkan filter "Semua Workspace" di setiap menu untuk melihat gabungan data secara komprehensif.'
+            : 'Use the Workspace Switcher in the sidebar or header to select active workspace (Personal / Family) or use the "All Workspaces" filter in views to review consolidated data.'
         },
         {
-          heading: isId ? '2. Fungsi Pemisahan Data' : '2. Purpose of Data Isolation',
+          heading: isId ? '2. Pemisahan Data Terisolasi' : '2. Isolated Data Architecture',
           text: isId 
-            ? 'Setiap workspace memiliki catatan arus kas, anggaran amplop, daftar tagihan, dan laporan keuangan terpisah yang aman & terisolasi.'
-            : 'Each workspace maintains completely isolated cash flows, envelope budgets, bill trackers, and financial reports.'
+            ? 'Setiap transaksi, rekening bank, barang aset, amplop anggaran, dan tagihan memiliki label workspace sehingga laporan keuangan tidak saling tumpang tindih.'
+            : 'Every transaction, bank account, physical asset, envelope budget, and bill carries a workspace label to maintain complete separation.'
         }
       ]
     },
     {
       step: '02',
-      title: isId ? 'Konfigurasi Master Data & Aset' : 'Master Data & Assets Setup',
-      subtitle: isId ? 'Mendata Akun Bank, E-Wallet, & Barang Properti' : 'Registering Bank Accounts, E-Wallets, & Assets',
+      title: isId ? 'Konfigurasi Rekening Kas & Aset Fisik' : 'Bank Accounts & Physical Assets Setup',
+      subtitle: isId ? 'Mendata Kas Likuid & Inventaris Barang Properti' : 'Registering Liquid Cash Accounts & Property Assets',
       icon: 'home_work',
+      color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
       navTarget: 'settings',
       details: [
         {
-          heading: isId ? '1. Pendaftaran Rekening Bank & E-Wallet' : '1. Bank & E-Wallet Accounts',
+          heading: isId ? '1. Rekening Bank & E-Wallet (Aset Likuid Kas)' : '1. Bank & E-Wallet Accounts (Liquid Cash)',
           text: isId 
-            ? 'Buka menu "Pengaturan" -> tab "Kategori & Rekening" -> atur rekening bank, e-wallet, atau saldo kas untuk pencatatan transaksi kas masuk & keluar sehari-hari.'
-            : 'Navigate to "Settings" -> "Categories & Accounts" tab -> setup bank accounts, e-wallets, or cash balances for daily transaction logging.'
+            ? 'Daftarkan rekening BCA, Mandiri, e-Wallet GoPay/OVO, atau kas tunai di Pengaturan / Menu Rekening. Setiap rekening menyimpan nomor rekening, nama pemilik, saldo awal, dan scope workspace.'
+            : 'Register bank accounts, e-wallets, or cash balances in Settings/Accounts. Store account numbers, holder names, current balances, and workspace scopes.'
         },
         {
-          heading: isId ? '2. Pendataan Barang & Depresiasi Aset' : '2. Property Assets & Depreciation',
+          heading: isId ? '2. Pendataan Barang Properti & Depresiasi' : '2. Property Assets & Auto Depreciation',
           text: isId 
-            ? 'Buka menu "Aset & Barang" -> daftarkan tanah, bangunan, kendaraan, atau barang berharga. Aplikasi secara otomatis menghitung estimasi nilai depresiasi dari waktu ke waktu.'
-            : 'Go to "Assets & Goods" -> register land, buildings, vehicles, or valuables. The app automatically estimates value depreciation over time.'
+            ? 'Di menu "Aset & Barang", daftarkan tanah, bangunan, kendaraan, atau perhiasan. Sistem menghitung estimasi depresiasi (penyusutan nilai) otomatis dari harga beli awal hingga nilai pasar saat ini.'
+            : 'In "Assets & Goods", register land, buildings, vehicles, or valuables. The app automatically calculates depreciation from purchase price to current market value.'
         }
       ]
     },
     {
       step: '03',
-      title: isId ? 'Pengaturan Amplop Anggaran (Envelope Budgeting)' : 'Envelope Budgeting Setup',
-      subtitle: isId ? 'Membagi Batas Batas Belanja Bulanan Per Kategori' : 'Setting Monthly Spending Limits Per Category',
+      title: isId ? 'Amplop Anggaran (Envelope Budgeting)' : 'Envelope Budgeting Setup',
+      subtitle: isId ? 'Batas Maksimal Belanja Bulanan & Safe Spend' : 'Monthly Spending Limits & Daily Safe Spend',
       icon: 'savings',
       color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
       navTarget: 'budgeting',
       details: [
         {
-          heading: isId ? '1. Membuat Amplop Anggaran' : '1. Creating Budget Envelopes',
+          heading: isId ? '1. Membuat Amplop Pos Anggaran' : '1. Creating Budget Envelopes',
           text: isId 
-            ? 'Masuk ke menu "Anggaran" -> klik "+ Tambah Amplop". Tentukan nama kategori (misal: Belanja Bulanan) dan alokasi nominal batas maksimal belanja.'
-            : 'Go to "Budgeting" -> click "+ Add Envelope". Specify category name (e.g. Groceries) and maximum monthly allocation limit.'
+            ? 'Masuk ke menu "Anggaran" -> klik "+ Tambah Amplop". Tentukan nama kategori (misal: Belanja Dapur) dan alokasi batas maksimal pengeluaran bulanan.'
+            : 'Navigate to "Budgeting" -> click "+ Add Envelope". Specify category name (e.g. Groceries) and maximum monthly allocation limit.'
         },
         {
-          heading: isId ? '2. Pemantauan Real-Time' : '2. Real-Time Tracking',
+          heading: isId ? '2. Pemantauan Real-Time & Safespend' : '2. Real-Time Tracking & Daily Safe Spend',
           text: isId 
-            ? 'Setiap kali Anda mencatat pengeluaran di kategori tersebut, kuota dalam amplop akan otomatis terpotong dengan indikator progress visual.'
-            : 'Every expense logged under that category automatically deducts from the envelope limit with visual progress bars.'
+            ? 'Sistem secara otomatis memotong kuota amplop setiap kali ada transaksi pengeluaran pada kategori tersebut dan menghitung batas belanja harian yang aman.'
+            : 'The app automatically deducts from the envelope quota on relevant expenses and calculates recommended daily safe spend limits.'
         }
       ]
     },
     {
       step: '04',
-      title: isId ? 'Master Tagihan & Pengingat Rutin' : 'Bills & Recurring Reminders',
-      subtitle: isId ? 'Mencatat Listrik, Internet, Cicilan, & Asuransi' : 'Logging Electricity, Internet, Loans, & Insurance',
+      title: isId ? 'Master Tagihan & Pengingat Rutin' : 'Bills & Recurring Obligations',
+      subtitle: isId ? 'Mencatat Listrik, Internet, Cicilan, & Eksekusi Bayar' : 'Tracking Utilities, Subscriptions, Loans & Payments',
       icon: 'receipt_long',
       color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
       navTarget: 'bills',
       details: [
         {
-          heading: isId ? '1. Mendaftarkan Tagihan' : '1. Registering Bills',
+          heading: isId ? '1. Mendaftarkan Tagihan Rutin' : '1. Registering Recurring Bills',
           text: isId 
-            ? 'Buka menu "Tagihan" -> klik "+ Tambah Tagihan". Masukkan nama penyedia, tanggal jatuh tempo bulanan, dan estimasi nominal.'
-            : 'Open "Bills" -> click "+ Add Bill". Enter vendor name, monthly due date, and estimated amount.'
+            ? 'Buka menu "Tagihan" -> klik "+ Tambah Tagihan". Catat nama layanan (PLN, Indihome, BPJS), nominal, tanggal jatuh tempo, dan opsi frekuensi.'
+            : 'Open "Bills" -> click "+ Add Bill". Record vendor name, amount, monthly due date, and frequency options.'
         },
         {
-          heading: isId ? '2. Notifikasi & Eksekusi Bayar' : '2. Notifications & Execution',
+          heading: isId ? '2. Pengingat & Eksekusi Bayar Langsung' : '2. Reminders & One-Click Payment',
           text: isId 
-            ? 'Lonceng notifikasi di bagian atas akan menyala saat tagihan mendekati jatuh tempo. Klik "Bayar" untuk langsung memotong saldo dompet.'
-            : 'The top bell icon will alert you as due dates approach. Click "Pay" to automatically deduct wallet balance and log the transaction.'
+            ? 'Sistem menandai tagihan mendekati jatuh tempo dengan badge status. Klik "Bayar Sekarang" untuk memotong saldo rekening pilihan dan mencatat transaksi kas keluar otomatis.'
+            : 'Status badges highlight upcoming bills. Click "Pay Now" to deduct from your chosen bank account and automatically log the cash outflow.'
         }
       ]
     },
     {
       step: '05',
-      title: isId ? 'Operasional Transaksi Harian & AI Scanner' : 'Daily Transactions & AI Scanner',
-      subtitle: isId ? 'Input Manual, Scan Struk Belanja, & Transfer' : 'Manual Entry, Receipt Scanning, & Transfers',
+      title: isId ? 'Operasional Arus Kas & Pemindaian Struk AI' : 'Daily Cash Flow & Gemini AI Scanner',
+      subtitle: isId ? 'Input Manual, Scan Struk Belanja, & Transfer Rekening' : 'Manual Entry, AI Receipt Scanning, & Account Transfer',
       icon: 'center_focus_strong',
       color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
       navTarget: 'cash-flow',
       details: [
         {
-          heading: isId ? '1. Pemindaian Struk AI Gemini' : '1. Gemini AI Receipt Scanning',
+          heading: isId ? '1. Pemindaian Struk AI Gemini 3.6 Flash' : '1. Gemini 3.6 Flash AI Scanning',
           text: isId 
-            ? 'Klik "+ Transaksi" -> klik "Input Otomatis (AI)". Ambil foto struk belanja dengan kamera HP/Laptop atau unggah gambar. AI Gemini akan membaca merchant, tanggal, total bayar, dan kategori.'
-            : 'Click "+ Transaction" -> click "AI Automatic Input". Take a photo of the receipt or upload an image. Gemini AI will automatically extract merchant, date, total amount, and category.'
+            ? 'Klik "+ Transaksi" -> pilih "Input Otomatis (AI)". Foto/unggah struk belanja dari supermarket atau restoran. AI Gemini akan membaca total nominal, tanggal, merchant, dan kategori secara presisi.'
+            : 'Click "+ Transaction" -> select "AI Automatic Input". Capture or upload a receipt image. Gemini AI automatically parses total amount, date, merchant, and category.'
         },
         {
-          heading: isId ? '2. Fitur Transfer Antar Rekening' : '2. Inter-Account Transfers',
+          heading: isId ? '2. Fitur Transfer Antar Rekening' : '2. Inter-Account Fund Transfers',
           text: isId 
-            ? 'Klik "+ Transfer" untuk memindahkan uang dari Bank BCA ke E-Wallet GoPay. Saldo berpindah dengan presisi tanpa merusak statistik pemasukan/pengeluaran bersih.'
-            : 'Click "+ Transfer" to move funds from BCA Bank to GoPay E-Wallet. Balances update accurately without altering net income/expense metrics.'
+            ? 'Klik "+ Transfer" untuk memindahkan dana (misal dari Rekening BCA ke GoPay). Pemindahan dana ini memperbarui saldo kedua rekening secara akurat tanpa merusak laporan arus kas bersih.'
+            : 'Click "+ Transfer" to shift funds (e.g., Bank BCA to GoPay). Balance updates immediately across both accounts without impacting net income/expense stats.'
         }
       ]
     },
     {
       step: '06',
-      title: isId ? 'Evaluasi & Membaca Laporan Keuangan' : 'Evaluating & Reading Financial Reports',
-      subtitle: isId ? 'Menganalisis Kesehatan Arus Kas & Distribusi Pengeluaran' : 'Analyzing Cash Flow Health & Expense Distribution',
+      title: isId ? 'Laporan, Ekspor Backup, & Log Aktivitas' : 'Reports, Offline Backup, & Audit Logs',
+      subtitle: isId ? 'Ekspor CSV/JSON, Cetak Laporan, & Audit Trail' : 'Export CSV/JSON, Print Statements, & Action Logs',
       icon: 'assessment',
       color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
       navTarget: 'reports',
       details: [
         {
-          heading: isId ? '1. Laporan Arus Kas & Diagram Pie' : '1. Cash Flow & Category Pie Charts',
+          heading: isId ? '1. Ekspor Cadangan Data Offline (CSV & JSON)' : '1. Offline Backup Export (CSV & JSON)',
           text: isId 
-            ? 'Buka menu "Laporan". Tinjau diagram donat untuk mengetahui proporsi pengeluaran terbesar (misal: 45% untuk Makanan, 20% Tagihan).'
-            : 'Open "Reports". Review the donut chart to inspect your top spending categories (e.g. 45% Food, 20% Bills).'
+            ? 'Di menu "Laporan", Anda dapat mengekspor cadangan lengkap mencakup Rekening Kas Likuid, Aset Fisik, Arus Kas, dan Amplop Anggaran dalam format CSV atau JSON sesuai workspace filter.'
+            : 'In "Reports", export a complete offline backup encompassing Liquid Cash Accounts, Physical Assets, Cash Flow, and Budget Envelopes in CSV or JSON.'
         },
         {
-          heading: isId ? '2. Indikator Rasio Kesehatan' : '2. Financial Health Ratios',
+          heading: isId ? '2. Cetak Dokumen Laporan & Audit Trail' : '2. Print PDF Reports & Activity Audit Trail',
           text: isId 
-            ? 'Periksa Cash Flow Health Score di Dashboard. Skor di atas 80% menandakan arus kas sehat dengan alokasi tabungan memadai.'
-            : 'Check the Cash Flow Health Score on the Dashboard. A score above 80% indicates robust cash flow with healthy savings allocations.'
+            ? 'Cetak Laporan Eksekutif dalam format PDF resmi atau periksa menu "Log Aktivitas" untuk melacak seluruh histori pembuatan, pembaruan, dan pemulihan data.'
+            : 'Print executive PDF statements or review "Activity Log" to audit all data creation, updates, and undo restorations.'
         }
       ]
     }
@@ -153,115 +154,139 @@ export function Help({ onNavigate }: HelpProps) {
 
   const menuGuides = [
     {
-      menu: 'Dashboard Utama',
+      menu: isId ? 'Dashboard Utama' : 'Executive Dashboard',
       icon: 'dashboard',
       description: isId 
-        ? 'Pusat kendali eksekutif yang menyajikan rangkuman total saldo, saldo bersih, indikator kesehatan finansial, grafik tren mingguan, dan jangkauan aksi cepat.'
-        : 'Executive dashboard presenting total balance summary, net worth, financial health scores, weekly trend lines, and quick action shortcuts.',
+        ? 'Pusat ringkasan eksekutif yang menampilkan Total Saldo Kas Likuid, Nilai Aset Fisik, Total Net Worth, indikator Kesehatan Arus Kas, peringatan anggaran, dan akses transaksi cepat.'
+        : 'Executive dashboard showcasing Total Liquid Cash, Physical Asset Values, Total Net Worth, Cash Flow Health score, budget warnings, and quick shortcuts.',
       howToRead: [
-        isId ? '1. Total Saldo: Gabungan dana aktif dari seluruh rekening bank dan e-wallet di workspace saat ini.' : '1. Total Balance: Combined active funds across all bank accounts and e-wallets in the active workspace.',
-        isId ? '2. Indikator Kesehatan: Persentase efisiensi pengeluaran dibandingkan pemasukan (Idealnya pengeluaran < 70% dari pemasukan).' : '2. Health Indicator: Efficiency ratio comparing expense vs income (Ideally expense < 70% of total income).',
-        isId ? '3. Widget Notifikasi: Peringatan dini jika ada tagihan belum dibayar atau amplop anggaran hampir habis.' : '3. Notification Widget: Early warning alerts for unpaid bills or depleted budget envelopes.'
+        isId ? '1. Kas Likuid Bank/E-Wallet: Gabungan saldo tunai aktif di seluruh rekening bank dan e-wallet.' : '1. Liquid Cash: Sum of active funds across all bank accounts and e-wallet balances.',
+        isId ? '2. Total Net Worth: Gabungan kas likuid ditambah total nilai pasar aset/barang fisik saat ini.' : '2. Total Net Worth: Combined liquid cash plus current market valuation of physical assets.',
+        isId ? '3. Health Score & Alerts: Indikator efisiensi belanja bulanan serta peringatan tagihan mendekati jatuh tempo.' : '3. Health Score & Alerts: Monthly spending efficiency ratio and upcoming bill alerts.'
       ]
     },
     {
-      menu: 'Arus Kas (Cash Flow)',
+      menu: isId ? 'Arus Kas (Cash Flow)' : 'Cash Flow',
       icon: 'swap_horiz',
       description: isId 
-        ? 'Buku kas digital tempat mencatat seluruh pengeluaran, pemasukan, dan transfer antar dompet beserta histori riwayat lengkap.'
-        : 'Digital cashbook for recording all expenses, incomes, and inter-account transfers with complete audit histories.',
+        ? 'Catatan buku kas digital lengkap untuk mencatat pengeluaran, pemasukan, dan transfer antar rekening beserta fitur pencarian dan filter scope workspace.'
+        : 'Digital cashbook for recording expenses, incomes, and inter-account transfers with search, category filter, and workspace scope selection.',
       howToRead: [
-        isId ? '1. Filter Tanggal & Kategori: Cari transaksi spesifik berdasarkan rentang waktu atau jenis kategori.' : '1. Date & Category Filters: Search specific transactions by timeframes or category types.',
-        isId ? '2. Warna Transaksi: Merah menandakan Pengeluaran (-), Hijau Pemasukan (+), Biru Transfer (Netral).' : '2. Color Coding: Red indicates Expenses (-), Green Incomes (+), Blue Transfers (Neutral).',
-        isId ? '3. Aksi Edit/Hapus: Klik icon pensil atau tong sampah pada baris transaksi untuk menyesuaikan data.' : '3. Edit/Delete Actions: Click pencil or trash icon on any transaction row to modify records.'
+        isId ? '1. Filter Scope Workspace: Bebas berganti antara "Semua Workspace", "Keluarga", atau "Pribadi".' : '1. Workspace Scope Filter: Switch between "All Workspaces", "Family", or "Personal".',
+        isId ? '2. Pencarian & Filter Tipe: Filter cepat berdasarkan kata kunci deskripsi, kategori, atau tipe transaksi (Pemasukan/Pengeluaran).' : '2. Search & Type Filters: Filter instantly by keywords, categories, or transaction types.',
+        isId ? '3. Pengodean Warna: Hijau untuk Pemasukan (+), Merah untuk Pengeluaran (-), dan Biru untuk Transfer antar rekening.' : '3. Color Coding: Green for Income (+), Red for Expenses (-), and Blue for Transfers.'
       ]
     },
     {
-      menu: 'Anggaran (Budgeting)',
+      menu: isId ? 'Anggaran (Budgeting)' : 'Envelope Budgeting',
       icon: 'account_balance_wallet',
       description: isId 
-        ? 'Modul Manajemen Amplop Anggaran (Envelope Budgeting) untuk disiplin batas pengeluaran bulanan.'
-        : 'Envelope Budgeting module designed for strictly adhering to monthly spending constraints.',
+        ? 'Modul Manajemen Amplop Anggaran (Envelope Budgeting) untuk menjaga batas belanja bulanan dan memantau sisa kuota aman harian.'
+        : 'Envelope Budgeting module designed to enforce monthly spending limits and monitor daily safe spend allocations.',
       howToRead: [
-        isId ? '1. Warna Progress Bar: Hijau (<75% terpakai = Aman), Kuning (75-90% = Waspada), Merah (>90% = Menipis/Overbudget).' : '1. Progress Bar Colors: Green (<75% used = Safe), Yellow (75-90% = Caution), Red (>90% = Danger/Overbudget).',
-        isId ? '2. Batas Aman Belanja Harian: Rekomendasi nominal maksimal yang aman dibelanjakan hari ini agar anggaran cukup hingga akhir bulan.' : '2. Daily Safe Spend: Recommended maximum daily limit to ensure funds last until month-end.',
-        isId ? '3. Alokasi Ulang: Klik "Edit Amplop" untuk menambah/mengurangi batas kuota anggaran.' : '3. Re-allocation: Click "Edit Envelope" to adjust allocation limits on the fly.'
+        isId ? '1. Progress Bar Kuota: Indikator visual tingkat penyerapan anggaran per kategori (Hijau < 75%, Kuning 75-90%, Merah > 90%).' : '1. Progress Bar: Visual envelope utilization level (Green < 75%, Yellow 75-90%, Red > 90%).',
+        isId ? '2. Batas Belanja Harian (Safe Spend): Estimasi batas nominal maksimal yang aman dihabiskan per hari.' : '2. Daily Safe Spend: Recommended maximum daily limit to prevent early envelope depletion.',
+        isId ? '3. Filter Scope Workspace: Menampilkan amplop anggaran khusus workspace Keluarga, Pribadi, atau Semua.' : '3. Workspace Filter: View budget envelopes specifically for Family, Personal, or All workspaces.'
       ]
     },
     {
-      menu: 'Aset & Barang (Assets)',
+      menu: isId ? 'Aset & Barang (Assets)' : 'Physical Assets & Goods',
       icon: 'home_work',
       description: isId 
-        ? 'Modul inventarisasi kekayaan fisik dan finansial, termasuk rumah, kendaraan, rekening bank, logam mulia, dan piutang.'
-        : 'Wealth and inventory management module covering physical property, vehicles, bank accounts, precious metals, and receivables.',
+        ? 'Modul inventarisasi fisik barang, tanah, bangunan, kendaraan, dan barang berharga lengkap dengan harga beli, nilai pasar saat ini, dan kalkulasi depresiasi.'
+        : 'Inventory module for land, property, vehicles, and valuables with purchase cost, current market value, and automatic depreciation math.',
       howToRead: [
-        isId ? '1. Total Net Worth: Total estimasi harga jual aset bersih setelah dikurangi liabilitas/utang.' : '1. Total Net Worth: Net estimated market value of all assets minus liabilities/debts.',
-        isId ? '2. Depresiasi Otomatis: Nilai kendaraan/elektronik secara otomatis menyusut sesuai estimasi umur ekonomis.' : '2. Auto Depreciation: Vehicles/electronics automatically depreciate based on estimated economic lifespan.',
-        isId ? '3. Likuiditas Aset: Aset diklasifikasikan menjadi Aset Lancar (Uang Kas/Bank) dan Aset Tetap (Properti/Barang).' : '3. Asset Liquidity: Assets categorized into Liquid Assets (Cash/Bank) and Fixed Assets (Property/Items).'
+        isId ? '1. Total Nilai Aset Fisik: Menjumlahkan nilai estimasi pasar seluruh barang fisik milik Anda.' : '1. Total Asset Value: Sum of current estimated market valuation of all physical property.',
+        isId ? '2. Depresiasi Otomatis: Nilai barang disesuaikan dari waktu ke waktu sesuai tanggal pembelian dan kondisi.' : '2. Auto Depreciation: Asset values depreciate over time based on acquisition date and condition.',
+        isId ? '3. Opsi Status Aset: Menandai barang aktif ("Tersimpan/Dimiliki") atau barang yang sudah "Dijual/Dilepas".' : '3. Asset Status: Mark items as "Owned" or "Sold/Disposed".'
       ]
     },
     {
-      menu: 'Tagihan & Langganan (Bills)',
+      menu: isId ? 'Tagihan & Langganan (Bills)' : 'Bills & Subscriptions',
       icon: 'receipt_long',
       description: isId 
-        ? 'Pengelola kewajiban rutin bulanan/tahunan seperti PLN, PDAM, Indihome, BPJS, Spotify, Netflix, dan Cicilan.'
-        : 'Manager for recurring monthly/yearly obligations like utilities, internet, insurance, streaming, and installments.',
+        ? 'Pengelola kewajiban rutin bulanan/tahunan seperti PLN, PDAM, Internet, BPJS, streaming, dan cicilan lengkap dengan pengingat jatuh tempo.'
+        : 'Manager for recurring obligations like utilities, internet, insurance, streaming, and loans with due date alerts.',
       howToRead: [
-        isId ? '1. Status Tagihan: Lunas (Hijau), Belum Dibayar (Kuning), Terlambat (Merah).' : '1. Bill Status: Paid (Green), Unpaid (Yellow), Overdue (Red).',
-        isId ? '2. Total Kewajiban Bulanan: Menampilkan estimasi pengeluaran wajib yang harus dipersiapkan setiap bulan.' : '2. Total Monthly Liability: Summarizes required fixed expenses to allocate each month.',
-        isId ? '3. Eksekusi Pembayaran: Klik "Bayar Sekarang" untuk memotong saldo dompet pilihan secara otomatis.' : '3. One-Click Payment: Click "Pay Now" to automatically deduct from selected wallet.'
+        isId ? '1. Badge Status Jatuh Tempo: Lunas (Hijau), Belum Dibayar (Kuning), Terlambat (Merah).' : '1. Status Badges: Paid (Green), Unpaid (Yellow), Overdue (Red).',
+        isId ? '2. Eksekusi "Bayar Sekarang": Langsung memotong saldo rekening bank/e-wallet dan mencatat transaksi kas keluar.' : '2. "Pay Now" Execution: Immediately deducts from selected bank account and logs transaction.',
+        isId ? '3. Filter Scope Workspace: Memisahkan daftar tagihan antara kebutuhan Pribadi dan Rumah Tangga/Keluarga.' : '3. Workspace Filter: Separates bill lists between Personal and Family obligations.'
       ]
     },
     {
-      menu: 'Target Finansial (Goals)',
+      menu: isId ? 'Target Finansial (Goals)' : 'Financial Goals',
       icon: 'ads_click',
       description: isId 
-        ? 'Perencana impian masa depan seperti Dana Darurat, Tabungan Rumah, Liburan, Pendidikan Anak, atau DP Kendaraan.'
-        : 'Financial goal planner for emergency funds, house downpayments, vacations, education, or vehicle purchases.',
+        ? 'Perencana impian tabungan masa depan seperti Dana Darurat, DP Rumah, Liburan, Pendidikan Anak, atau DP Kendaraan.'
+        : 'Goal planner for emergency funds, house downpayments, vacations, education, or vehicle purchases.',
       howToRead: [
-        isId ? '1. Persentase Pencapaian: Progress terkumpul dibanding target nominal impian.' : '1. Achievement Percentage: Accumulated funds vs target goal amount.',
-        isId ? '2. Estimasi Waktu Selesai: Perhitungan bulan yang dibutuhkan berdasarkan rata-rata setoran bulanan Anda.' : '2. Estimated Completion: Projected remaining months based on your average monthly contribution rate.',
-        isId ? '3. Setor Tabungan: Klik "+ Setor" untuk mentransfer sebagian saldo kas masuk ke alokasi target ini.' : '3. Deposit Funds: Click "+ Deposit" to allocate portion of cash reserves into this goal.'
+        isId ? '1. Progress Bar Tabungan: Persentase saldo terkumpul dibandingkan dengan target nominal impian.' : '1. Savings Progress: Accumulated percentage against total target amount.',
+        isId ? '2. Proyeksi Waktu Selesai: Perhitungan estimasi bulan yang dibutuhkan berdasarkan kecepatan setoran Anda.' : '2. Estimated Timeline: Projected completion months based on set contribution rate.',
+        isId ? '3. Fitur "+ Setor": Alokasikan kas masuk secara bertahap menuju target impian Anda.' : '3. "+ Deposit" Action: Transfer funds directly towards your savings target.'
       ]
     },
     {
-      menu: 'Laporan & Analitik (Reports)',
+      menu: isId ? 'Laporan & Ekspor Backup (Reports)' : 'Reports & Offline Backup',
       icon: 'assessment',
       description: isId 
-        ? 'Pusat analisis data mendalam berisi grafik tren, diagram donat pengeluaran, perbandingan bulanan, dan evaluasi rasio keuangan.'
-        : 'Deep analytical hub with trend graphs, expense breakdown pie charts, monthly comparisons, and financial ratios.',
+        ? 'Pusat laporan eksekutif dengan grafik tren arus kas, diagram donat pengeluaran, pratinjau PDF cetak, dan ekspor cadangan data offline (CSV & JSON).'
+        : 'Executive analytics hub with cash flow trend charts, expense pie charts, printable PDF statement, and offline data backup exports (CSV & JSON).',
       howToRead: [
-        isId ? '1. Diagram Donat Kategori: Mengidentifikasi pos pengeluaran mana yang paling banyak menguras keuangan Anda.' : '1. Category Pie Chart: Pinpoints which spending categories consume the largest portion of your income.',
-        isId ? '2. Rasio Tabungan (Savings Ratio): Persentase pendapatan yang berhasil ditabung (Target ideal minimal 20%).' : '2. Savings Ratio: Percentage of income successfully saved (Ideal target: minimum 20%).',
-        isId ? '3. Ekspor Laporan: Mengunduh ringkasan transaksi atau mencetak laporan untuk arsip keluarga/bisnis.' : '3. Report Export: Download transaction summaries or print reports for family/business archives.'
+        isId ? '1. Ringkasan Eksekutif: Rincian Kas Likuid Bank, Aset Fisik, Total Kekayaan (Net Worth), dan Tabungan Bersih.' : '1. Executive Summary: Breakdown of Liquid Cash, Physical Assets, Total Net Worth, and Net Savings.',
+        isId ? '2. Ekspor Cadangan Offline: Unduh data dalam format CSV (tabel spreadsheet) atau JSON (data utuh) lengkap dengan filter scope.' : '2. Offline Backup Export: Download records as CSV spreadsheets or structured JSON backup files.',
+        isId ? '3. Pratinjau Dokumen PDF: Pratinjau cetak resmi Laporan Keuangan untuk arsip pribadi atau dokumen keluarga.' : '3. PDF Document Preview: Clean official statement layout ready for printing or digital archive.'
+      ]
+    },
+    {
+      menu: isId ? 'Log Aktivitas & Keamanan (Audit Trail & Security)' : 'Activity Log & Security',
+      icon: 'history',
+      description: isId 
+        ? 'Halaman histori audit lengkap yang mencatat seluruh aksi pengguna (tambah, edit, hapus, bayar tagihan, transfer) serta pengunci PIN 6-digit.'
+        : 'Complete audit log view tracking every user action (create, edit, delete, bill pay, transfer) alongside 6-digit PIN app lock.',
+      howToRead: [
+        isId ? '1. Audit Trail Lengkap: Setiap perubahan data dicatat lengkap dengan timestamp, tipe aksi, dan detail entitas.' : '1. Complete Audit Trail: Tracks every record change with timestamps, action types, and details.',
+        isId ? '2. Fitur Urungkan (Undo / Restore): Kembalikan data yang tidak sengaja terhapus dengan satu klik dari log aktivitas.' : '2. Undo / Restore Feature: Easily restore accidentally deleted records directly from the activity log.',
+        isId ? '3. Keamanan Keuangan (PIN Lock): Aktifkan pengunci layar 6-digit di menu Pengaturan untuk menjaga privasi data.' : '3. Security PIN Lock: Enable 6-digit screen lock in Settings to guard sensitive financial data.'
       ]
     }
   ];
 
   const faqs = [
     {
-      q: isId ? 'Bagaimana cara kerja Pemindaian Struk AI Gemini?' : 'How does Gemini AI Receipt Scanning work?',
+      q: isId ? 'Bagaimana cara kerja Pemindaian Struk AI Gemini 3.6 Flash?' : 'How does Gemini 3.6 Flash AI Receipt Scanning work?',
       a: isId 
-        ? 'Ketika Anda mengambil foto atau mengunggah gambar struk belanja, AI Gemini 3.6 Flash di server kami akan menganalisis teks visual. AI membaca nama merchant, total nominal akhir, tanggal belanja, dan secara cerdas memilih kategori pengeluaran yang paling cocok.'
-        : 'When you take a photo or upload a receipt image, Gemini 3.6 Flash AI on our server analyzes visual text. The AI extracts the merchant name, total amount, transaction date, and intelligently categorizes the expense.'
+        ? 'Ketika Anda mengambil foto atau mengunggah gambar struk belanja, model AI Gemini 3.6 Flash di server kami akan menganalisis teks visual. AI membaca nama merchant, total nominal akhir, tanggal belanja, dan secara cerdas memilih kategori pengeluaran yang paling sesuai.'
+        : 'When you capture or upload a receipt image, server-side Gemini 3.6 Flash AI analyzes the visual text. The AI extracts merchant name, total amount, transaction date, and intelligently assigns the matching spending category.'
     },
     {
-      q: isId ? 'Apakah data transaksi saya aman?' : 'Is my transaction data secure?',
+      q: isId ? 'Apa perbedaan Rekening Bank/E-Wallet (Kas Likuid) dan Aset & Barang (Aset Fisik)?' : 'What is the difference between Bank/E-Wallet (Liquid Cash) and Assets & Goods (Physical Assets)?',
       a: isId 
-        ? 'Ya. Data Anda disimpan dalam Cloud Firestore terenkripsi dengan aturan keamanan (Security Rules) berbasis otentikasi user. Anda juga dapat memasukkan PIN 6-digit di menu Pengaturan untuk mengunci layar aplikasi saat ditinggalkan.'
-        : 'Yes. Your data is stored in encrypted Cloud Firestore with strict rule-based access controls. You can also set a 6-digit security PIN in Settings to lock your app screen.'
+        ? 'Rekening Bank & E-Wallet adalah tempat penyimpanan uang tunai cair (seperti BCA, Mandiri, GoPay, OVO, Cash) yang digunakan langsung untuk transaksi harian. Sedangkan Aset & Barang adalah inventaris kekayaan fisik (seperti tanah, rumah, mobil, laptop, perhiasan) yang nilainya dapat mengalami depresiasi atau apresiasi pasar.'
+        : 'Bank Accounts & E-Wallets store liquid cash reserves (BCA, Mandiri, GoPay, OVO, Cash) used directly for daily transactions. Assets & Goods store physical inventory (land, homes, cars, laptops, jewelry) subject to market value changes or depreciation.'
     },
     {
-      q: isId ? 'Apa perbedaan Dompet Pribadi dan Dompet Keluarga?' : 'What is the difference between Personal and Family Wallet?',
+      q: isId ? 'Bagaimana cara menggunakan filter Scope Workspace (Semua Workspace, Keluarga, Pribadi)?' : 'How does the Workspace Scope Filter work (All Workspaces, Family, Personal)?',
       a: isId 
-        ? 'Dompet Pribadi digunakan untuk mencatat pengeluaran pribadi sehari-hari. Dompet Keluarga dirancang untuk kebutuhan bersama (seperti belanja dapur rumah tangga, tagihan listrik rumah, sekolah anak) sehingga catatan tidak tercampur.'
-        : 'Personal Wallet tracks day-to-day individual expenses. Family Wallet handles shared household budgets (groceries, home utilities, kids education) so records remain clean and separated.'
+        ? 'Di bagian atas setiap halaman (Arus Kas, Anggaran, Tagihan, Target, Aset, Laporan), Anda dapat mengeklik tombol switch filter workspace. Opsi "Semua Workspace" menggabungkan seluruh catatan data dari Dompet Pribadi dan Dompet Keluarga tanpa perlu berganti-ganti workspace.'
+        : 'At the top of each view (Cash Flow, Budgeting, Bills, Goals, Assets, Reports), click the workspace scope switcher. Selecting "All Workspaces" aggregates data from both Personal and Family wallets into a unified view.'
     },
     {
-      q: isId ? 'Apakah transfer antar rekening mempengaruhi laporan pengeluaran?' : 'Do transfers between accounts affect expense reports?',
+      q: isId ? 'Bagaimana cara melakukan cadangan data offline (Offline Backup) & ekspor laporan?' : 'How to export offline data backups and financial statements?',
       a: isId 
-        ? 'Tidak. Fitur Transfer bersifat netral. Memindahkan uang dari Bank BCA ke GoPay hanya mengubah posisi saldo aset Anda tanpa dihitung sebagai Pengeluaran ataupun Pemasukan baru.'
-        : 'No. Transfers are neutral. Moving funds from Bank to E-Wallet updates asset distribution without counting as a new expense or income.'
+        ? 'Buka menu "Laporan", lalu scroll ke bagian "Ekspor Laporan & Cadangan Data". Pilih bulan, tahun, scope workspace, serta jenis data yang ingin disertakan (Rekening Kas Likuid, Aset Fisik, Arus Kas, Amplop Anggaran). Pilih format CSV (untuk Excel/Spreadsheet) atau JSON (cadangan aplikasi), lalu klik Unduh.'
+        : 'Navigate to "Reports" -> scroll to "Export Statement & Backup". Choose month, year, workspace scope, and dataset checkboxes (Liquid Cash Accounts, Physical Assets, Cash Flow, Budget Envelopes). Download in CSV spreadsheet or full JSON format.'
+    },
+    {
+      q: isId ? 'Bagaimana jika saya tidak sengaja menghapus data transaksi atau aset?' : 'What if I accidentally delete a transaction or asset record?',
+      a: isId 
+        ? 'Buka menu "Log Aktivitas". Semua tindakan seperti penambahan, pembaruan, dan penghapusan tersimpan dengan rapi. Cari catatan tindakan yang dihapus, lalu klik tombol "Urungkan / Pulihkan" untuk mengembalikan data tersebut secara instan.'
+        : 'Open the "Activity Log" view. Every creation, edit, and deletion is recorded. Locate the deleted action entry and click the "Undo / Restore" button to instantly recover the record.'
+    },
+    {
+      q: isId ? 'Apakah data transaksi saya aman dan bisa dikunci dengan PIN?' : 'Is my financial data secure and protected with a PIN lock?',
+      a: isId 
+        ? 'Ya. Data Anda disimpan secara terenkripsi di Firestore. Selain itu, Anda dapat mengaktifkan opsi "Keamanan PIN 6-Digit" di menu Pengaturan. Setiap kali aplikasi dibuka atau ditinggalkan, layar pengunci PIN akan muncul untuk menjaga privasi keuangan Anda.'
+        : 'Yes. Data is securely stored in encrypted Firestore. Furthermore, enable "6-Digit Security PIN" in Settings. The app will prompt for the PIN whenever opened to safeguard your financial privacy.'
     }
   ];
 
@@ -279,15 +304,15 @@ export function Help({ onNavigate }: HelpProps) {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
               <span className="material-symbols-outlined text-[16px]">menu_book</span>
-              {isId ? 'Panduan Pengguna Sistem (Functional Manual)' : 'System Functional User Manual'}
+              {isId ? 'Panduan Pengguna Sistem & Pusat Bantuan' : 'System User Guide & Help Center'}
             </div>
             <h1 className="font-headline-lg md:font-display-md font-black tracking-tight mb-3">
-              {isId ? 'Petunjuk Lengkap Harmoni Finansial' : 'Harmoni Finansial Complete User Guide'}
+              {isId ? 'Petunjuk Lengkap Harmoni Finansial' : 'Harmoni Finansial Complete User Manual'}
             </h1>
             <p className="font-body-md text-white/90 leading-relaxed">
               {isId 
-                ? 'Panduan terstruktur langkah demi langkah untuk menguasai pengelolaan arus kas, master data, otomatisasi AI, hingga analisis laporan keuangan keluarga & bisnis.' 
-                : 'Step-by-step structured manual covering cash flow management, master data configuration, AI automation, and financial reporting analysis.'}
+                ? 'Panduan terstruktur langkah demi langkah untuk menguasai pengelolaan arus kas, master data rekening & aset, otomatisasi AI Gemini, hingga analisis laporan keuangan & ekspor cadangan data.' 
+                : 'Step-by-step structured manual covering cash flow tracking, bank accounts & physical assets, Gemini AI automation, reporting analytics, and offline data backups.'}
             </p>
           </div>
 
@@ -360,7 +385,7 @@ export function Help({ onNavigate }: HelpProps) {
           }`}
         >
           <span className="material-symbols-outlined text-[20px]">analytics</span>
-          {isId ? '4. Analisis Laporan' : '4. Reports Analytics'}
+          {isId ? '4. Laporan & Backup' : '4. Reports & Backup'}
         </button>
 
         <button
@@ -386,8 +411,8 @@ export function Help({ onNavigate }: HelpProps) {
               </h3>
               <p className="text-xs text-on-surface-variant">
                 {isId 
-                  ? 'Ikuti 6 langkah berurutan di bawah ini dari setup awal master data hingga evaluasi bulanan untuk mencapai transparansi keuangan maksimal.' 
-                  : 'Follow the 6 sequential steps below from setup to monthly evaluation for total financial transparency.'}
+                  ? 'Ikuti 6 langkah berurutan di bawah ini dari setup awal master data hingga evaluasi bulanan dan pencadangan data untuk akurasi finansial maksimal.' 
+                  : 'Follow the 6 sequential steps below from setup to monthly evaluation and offline backups for complete accuracy.'}
               </p>
             </div>
             <div className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-lg shrink-0">
