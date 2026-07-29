@@ -10,6 +10,7 @@ import { useFinance } from '../../store';
 import { SettingsSkeleton } from '../ui/Skeleton';
 import { Plus, Pencil, Trash2, Check, X, Shield, Fingerprint, Clock, Key, Lock, AlertCircle, CheckCircle, UserPlus, Users, Scale } from 'lucide-react';
 import { FamilyMember, PaymentAccount, WorkspaceType } from '../../types';
+import { DatabaseMigration } from '../DatabaseMigration';
 import { formatCurrency } from '../../utils';
 
 export function Settings() {
@@ -1403,6 +1404,9 @@ export function Settings() {
           </Card>
         </div>
       </div>
+
+      {/* Migration Tool */}
+      <DatabaseMigration />
 
       {/* Confirm Delete Category Dialog */}
       <ConfirmDialog
