@@ -556,13 +556,14 @@ export const AssetSimulationModal: React.FC<AssetSimulationModalProps> = ({
             {/* TAB 1: CHART */}
             {activeTab === 'chart' && (
               <div className="space-y-3">
-                <div className="h-64 sm:h-72 w-full pt-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={simulationData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorRealistic" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
+                <div className="h-64 sm:h-72 w-full pt-2 overflow-x-auto">
+                  <div style={{ minWidth: simulationData.length > 10 ? `${simulationData.length * 30}px` : '100%', height: '100%' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={simulationData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorRealistic" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
@@ -633,6 +634,7 @@ export const AssetSimulationModal: React.FC<AssetSimulationModalProps> = ({
                       />
                     </ComposedChart>
                   </ResponsiveContainer>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] text-on-surface-variant p-2.5 bg-surface-container-low/80 rounded-xl border border-outline-variant/50">
@@ -648,7 +650,7 @@ export const AssetSimulationModal: React.FC<AssetSimulationModalProps> = ({
             {/* TAB 2: SCHEDULE TABLE */}
             {activeTab === 'table' && (
               <div className="overflow-x-auto max-h-72 rounded-xl border border-outline-variant/60">
-                <table className="w-full text-left text-xs font-mono">
+                <table className="w-full text-left text-xs font-mono min-w-[600px]">
                   <thead className="bg-surface-container-low text-on-surface-variant font-sans font-bold border-b border-outline-variant">
                     <tr>
                       <th className="p-2.5">{isId ? 'Tahun' : 'Year'}</th>

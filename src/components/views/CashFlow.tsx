@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../store';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { useToast } from '../../context/ToastContext';
-import { formatCurrency } from '../../utils';
+import { formatCurrency, formatDateDDMMYYYY } from '../../utils';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -326,7 +326,7 @@ export function CashFlow() {
                         />
                       </td>
                       <td className="py-4 px-4 text-on-surface-variant whitespace-nowrap">
-                        {new Date(t.date).toLocaleDateString('id-ID', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {formatDateDDMMYYYY(t.date)}
                       </td>
                       <td className="py-4 px-4 font-medium text-on-surface flex items-center gap-3 whitespace-nowrap">
                         {(() => {
@@ -482,7 +482,7 @@ export function CashFlow() {
                         <div className="font-body-md font-semibold text-on-surface truncate max-w-[120px]">{t.title || t.description}</div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="px-2 py-0.5 rounded bg-surface-container text-[11px] font-medium text-on-surface-variant">{t.category}</span>
-                          <span className="text-[11px] text-on-surface-variant whitespace-nowrap">{new Date(t.date).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}</span>
+                          <span className="text-[11px] text-on-surface-variant whitespace-nowrap">{formatDateDDMMYYYY(t.date)}</span>
                         </div>
                       </div>
                     </div>
@@ -528,7 +528,7 @@ export function CashFlow() {
           { label: 'Kategori', value: deleteTarget.category },
           { label: 'Deskripsi', value: deleteTarget.description || deleteTarget.title || '-' },
           { label: 'Nominal', value: formatCurrency(deleteTarget.amount) },
-          { label: 'Tanggal', value: new Date(deleteTarget.date).toLocaleDateString('id-ID') }
+          { label: 'Tanggal', value: formatDateDDMMYYYY(deleteTarget.date) }
         ] : []}
         confirmText="Hapus Transaksi"
         isLoading={Boolean(deletingId)}

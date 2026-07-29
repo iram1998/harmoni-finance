@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Asset, AssetValuationHistory } from '../types';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
-import { formatCurrency, getAssetEffectiveValue, calculateAssetDepreciation, decimalToDMS } from '../utils';
+import { formatCurrency, getAssetEffectiveValue, calculateAssetDepreciation, decimalToDMS, formatDateDDMMYYYY } from '../utils';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { useFinance } from '../store';
@@ -331,7 +331,7 @@ export function AssetDetailModal({
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-on-surface">{item.date}</span>
+                        <span className="font-bold text-on-surface">{formatDateDDMMYYYY(item.date)}</span>
                         {item.isLatest && (
                           <span className="bg-primary/10 text-primary font-bold text-[10px] px-2 py-0.5 rounded-full uppercase">
                             {isId ? 'Nilai Terbaru' : 'Current Value'}
@@ -528,7 +528,7 @@ export function AssetDetailModal({
           {/* Purchase Date */}
           <div className="text-xs text-on-surface-variant flex justify-between items-center pt-2 border-t border-outline-variant/40">
             <span>{isId ? 'Tanggal Pembelian / Perolehan' : 'Purchase Date'}</span>
-            <span className="font-bold text-on-surface">{asset.purchaseDate}</span>
+            <span className="font-bold text-on-surface">{formatDateDDMMYYYY(asset.purchaseDate)}</span>
           </div>
         </div>
 

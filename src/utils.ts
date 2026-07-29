@@ -356,12 +356,25 @@ export function formatRemainingTime(years: number, months: number, days: number,
   }
 }
 
-export function formatDateFriendly(dateStr: string, language: 'id' | 'en' = 'id'): string {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
-  return date.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', options);
+export function formatDateDDMMYYYY(dateInput: string | Date | undefined | null): string {
+  if (!dateInput) return '-';
+  if (typeof dateInput === 'string') {
+    const match = dateInput.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
+  }
+  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (isNaN(date.getTime())) return String(dateInput);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+export function formatDateFriendly(dateStr: string | Date | undefined | null, language: 'id' | 'en' = 'id'): string {
+  if (!dateStr) return '-';
+  return formatDateDDMMYYYY(dateStr);
 }
 
 

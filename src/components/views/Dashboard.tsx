@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { DashboardSkeleton } from '../ui/Skeleton';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
+import { X } from 'lucide-react';
 
 interface DashboardProps {
   setCurrentView?: (view: string) => void;
@@ -15,6 +16,8 @@ interface DashboardProps {
 export function Dashboard({ setCurrentView }: DashboardProps = {}) {
   const [isLoading, setIsLoading] = useState(true);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+  const [isFullTrendChartOpen, setIsFullTrendChartOpen] = useState(false);
+  const [isFullCategoryChartOpen, setIsFullCategoryChartOpen] = useState(false);
   const { workspace, transactions, envelopes, goals, bills, paymentAccounts, markBillPaid, openTransactionModal, openTransferModal, openEnvelopeModal, openGoalModal, openBillModal, assets, user } = useFinance();
   const { language, t } = useThemeLanguage();
 
@@ -414,12 +417,27 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                 <CardTitle className="text-lg font-bold text-on-surface">{t('spendingTrend')}</CardTitle>
                 <p className="font-body-sm text-on-surface-variant mt-0.5">{t('recentSpendingTrendDesc')}</p>
               </div>
-              <span className="material-symbols-outlined text-on-surface-variant">trending_up</span>
+              <div className="flex items-center gap-2">
+                {hasExpenses && (
+                  <button
+                    type="button"
+                    onClick={() => setIsFullTrendChartOpen(true)}
+                    className="text-xs text-primary font-bold hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-full transition-all cursor-pointer active:scale-95"
+                    title={language === 'id' ? 'Buka Layar Penuh Grafik' : 'Open Fullscreen Chart'}
+                  >
+                    <span className="material-symbols-outlined text-[15px]">open_in_full</span>
+                    <span>{language === 'id' ? 'Lihat Semua' : 'Full View'}</span>
+                  </button>
+                )}
+                <span className="material-symbols-outlined text-on-surface-variant">trending_up</span>
+              </div>
             </CardHeader>
             <CardContent className="p-0 flex-1 min-h-[260px] relative flex flex-col justify-center">
               {hasExpenses ? (
-                <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <div className="w-full overflow-x-auto">
+                  <div style={{ minWidth: trendData.length > 7 ? `${trendData.length * 45}px` : '100%', height: '260px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2}/>
@@ -452,8 +470,10 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                       fillOpacity={1} 
                       fill="url(#colorSpend)" 
                     />
-                  </AreaChart>
-                </ResponsiveContainer>
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center p-8 text-center gap-3 bg-surface-container-lowest/50 rounded-xl border border-dashed border-outline-variant">
                   <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
@@ -486,7 +506,20 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                 <CardTitle className="text-lg font-bold text-on-surface">{t('spendingByCategory')}</CardTitle>
                 <p className="font-body-sm text-on-surface-variant mt-0.5">{t('categoryDistributionDesc')}</p>
               </div>
-              <span className="material-symbols-outlined text-on-surface-variant">pie_chart</span>
+              <div className="flex items-center gap-2">
+                {hasExpenses && (
+                  <button
+                    type="button"
+                    onClick={() => setIsFullCategoryChartOpen(true)}
+                    className="text-xs text-primary font-bold hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-full transition-all cursor-pointer active:scale-95"
+                    title={language === 'id' ? 'Buka Layar Penuh Grafik' : 'Open Fullscreen Chart'}
+                  >
+                    <span className="material-symbols-outlined text-[15px]">open_in_full</span>
+                    <span>{language === 'id' ? 'Lihat Semua' : 'Full View'}</span>
+                  </button>
+                )}
+                <span className="material-symbols-outlined text-on-surface-variant">pie_chart</span>
+              </div>
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col items-center justify-center relative min-h-[260px]">
               {hasExpenses ? (
@@ -647,6 +680,147 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
             </div>
           </div>
       </div>
+
+      {/* Fullscreen Spending Trend Chart Modal */}
+      {isFullTrendChartOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col p-3 sm:p-6 animate-fade-in overflow-hidden">
+          <div className="w-full h-full flex flex-col bg-surface rounded-2xl border border-outline-variant shadow-2xl overflow-hidden max-w-6xl mx-auto">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-container-low shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-2xl">trending_up</span>
+                <h3 className="font-headline-sm text-on-surface font-extrabold text-lg sm:text-xl">
+                  {language === 'id' ? 'Tren Pengeluaran Histori (Layar Penuh)' : 'Spending Trend History (Full View)'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsFullTrendChartOpen(false)}
+                className="p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 p-6 overflow-x-auto overflow-y-auto min-h-[400px]">
+              <div style={{ minWidth: trendData.length > 10 ? `${trendData.length * 60}px` : '100%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trendData} margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
+                    <defs>
+                      <linearGradient id="colorSpendFull" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fill: '#64748b', fontSize: 12, fontWeight: 500 }}
+                    />
+                    <YAxis 
+                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      tickFormatter={(val) => `Rp ${val >= 1000000 ? (val / 1000000).toFixed(1) + 'M' : val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`}
+                    />
+                    <Tooltip 
+                      formatter={(value: any) => [formatCurrency(value), t('amount')]} 
+                      contentStyle={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(15,23,42,0.1)' }}
+                      labelStyle={{ fontWeight: 700, color: '#1e293b', marginBottom: '4px', fontSize: '13px' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="Amount" 
+                      stroke="#2563eb" 
+                      strokeWidth={3} 
+                      fillOpacity={1} 
+                      fill="url(#colorSpendFull)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="p-3 bg-surface-container-low border-t border-outline-variant text-center shrink-0">
+              <Button variant="outline" size="sm" onClick={() => setIsFullTrendChartOpen(false)} className="px-6 font-bold cursor-pointer">
+                {language === 'id' ? 'Tutup Fullscreen' : 'Close Fullscreen'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Category Expense Chart Modal */}
+      {isFullCategoryChartOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col p-3 sm:p-6 animate-fade-in overflow-hidden">
+          <div className="w-full h-full flex flex-col bg-surface rounded-2xl border border-outline-variant shadow-2xl overflow-hidden max-w-5xl mx-auto">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-container-low shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-2xl">pie_chart</span>
+                <h3 className="font-headline-sm text-on-surface font-extrabold text-lg sm:text-xl">
+                  {language === 'id' ? 'Distribusi Pengeluaran Kategori (Layar Penuh)' : 'Spending by Category (Full View)'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsFullCategoryChartOpen(false)}
+                className="p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 p-6 flex flex-col md:flex-row items-center justify-center gap-8 overflow-y-auto">
+              <div className="w-full md:w-1/2 h-[320px] sm:h-[420px] relative flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={85}
+                      outerRadius={140}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="font-label-sm text-on-surface-variant uppercase text-xs tracking-wider">{t('totalSpend')}</span>
+                  <span className="font-headline-md text-on-surface font-extrabold mt-0.5">{formatCurrency(totalSpend)}</span>
+                </div>
+              </div>
+
+              <div className="w-full md:w-1/2 space-y-3 bg-surface-container-low p-5 rounded-2xl border border-outline-variant/60 max-h-[420px] overflow-y-auto">
+                <h4 className="font-bold text-on-surface text-base mb-3 pb-2 border-b border-outline-variant/60">
+                  {language === 'id' ? 'Rincian Kategori Pengeluaran' : 'Category Spending Breakdown'}
+                </h4>
+                {pieData.map((item, index) => {
+                  const percentage = totalSpend > 0 ? ((item.value / totalSpend) * 100).toFixed(1) : '0';
+                  return (
+                    <div key={index} className="flex items-center justify-between p-3 bg-surface rounded-xl border border-outline-variant/40">
+                      <div className="flex items-center gap-3">
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
+                        <span className="font-bold text-on-surface text-sm">{item.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-extrabold text-on-surface text-sm">{formatCurrency(item.value)}</div>
+                        <div className="text-xs text-on-surface-variant font-medium">{percentage}%</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-3 bg-surface-container-low border-t border-outline-variant text-center shrink-0">
+              <Button variant="outline" size="sm" onClick={() => setIsFullCategoryChartOpen(false)} className="px-6 font-bold cursor-pointer">
+                {language === 'id' ? 'Tutup Fullscreen' : 'Close Fullscreen'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

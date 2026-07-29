@@ -4,11 +4,16 @@ import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { formatCurrency, getAssetEffectiveValue } from '../../utils';
 import { ReportsSkeleton } from '../ui/Skeleton';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { X } from 'lucide-react';
 
 export function Reports() {
   const { workspace, transactions, assets, envelopes, paymentAccounts } = useFinance();
   const { language, theme, t } = useThemeLanguage();
   const [isLoading, setIsLoading] = useState(true);
+
+  // Fullscreen chart state
+  const [isFullCategoryPieOpen, setIsFullCategoryPieOpen] = useState(false);
+  const [isFullIncomeExpenseOpen, setIsFullIncomeExpenseOpen] = useState(false);
 
   // Filter modes: 'pribadi' | 'keluarga' | 'all'
   const [reportWorkspaceFilter, setReportWorkspaceFilter] = useState<'pribadi' | 'keluarga' | 'all'>('all');
@@ -464,7 +469,7 @@ export function Reports() {
                 {periodPayAccs.length === 0 ? (
                   <p className="text-xs text-slate-500 italic py-2">{isId ? 'Tidak ada rekening bank / e-wallet tercatat.' : 'No payment accounts found.'}</p>
                 ) : (
-                  <table className="w-full text-left text-xs border-collapse">
+                  <div className="w-full overflow-x-auto"><table className="w-full text-left text-xs border-collapse min-w-[500px]">
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-300">
                         <th className="p-2 font-bold text-slate-700">{isId ? 'Nama Rekening' : 'Account Name'}</th>
@@ -485,7 +490,7 @@ export function Reports() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 )}
               </div>
             )}
@@ -499,7 +504,7 @@ export function Reports() {
                 {periodAssets.length === 0 ? (
                   <p className="text-xs text-slate-500 italic py-2">{isId ? 'Tidak ada kepemilikan aset aktif tercatat.' : 'No active assets found.'}</p>
                 ) : (
-                  <table className="w-full text-left text-xs border-collapse">
+                  <div className="w-full overflow-x-auto"><table className="w-full text-left text-xs border-collapse min-w-[500px]">
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-300">
                         <th className="p-2 font-bold text-slate-700">{isId ? 'Nama Aset' : 'Asset Name'}</th>
@@ -520,7 +525,7 @@ export function Reports() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 )}
               </div>
             )}
@@ -534,7 +539,7 @@ export function Reports() {
                 {periodBudget.length === 0 ? (
                   <p className="text-xs text-slate-500 italic py-2">{isId ? 'Tidak ada pos anggaran aktif dikonfigurasi.' : 'No envelope budgets configured.'}</p>
                 ) : (
-                  <table className="w-full text-left text-xs border-collapse">
+                  <div className="w-full overflow-x-auto"><table className="w-full text-left text-xs border-collapse min-w-[500px]">
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-300">
                         <th className="p-2 font-bold text-slate-700">{isId ? 'Kategori Amplop' : 'Envelope Category'}</th>
@@ -555,7 +560,7 @@ export function Reports() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 )}
               </div>
             )}
@@ -570,7 +575,7 @@ export function Reports() {
                   <p className="text-xs text-slate-500 italic py-2">{isId ? 'Tidak ada data transaksi pada periode ini.' : 'No transactions recorded for this period.'}</p>
                 ) : (
                   <div>
-                    <table className="w-full text-left text-xs border-collapse">
+                    <div className="w-full overflow-x-auto"><table className="w-full text-left text-xs border-collapse min-w-[500px]">
                       <thead>
                         <tr className="bg-slate-100 border-b border-slate-300">
                           <th className="p-2 font-bold text-slate-700">{isId ? 'Tanggal' : 'Date'}</th>
@@ -599,7 +604,7 @@ export function Reports() {
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                    </table></div>
                     {periodTrs.length > 18 && (
                       <p className="text-[10px] text-slate-400 italic mt-2 text-center">
                         {isId 
@@ -888,7 +893,20 @@ export function Reports() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 print:hidden">
           {/* Spending by Category Pie Chart */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-6 flex flex-col h-full shadow-2xs">
-            <h3 className="font-headline-sm text-on-surface mb-6">{t('spendingByCategory')}</h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-headline-sm text-on-surface">{t('spendingByCategory')}</h3>
+              {pieData.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsFullCategoryPieOpen(true)}
+                  className="text-xs text-primary font-bold hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-full transition-all cursor-pointer active:scale-95"
+                  title={isId ? 'Buka Layar Penuh Grafik' : 'Open Fullscreen Chart'}
+                >
+                  <span className="material-symbols-outlined text-[15px]">open_in_full</span>
+                  <span>{isId ? 'Lihat Semua' : 'Full View'}</span>
+                </button>
+              )}
+            </div>
             
             <div className="flex-1 flex flex-col items-center justify-center relative min-h-[250px]">
               {pieData.length === 0 ? (
@@ -951,7 +969,7 @@ export function Reports() {
 
           {/* Income vs Expenses Area Chart */}
           <div className="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 shadow-2xs">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
               <h3 className="font-headline-sm text-on-surface">{t('incomeVsExpense')}</h3>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -962,12 +980,22 @@ export function Reports() {
                   <div className="w-3 h-3 rounded-full bg-rose-500"></div>
                   <span className="font-label-sm text-on-surface-variant uppercase">{t('expense')}</span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFullIncomeExpenseOpen(true)}
+                  className="text-xs text-primary font-bold hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-full transition-all cursor-pointer active:scale-95 ml-2"
+                  title={isId ? 'Buka Layar Penuh Grafik' : 'Open Fullscreen Chart'}
+                >
+                  <span className="material-symbols-outlined text-[15px]">open_in_full</span>
+                  <span>{isId ? 'Lihat Semua' : 'Full View'}</span>
+                </button>
               </div>
             </div>
             
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartDisplayData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+            <div className="h-[300px] w-full overflow-x-auto">
+              <div style={{ minWidth: chartDisplayData.length > 7 ? `${chartDisplayData.length * 50}px` : '100%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartDisplayData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15}/>
@@ -1001,6 +1029,7 @@ export function Reports() {
                   <Area type="monotone" dataKey="Expense" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
                 </AreaChart>
               </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>
@@ -1011,7 +1040,7 @@ export function Reports() {
             <h3 className="font-headline-sm text-on-surface">{t('financialHealthScore')}</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="bg-surface-container-low border-b border-outline-variant">
                   <th className="p-4 font-label-md text-on-surface-variant uppercase">{t('date')}</th>
@@ -1040,6 +1069,163 @@ export function Reports() {
           </div>
         </div>
       </div>
+
+      {/* Fullscreen Category Pie Chart Modal */}
+      {isFullCategoryPieOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col p-3 sm:p-6 animate-fade-in overflow-hidden print:hidden">
+          <div className="w-full h-full flex flex-col bg-surface rounded-2xl border border-outline-variant shadow-2xl overflow-hidden max-w-5xl mx-auto">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-container-low shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-2xl">pie_chart</span>
+                <h3 className="font-headline-sm text-on-surface font-extrabold text-lg sm:text-xl">
+                  {isId ? 'Distribusi Pengeluaran Kategori (Layar Penuh)' : 'Category Expenses Breakdown (Full View)'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsFullCategoryPieOpen(false)}
+                className="p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 p-6 flex flex-col md:flex-row items-center justify-center gap-8 overflow-y-auto">
+              <div className="w-full md:w-1/2 h-[320px] sm:h-[420px] relative flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={85}
+                      outerRadius={140}
+                      paddingAngle={4}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="font-label-sm text-on-surface-variant uppercase text-xs tracking-wider">{t('totalSpend')}</span>
+                  <span className="font-headline-md text-on-surface font-extrabold mt-0.5">{formatCurrency(totalSpend)}</span>
+                </div>
+              </div>
+
+              <div className="w-full md:w-1/2 space-y-3 bg-surface-container-low p-5 rounded-2xl border border-outline-variant/60 max-h-[420px] overflow-y-auto">
+                <h4 className="font-bold text-on-surface text-base mb-3 pb-2 border-b border-outline-variant/60">
+                  {isId ? 'Rincian Pengeluaran Kategori' : 'Category Expenses Breakdown'}
+                </h4>
+                {pieData.map((item, index) => {
+                  const percentage = totalSpend > 0 ? ((item.value / totalSpend) * 100).toFixed(1) : '0';
+                  return (
+                    <div key={index} className="flex items-center justify-between p-3 bg-surface rounded-xl border border-outline-variant/40">
+                      <div className="flex items-center gap-3">
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                        <span className="font-bold text-on-surface text-sm">{item.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-extrabold text-on-surface text-sm">{formatCurrency(item.value)}</div>
+                        <div className="text-xs text-on-surface-variant font-medium">{percentage}%</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-3 bg-surface-container-low border-t border-outline-variant text-center shrink-0">
+              <button
+                onClick={() => setIsFullCategoryPieOpen(false)}
+                className="px-6 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest font-bold text-xs text-on-surface cursor-pointer border border-outline-variant transition-all"
+              >
+                {isId ? 'Tutup Fullscreen' : 'Close Fullscreen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Income vs Expense Trend Chart Modal */}
+      {isFullIncomeExpenseOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col p-3 sm:p-6 animate-fade-in overflow-hidden print:hidden">
+          <div className="w-full h-full flex flex-col bg-surface rounded-2xl border border-outline-variant shadow-2xl overflow-hidden max-w-6xl mx-auto">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-container-low shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary text-2xl">insights</span>
+                <div>
+                  <h3 className="font-headline-sm text-on-surface font-extrabold text-lg sm:text-xl">
+                    {isId ? 'Perbandingan Pemasukan vs Pengeluaran (Layar Penuh)' : 'Income vs Expense Trend (Full View)'}
+                  </h3>
+                  <div className="flex items-center gap-4 mt-1 text-xs">
+                    <span className="flex items-center gap-1.5 font-semibold text-primary">
+                      <span className="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span>
+                      {t('income')}
+                    </span>
+                    <span className="flex items-center gap-1.5 font-semibold text-rose-500">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+                      {t('expense')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsFullIncomeExpenseOpen(false)}
+                className="p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 p-6 overflow-x-auto overflow-y-auto min-h-[400px]">
+              <div style={{ minWidth: chartDisplayData.length > 8 ? `${chartDisplayData.length * 80}px` : '100%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartDisplayData} margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
+                    <defs>
+                      <linearGradient id="colorIncomeFull" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorExpenseFull" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
+                    />
+                    <YAxis 
+                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      tickFormatter={(val) => `Rp ${val >= 1000000 ? (val / 1000000).toFixed(1) + 'M' : val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => formatCurrency(value)}
+                      contentStyle={{ borderRadius: '12px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', boxShadow: '0 4px 12px rgba(15,23,42,0.1)' }}
+                    />
+                    <Area type="monotone" dataKey="Income" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorIncomeFull)" />
+                    <Area type="monotone" dataKey="Expense" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenseFull)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="p-3 bg-surface-container-low border-t border-outline-variant text-center shrink-0">
+              <button
+                onClick={() => setIsFullIncomeExpenseOpen(false)}
+                className="px-6 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest font-bold text-xs text-on-surface cursor-pointer border border-outline-variant transition-all"
+              >
+                {isId ? 'Tutup Fullscreen' : 'Close Fullscreen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

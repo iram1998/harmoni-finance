@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../store';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { useToast } from '../../context/ToastContext';
-import { formatCurrency, getAssetEffectiveValue, calculateAssetDepreciation, parseDMSToDecimal, parseCombinedCoordinates, decimalToDMS } from '../../utils';
+import { formatCurrency, getAssetEffectiveValue, calculateAssetDepreciation, parseDMSToDecimal, parseCombinedCoordinates, decimalToDMS, formatDateDDMMYYYY } from '../../utils';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -54,6 +54,17 @@ export function Assets() {
 
   const [deletePayAccTarget, setDeletePayAccTarget] = useState<PaymentAccount | null>(null);
   const [isDeletingPayAcc, setIsDeletingPayAcc] = useState(false);
+
+  // Pagination & Fullscreen Chart State
+  const [payAccPage, setPayAccPage] = useState(1);
+  const payAccPerPage = 8;
+
+  const [assetPage, setAssetPage] = useState(1);
+  const [assetPerPage, setAssetPerPage] = useState(6);
+
+  const [isFullChartOpen, setIsFullChartOpen] = useState(false);
+  const [isFullPieChartOpen, setIsFullPieChartOpen] = useState(false);
+  const [fullChartSort, setFullChartSort] = useState<'default' | 'value' | 'roi' | 'name'>('default');
 
   const handleOpenAddPayAccModal = () => {
     setEditingPayAcc(null);
@@ -593,6 +604,22 @@ export function Assets() {
     return true;
   });
 
+  // Reset pagination pages on filter changes
+  useEffect(() => {
+    setPayAccPage(1);
+  }, [filterMode, filteredPaymentAccounts.length]);
+
+  useEffect(() => {
+    setAssetPage(1);
+  }, [filterMode, selectedCategory, searchTerm, filteredAssets.length, assetPerPage]);
+
+  // Pagination Slice Calculations
+  const totalPayAccPages = Math.ceil(filteredPaymentAccounts.length / payAccPerPage) || 1;
+  const currentPayAccs = filteredPaymentAccounts.slice((payAccPage - 1) * payAccPerPage, payAccPage * payAccPerPage);
+
+  const totalAssetPages = Math.ceil(filteredAssets.length / assetPerPage) || 1;
+  const currentAssets = filteredAssets.slice((assetPage - 1) * assetPerPage, assetPage * assetPerPage);
+
   // Calculate statistics
   const ownedAssets = filteredAssets.filter(a => a.status === 'owned');
   const totalPurchasePrice = ownedAssets.reduce((sum, a) => sum + (a.purchasePrice || 0), 0);
@@ -617,12 +644,63 @@ export function Assets() {
     color: chartColors[index % chartColors.length]
   }));
 
-  // Create comparative values list for Bar Chart
-  const barChartData = ownedAssets.slice(0, 10).map(asset => ({
-    name: asset.name.length > 14 ? asset.name.substring(0, 14) + '...' : asset.name,
-    [language === 'id' ? 'Harga Beli' : 'Purchase Price']: asset.purchasePrice,
-    [language === 'id' ? 'Nilai Sekarang' : 'Current Value']: getAssetEffectiveValue(asset),
-  }));
+  // Helper for smart short names on chart X-Axis preserving distinguishing suffixes (e.g. Simpang, Datu Kabul)
+  const getSmartShortName = (fullName: string): string => {
+    if (fullName.length <= 16) return fullName;
+    // Strip common leading prefix words to expose specific location/identifier
+    const cleaned = fullName.replace(/^(Tanah|Lahan|Bangunan|Properti|Kendaraan|Mobil|Motor)\s+/i, '');
+    if (cleaned.length <= 18) return cleaned;
+    // If still long, shorten middle while keeping first and last word
+    const parts = cleaned.split(/\s+/);
+    if (parts.length > 2) {
+      return `${parts[0]} ... ${parts[parts.length - 1]}`;
+    }
+    return cleaned.substring(0, 16) + '…';
+  };
+
+  // Create comparative values list for Bar Chart with unique X-Axis keys
+  const nameCounts: Record<string, number> = {};
+  const barChartData = ownedAssets.map(asset => {
+    const buyPrice = asset.purchasePrice || 0;
+    const currVal = getAssetEffectiveValue(asset) || 0;
+    const diff = currVal - buyPrice;
+    const diffPercent = buyPrice > 0 ? ((diff / buyPrice) * 100).toFixed(1) : '0';
+
+    let shortName = getSmartShortName(asset.name);
+    if (nameCounts[shortName]) {
+      nameCounts[shortName]++;
+      shortName = `${shortName} (${nameCounts[shortName]})`;
+    } else {
+      nameCounts[shortName] = 1;
+    }
+
+    return {
+      id: asset.id,
+      fullName: asset.name,
+      name: shortName,
+      buyPrice,
+      currVal,
+      diff,
+      diffPercent,
+      category: translateCategory(asset.category),
+      location: asset.locationName || '-',
+      purchaseDate: formatDateDDMMYYYY(asset.purchaseDate),
+      [language === 'id' ? 'Harga Beli' : 'Purchase Price']: buyPrice,
+      [language === 'id' ? 'Nilai Sekarang' : 'Current Value']: currVal,
+    };
+  });
+
+  const sortedBarChartData = React.useMemo(() => {
+    const data = [...barChartData];
+    if (fullChartSort === 'value') {
+      data.sort((a, b) => b.currVal - a.currVal);
+    } else if (fullChartSort === 'roi') {
+      data.sort((a, b) => b.diff - a.diff);
+    } else if (fullChartSort === 'name') {
+      data.sort((a, b) => a.fullName.localeCompare(b.fullName));
+    }
+    return data;
+  }, [barChartData, fullChartSort]);
 
   // Handle image file upload
   const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1067,8 +1145,9 @@ export function Assets() {
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 animate-in fade-in duration-200">
-                {filteredPaymentAccounts.map((acc) => {
+              <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 animate-in fade-in duration-200">
+                  {currentPayAccs.map((acc) => {
                   const getIconName = (type: string) => {
                     switch (type) {
                       case 'bank': return 'account_balance';
@@ -1144,6 +1223,50 @@ export function Assets() {
                   );
                 })}
               </div>
+
+              {totalPayAccPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-3 border-t border-outline-variant/50 text-xs">
+                  <div className="text-on-surface-variant">
+                    {language === 'id'
+                      ? `Menampilkan ${Math.min((payAccPage - 1) * payAccPerPage + 1, filteredPaymentAccounts.length)} - ${Math.min(payAccPage * payAccPerPage, filteredPaymentAccounts.length)} dari ${filteredPaymentAccounts.length} Rekening`
+                      : `Showing ${Math.min((payAccPage - 1) * payAccPerPage + 1, filteredPaymentAccounts.length)} - ${Math.min(payAccPage * payAccPerPage, filteredPaymentAccounts.length)} of ${filteredPaymentAccounts.length} Accounts`}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={payAccPage === 1}
+                      onClick={() => setPayAccPage(p => Math.max(p - 1, 1))}
+                      className="px-2 py-1 text-xs cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                    </Button>
+                    {Array.from({ length: totalPayAccPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setPayAccPage(page)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          payAccPage === page
+                            ? 'bg-primary text-on-primary shadow-2xs'
+                            : 'bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={payAccPage === totalPayAccPages}
+                      onClick={() => setPayAccPage(p => Math.min(p + 1, totalPayAccPages))}
+                      className="px-2 py-1 text-xs cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
             )}
           </div>
         )}
@@ -1154,10 +1277,21 @@ export function Assets() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Category Distribution Chart */}
           <Card variant="outlined" className="p-5">
-            <h4 className="font-title-md font-bold text-on-surface mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-[20px]">pie_chart</span>
-              {language === 'id' ? 'Komposisi Aset per Kategori' : 'Asset Allocation by Category'}
-            </h4>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h4 className="font-title-md font-bold text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px]">pie_chart</span>
+                {language === 'id' ? 'Komposisi Aset per Kategori' : 'Asset Allocation by Category'}
+              </h4>
+              <button
+                type="button"
+                onClick={() => setIsFullPieChartOpen(true)}
+                className="text-xs text-primary font-bold hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-full transition-all cursor-pointer active:scale-95"
+                title={language === 'id' ? 'Buka Layar Penuh Grafik' : 'Open Fullscreen Chart'}
+              >
+                <span className="material-symbols-outlined text-[15px]">open_in_full</span>
+                <span>{language === 'id' ? 'Lihat Semua' : 'Full View'}</span>
+              </button>
+            </div>
             <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -1183,23 +1317,89 @@ export function Assets() {
 
           {/* Asset Value Comparison */}
           <Card variant="outlined" className="p-5">
-            <h4 className="font-title-md font-bold text-on-surface mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-[20px]">bar_chart</span>
-              {language === 'id' ? 'Perbandingan Harga Beli vs Nilai Sekarang' : 'Cost vs Current Value'}
-            </h4>
-            <div className="h-[220px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                  <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
-                  <YAxis fontSize={9} stroke="#94a3b8" tickFormatter={(v) => `${(v / 1000000).toFixed(0)}J`} />
-                  <Tooltip formatter={(val: any) => formatCurrency(Number(val))} />
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h4 className="font-title-md font-bold text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px]">bar_chart</span>
+                {language === 'id' ? 'Perbandingan Harga Beli vs Nilai Sekarang' : 'Cost vs Current Value'}
+              </h4>
+              <div className="flex items-center gap-2">
+                {ownedAssets.length > 0 && (
+                  <span className="text-[11px] text-on-surface-variant font-medium bg-surface-container px-2.5 py-1 rounded-full border border-outline-variant/60">
+                    {language === 'id' ? `${barChartData.length} Aset Fisik` : `${barChartData.length} Physical Assets`}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsFullChartOpen(true)}
+                  className="text-xs text-primary font-bold hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-full transition-all cursor-pointer active:scale-95"
+                  title={language === 'id' ? 'Buka Layar Penuh Grafik' : 'Open Fullscreen Chart'}
+                >
+                  <span className="material-symbols-outlined text-[15px]">open_in_full</span>
+                  <span>{language === 'id' ? 'Lihat Semua' : 'Full View'}</span>
+                </button>
+              </div>
+            </div>
+            <div className="h-[290px] w-full overflow-x-auto">
+              <div style={{ minWidth: barChartData.length > 6 ? `${barChartData.length * 95}px` : '100%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barChartData} margin={{ top: 10, right: 10, left: 0, bottom: 50 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.15)" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }} 
+                    stroke="#cbd5e1"
+                    interval={0}
+                    angle={-25}
+                    textAnchor="end"
+                    height={55}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 10, fill: '#64748b' }} 
+                    stroke="#cbd5e1" 
+                    tickFormatter={(v) => `${v >= 1000000000 ? (v / 1000000000).toFixed(1) + 'M' : v >= 1000000 ? (v / 1000000).toFixed(0) + 'Jt' : v >= 1000 ? (v / 1000).toFixed(0) + 'rb' : v}`} 
+                  />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        const buyPrice = data.buyPrice;
+                        const currVal = data.currVal;
+                        const diff = currVal - buyPrice;
+                        const isGain = diff >= 0;
+
+                        return (
+                          <div className="bg-surface p-3 rounded-xl border border-outline-variant shadow-lg text-xs space-y-1.5 min-w-[210px] z-50">
+                            <p className="font-bold text-on-surface border-b border-outline-variant/60 pb-1">
+                              {data.fullName}
+                            </p>
+                            <div className="flex justify-between items-center text-on-surface-variant">
+                              <span>{language === 'id' ? 'Harga Beli:' : 'Purchase Price:'}</span>
+                              <span className="font-semibold text-on-surface">{formatCurrency(buyPrice)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-on-surface-variant">
+                              <span>{language === 'id' ? 'Nilai Sekarang:' : 'Current Value:'}</span>
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(currVal)}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-1 border-t border-outline-variant/40">
+                              <span>{language === 'id' ? 'Selisih (ROI):' : 'Difference (ROI):'}</span>
+                              <span className={`font-bold ${isGain ? 'text-emerald-600 dark:text-emerald-400' : 'text-error'}`}>
+                                {isGain ? '+' : ''}{formatCurrency(diff)} ({isGain ? '+' : ''}{data.diffPercent}%)
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }} />
                   <Bar dataKey={language === 'id' ? 'Harga Beli' : 'Purchase Price'} fill="#94a3b8" radius={[4, 4, 0, 0]} />
                   <Bar dataKey={language === 'id' ? 'Nilai Sekarang' : 'Current Value'} fill="#10b981" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </Card>
+          </div>
+        </Card>
         </div>
       )}
 
@@ -1289,7 +1489,7 @@ export function Assets() {
         <AssetMapView assets={filteredAssets} onSelectAsset={setSelectedDetailAsset} />
       ) : viewMode === 'table' ? (
         <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface shadow-sm">
-          <table className="w-full text-left border-collapse text-xs sm:text-sm">
+          <table className="w-full text-left border-collapse text-xs sm:text-sm min-w-[800px]">
             <thead>
               <tr className="bg-surface-container-low border-b border-outline-variant text-on-surface-variant font-bold uppercase tracking-wider text-[11px]">
                 <th className="p-3.5">{language === 'id' ? 'Foto & Nama Aset' : 'Photo & Asset'}</th>
@@ -1301,7 +1501,7 @@ export function Assets() {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/40 text-on-surface">
-              {filteredAssets.map((asset) => {
+              {currentAssets.map((asset) => {
                 const effVal = getAssetEffectiveValue(asset);
                 return (
                   <tr
@@ -1322,7 +1522,7 @@ export function Assets() {
                         )}
                         <div>
                           <div className="font-bold text-on-surface text-sm">{asset.name}</div>
-                          <div className="text-[10px] text-on-surface-variant">{asset.purchaseDate}</div>
+                          <div className="text-[10px] text-on-surface-variant">{formatDateDDMMYYYY(asset.purchaseDate)}</div>
                         </div>
                       </div>
                     </td>
@@ -1373,7 +1573,7 @@ export function Assets() {
       ) : (
         /* Grid View Cards with Photos and Location Pin Badges */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAssets.map(asset => {
+          {currentAssets.map(asset => {
             const effectiveValue = getAssetEffectiveValue(asset);
             const isDepreciating = asset.depreciationMethod && asset.depreciationMethod !== 'none';
             const depDetails = isDepreciating 
@@ -1490,7 +1690,7 @@ export function Assets() {
                     <div className="flex justify-between items-center text-xs text-on-surface-variant">
                       <span className="flex items-center gap-1">
                         <span className="material-symbols-outlined text-[14px]">calendar_today</span>
-                        {asset.purchaseDate}
+                        {formatDateDDMMYYYY(asset.purchaseDate)}
                       </span>
                       {Boolean(asset.areaSize) && (
                         <span className="font-semibold text-primary text-[11px]">
@@ -1526,6 +1726,72 @@ export function Assets() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination Controls for Main Asset List */}
+      {filteredAssets.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 p-4 bg-surface rounded-2xl border border-outline-variant shadow-xs">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-on-surface-variant font-medium">
+              {language === 'id'
+                ? `Menampilkan ${Math.min((assetPage - 1) * assetPerPage + 1, filteredAssets.length)} - ${Math.min(assetPage * assetPerPage, filteredAssets.length)} dari ${filteredAssets.length} Aset`
+                : `Showing ${Math.min((assetPage - 1) * assetPerPage + 1, filteredAssets.length)} - ${Math.min(assetPage * assetPerPage, filteredAssets.length)} of ${filteredAssets.length} Assets`}
+            </span>
+            <div className="flex items-center gap-1.5 text-xs text-on-surface-variant">
+              <span>{language === 'id' ? 'Tampilkan:' : 'Show:'}</span>
+              <select
+                value={assetPerPage}
+                onChange={(e) => setAssetPerPage(Number(e.target.value))}
+                className="bg-surface-container-high text-on-surface font-bold rounded-lg px-2 py-1 text-xs border border-outline-variant/80 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value={6}>6</option>
+                <option value={12}>12</option>
+                <option value={24}>24</option>
+                <option value={48}>48</option>
+              </select>
+            </div>
+          </div>
+
+          {totalAssetPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={assetPage === 1}
+                onClick={() => setAssetPage(p => Math.max(p - 1, 1))}
+                className="px-2 py-1 text-xs cursor-pointer flex items-center gap-0.5"
+              >
+                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                <span>{language === 'id' ? 'Sebelumnya' : 'Prev'}</span>
+              </Button>
+
+              {Array.from({ length: totalAssetPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setAssetPage(page)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    assetPage === page
+                      ? 'bg-primary text-on-primary shadow-2xs'
+                      : 'bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={assetPage === totalAssetPages}
+                onClick={() => setAssetPage(p => Math.min(p + 1, totalAssetPages))}
+                className="px-2 py-1 text-xs cursor-pointer flex items-center gap-0.5"
+              >
+                <span>{language === 'id' ? 'Berikutnya' : 'Next'}</span>
+                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -2120,6 +2386,254 @@ export function Assets() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Chart Modal */}
+      {isFullChartOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col p-3 sm:p-6 animate-fade-in overflow-hidden">
+          <div className="w-full h-full flex flex-col bg-surface rounded-2xl border border-outline-variant shadow-2xl overflow-hidden max-w-7xl mx-auto">
+            {/* Fullscreen Modal Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 border-b border-outline-variant bg-surface-container-low shrink-0">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-2xl">bar_chart</span>
+                  <h3 className="font-headline-sm text-on-surface font-extrabold text-lg sm:text-xl">
+                    {language === 'id' ? 'Grafik Lengkap Perbandingan Nilai Aset' : 'Full Asset Value Comparison Chart'}
+                  </h3>
+                </div>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  {language === 'id' 
+                    ? 'Perbandingan harga beli awal vs nilai pasar sekarang untuk seluruh aset fisik' 
+                    : 'Comparison of initial purchase price vs current market value for all physical assets'}
+                </p>
+              </div>
+
+              {/* Header Actions: Sort controls & Close button */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1 bg-surface-container px-2 py-1 rounded-xl border border-outline-variant/60 text-xs">
+                  <span className="text-on-surface-variant font-medium text-[11px] hidden sm:inline">{language === 'id' ? 'Urutkan:' : 'Sort:'}</span>
+                  <button
+                    onClick={() => setFullChartSort('default')}
+                    className={`px-2 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                      fullChartSort === 'default' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    Default
+                  </button>
+                  <button
+                    onClick={() => setFullChartSort('value')}
+                    className={`px-2 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                      fullChartSort === 'value' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    {language === 'id' ? 'Nilai' : 'Value'}
+                  </button>
+                  <button
+                    onClick={() => setFullChartSort('roi')}
+                    className={`px-2 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                      fullChartSort === 'roi' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    ROI
+                  </button>
+                  <button
+                    onClick={() => setFullChartSort('name')}
+                    className={`px-2 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                      fullChartSort === 'name' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    {language === 'id' ? 'Nama' : 'Name'}
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setIsFullChartOpen(false)}
+                  className="p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer"
+                  title="Tutup (Esc)"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Summary Ribbon */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-surface-container-lowest border-b border-outline-variant/60 shrink-0 text-xs">
+              <div className="p-2.5 rounded-xl bg-surface border border-outline-variant/40">
+                <span className="text-on-surface-variant text-[11px] block">{language === 'id' ? 'Total Aset Fisik' : 'Total Physical Assets'}</span>
+                <span className="font-extrabold text-on-surface text-sm sm:text-base mt-0.5 block">{sortedBarChartData.length} Aset</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-surface border border-outline-variant/40">
+                <span className="text-on-surface-variant text-[11px] block">{language === 'id' ? 'Total Harga Beli' : 'Total Purchase Price'}</span>
+                <span className="font-extrabold text-on-surface text-sm sm:text-base mt-0.5 block">{formatCurrency(totalPurchasePrice)}</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-surface border border-outline-variant/40">
+                <span className="text-on-surface-variant text-[11px] block">{language === 'id' ? 'Total Nilai Sekarang' : 'Total Current Value'}</span>
+                <span className="font-extrabold text-primary text-sm sm:text-base mt-0.5 block">{formatCurrency(totalCurrentValue)}</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-surface border border-outline-variant/40">
+                <span className="text-on-surface-variant text-[11px] block">{language === 'id' ? 'Net Gain / ROI' : 'Net Gain / ROI'}</span>
+                <span className={`font-extrabold text-sm sm:text-base mt-0.5 block ${netROI >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-error'}`}>
+                  {netROI >= 0 ? '+' : ''}{formatCurrency(netROI)} ({netROI >= 0 ? '+' : ''}{roiPercentage.toFixed(1)}%)
+                </span>
+              </div>
+            </div>
+
+            {/* Fullscreen Interactive Chart Body */}
+            <div className="flex-1 p-4 sm:p-6 overflow-x-auto overflow-y-auto">
+              <div style={{ minWidth: sortedBarChartData.length > 5 ? `${sortedBarChartData.length * 110}px` : '100%', minHeight: '480px', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={sortedBarChartData} margin={{ top: 20, right: 20, left: 10, bottom: 90 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+                    <XAxis 
+                      dataKey="fullName" 
+                      tick={{ fontSize: 12, fill: '#64748b', fontWeight: 600 }} 
+                      stroke="#cbd5e1"
+                      interval={0}
+                      angle={-35}
+                      textAnchor="end"
+                      height={90}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11, fill: '#64748b' }} 
+                      stroke="#cbd5e1" 
+                      tickFormatter={(v) => `${v >= 1000000000 ? (v / 1000000000).toFixed(1) + 'M' : v >= 1000000 ? (v / 1000000).toFixed(0) + 'Jt' : v >= 1000 ? (v / 1000).toFixed(0) + 'rb' : v}`} 
+                    />
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          const buyPrice = data.buyPrice;
+                          const currVal = data.currVal;
+                          const diff = currVal - buyPrice;
+                          const isGain = diff >= 0;
+
+                          return (
+                            <div className="bg-surface p-4 rounded-2xl border border-outline-variant shadow-2xl text-xs space-y-2 min-w-[240px] z-50">
+                              <p className="font-extrabold text-on-surface border-b border-outline-variant/60 pb-1.5 text-sm">
+                                {data.fullName}
+                              </p>
+                              <div className="flex justify-between items-center text-on-surface-variant">
+                                <span>{language === 'id' ? 'Kategori:' : 'Category:'}</span>
+                                <span className="font-semibold text-on-surface">{data.category}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-on-surface-variant">
+                                <span>{language === 'id' ? 'Tanggal Beli:' : 'Purchase Date:'}</span>
+                                <span className="font-semibold text-on-surface">{data.purchaseDate}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-on-surface-variant">
+                                <span>{language === 'id' ? 'Lokasi:' : 'Location:'}</span>
+                                <span className="font-semibold text-on-surface truncate max-w-[140px]">{data.location}</span>
+                              </div>
+                              <div className="pt-2 border-t border-outline-variant/40 space-y-1.5">
+                                <div className="flex justify-between items-center text-on-surface-variant">
+                                  <span>{language === 'id' ? 'Harga Beli:' : 'Purchase Price:'}</span>
+                                  <span className="font-semibold text-on-surface">{formatCurrency(buyPrice)}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-on-surface-variant">
+                                  <span>{language === 'id' ? 'Nilai Sekarang:' : 'Current Value:'}</span>
+                                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(currVal)}</span>
+                                </div>
+                                <div className="flex justify-between items-center pt-1 border-t border-outline-variant/40">
+                                  <span>{language === 'id' ? 'Selisih (ROI):' : 'Difference (ROI):'}</span>
+                                  <span className={`font-bold ${isGain ? 'text-emerald-600 dark:text-emerald-400' : 'text-error'}`}>
+                                    {isGain ? '+' : ''}{formatCurrency(diff)} ({isGain ? '+' : ''}{data.diffPercent}%)
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '15px', fontSize: '13px' }} />
+                    <Bar dataKey={language === 'id' ? 'Harga Beli' : 'Purchase Price'} fill="#94a3b8" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey={language === 'id' ? 'Nilai Sekarang' : 'Current Value'} fill="#10b981" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 bg-surface-container-low border-t border-outline-variant text-center shrink-0">
+              <Button variant="outline" size="sm" onClick={() => setIsFullChartOpen(false)} className="px-6 font-bold cursor-pointer">
+                {language === 'id' ? 'Tutup Fullscreen' : 'Close Fullscreen'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Category Pie Chart Modal */}
+      {isFullPieChartOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col p-3 sm:p-6 animate-fade-in overflow-hidden">
+          <div className="w-full h-full flex flex-col bg-surface rounded-2xl border border-outline-variant shadow-2xl overflow-hidden max-w-5xl mx-auto">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-container-low shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-2xl">pie_chart</span>
+                <h3 className="font-headline-sm text-on-surface font-extrabold text-lg sm:text-xl">
+                  {language === 'id' ? 'Komposisi Aset per Kategori (Layar Penuh)' : 'Asset Allocation by Category (Full View)'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsFullPieChartOpen(false)}
+                className="p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 p-6 flex flex-col md:flex-row items-center justify-center gap-8 overflow-y-auto">
+              <div className="w-full md:w-1/2 h-[350px] sm:h-[450px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={80}
+                      outerRadius={140}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(val: any) => formatCurrency(Number(val))} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="w-full md:w-1/2 space-y-3 bg-surface-container-low p-5 rounded-2xl border border-outline-variant/60 max-h-[400px] overflow-y-auto">
+                <h4 className="font-bold text-on-surface text-base mb-3 pb-2 border-b border-outline-variant/60">
+                  {language === 'id' ? 'Rincian Aset Kategori' : 'Category Allocation Details'}
+                </h4>
+                {chartData.map((item, idx) => {
+                  const percentage = totalCurrentValue > 0 ? ((item.value / totalCurrentValue) * 100).toFixed(1) : '0';
+                  return (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-surface rounded-xl border border-outline-variant/40">
+                      <div className="flex items-center gap-3">
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="font-bold text-on-surface text-sm">{item.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-extrabold text-on-surface text-sm">{formatCurrency(item.value)}</div>
+                        <div className="text-xs text-on-surface-variant font-medium">{percentage}%</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-3 bg-surface-container-low border-t border-outline-variant text-center shrink-0">
+              <Button variant="outline" size="sm" onClick={() => setIsFullPieChartOpen(false)} className="px-6 font-bold cursor-pointer">
+                {language === 'id' ? 'Tutup Fullscreen' : 'Close Fullscreen'}
+              </Button>
+            </div>
           </div>
         </div>
       )}
