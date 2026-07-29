@@ -10,6 +10,15 @@ export function DatabaseMigration() {
   const [isFixingUid, setIsFixingUid] = useState(false);
   const [fixStatus, setFixStatus] = useState('');
 
+  const parseConfig = () => {
+    let cleanStr = configStr;
+    if (cleanStr.includes('const firebaseConfig =')) {
+      cleanStr = cleanStr.split('const firebaseConfig =')[1].trim();
+      if (cleanStr.endsWith(';')) cleanStr = cleanStr.slice(0, -1);
+    }
+    return new Function('return ' + cleanStr)();
+  };
+
   const handleMigrate = async () => {
     try {
       setIsMigrating(true);
@@ -17,17 +26,12 @@ export function DatabaseMigration() {
       
       let prodConfig;
       try {
-        let cleanStr = configStr;
-        if (cleanStr.includes('const firebaseConfig =')) {
-          cleanStr = cleanStr.split('const firebaseConfig =')[1].trim();
-          if (cleanStr.endsWith(';')) cleanStr = cleanStr.slice(0, -1);
-        }
-        prodConfig = new Function('return ' + cleanStr)();
+        prodConfig = parseConfig();
       } catch (err) {
-        throw new Error('Invalid Firebase config format. Please paste the JSON-like object.');
+        throw new Error('Format config Firebase tidak valid. Pastikan Anda menempelkan object JSON dengan benar.');
       }
 
-      setStatus('Connecting to Production Database...');
+      setStatus('Menghubungkan ke Database Production...');
       const appProd = initializeApp(prodConfig, 'prod_migration_' + Date.now());
       const dbProd = getFirestore(appProd);
 
@@ -44,7 +48,7 @@ export function DatabaseMigration() {
       ];
 
       for (const collName of collections) {
-        setStatus(`Migrating ${collName}...`);
+        setStatus(`Migrasi ${collName}...`);
         const snapshot = await getDocs(collection(dbDev, collName));
         let count = 0;
         for (const document of snapshot.docs) {
@@ -54,7 +58,7 @@ export function DatabaseMigration() {
         console.log(`Migrated ${count} documents in ${collName}`);
       }
 
-      setStatus('Migration completed successfully!');
+      setStatus('Migrasi selesai dengan sukses!');
     } catch (err: any) {
       console.error(err);
       setStatus(`Error: ${err.message}`);
@@ -68,10 +72,21 @@ export function DatabaseMigration() {
       if (!auth.currentUser) {
         throw new Error('Anda harus login terlebih dahulu.');
       }
+      
+      let prodConfig;
+      try {
+        prodConfig = parseConfig();
+      } catch (err) {
+        throw new Error('Format config Firebase tidak valid. Tempelkan config dari project Production Anda terlebih dahulu.');
+      }
+
       const newUid = auth.currentUser.uid;
 
       setIsFixingUid(true);
-      setFixStatus('Mencari data...');
+      setFixStatus('Menghubungkan ke Database Production...');
+      
+      const appProd = initializeApp(prodConfig, 'prod_fixuid_' + Date.now());
+      const dbProd = getFirestore(appProd);
       
       const collections = [
         'activity_logs', 
@@ -86,15 +101,18 @@ export function DatabaseMigration() {
       ];
 
       let totalUpdated = 0;
+      let totalFound = 0;
 
       for (const collName of collections) {
         setFixStatus(`Memproses ${collName}...`);
-        const snapshot = await getDocs(collection(dbDev, collName));
+        const snapshot = await getDocs(collection(dbProd, collName));
+        totalFound += snapshot.docs.length;
+        
         let count = 0;
         for (const document of snapshot.docs) {
           const data = document.data();
           if (data.userId && data.userId !== newUid) {
-            await updateDoc(doc(dbDev, collName, document.id), {
+            await updateDoc(doc(dbProd, collName, document.id), {
               userId: newUid
             });
             count++;
@@ -104,7 +122,7 @@ export function DatabaseMigration() {
         console.log(`Updated ${count} documents in ${collName}`);
       }
 
-      setFixStatus(`Selesai! Berhasil mengambil alih ${totalUpdated} data.`);
+      setFixStatus(`Selesai! Dari total ${totalFound} data di DB, berhasil memperbarui UID pada ${totalUpdated} data.`);
     } catch (err: any) {
       console.error(err);
       setFixStatus(`Error: ${err.message}`);
@@ -147,13 +165,13 @@ export function DatabaseMigration() {
       <div className="bg-primary-container/20 p-6 rounded-2xl border border-primary/30">
         <h3 className="font-headline-sm font-bold text-on-surface mb-2">Ambil Alih Data Hasil Migrasi (Fix UID)</h3>
         <p className="text-sm text-on-surface-variant mb-4">
-          Jika data sudah berhasil dimigrasi namun tidak muncul karena ID Pengguna (UID) berubah, gunakan tombol ini untuk menghubungkan semua data ke akun yang sedang login saat ini.
+          PENTING: Pastikan Anda sudah login ke akun Google Anda, lalu tempelkan <code>firebaseConfig</code> Production di kotak teks atas, kemudian klik tombol di bawah ini.
         </p>
         
         <div className="flex items-center gap-4">
           <button
             onClick={handleFixUid}
-            disabled={isFixingUid}
+            disabled={isFixingUid || !configStr.trim()}
             className="bg-primary text-on-primary px-4 py-2 rounded-xl font-bold text-sm disabled:opacity-50"
           >
             {isFixingUid ? 'Memproses...' : 'Ambil Alih Data Sekarang'}
