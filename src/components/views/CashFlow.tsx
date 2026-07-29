@@ -13,14 +13,66 @@ export function CashFlow() {
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
-  const { workspace, transactions, deleteTransaction, openTransactionModal } = useFinance();
+  const { workspace, transactions, deleteTransaction, deleteTransactions, openTransactionModal, openTransactionDetailModal } = useFinance();
   const { t, language } = useThemeLanguage();
   const { showToast } = useToast();
+
+  // Selection states for bulk delete
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
 
   // Local filter states
   const [cfWorkspaceFilter, setCfWorkspaceFilter] = useState<'pribadi' | 'keluarga' | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
+
+  // Clear selected ids when workspace filter changes
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [cfWorkspaceFilter]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allFilteredIds = wsTransactions.map(t => t.id);
+      setSelectedIds(allFilteredIds);
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(item => item !== id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      await deleteTransactions(selectedIds);
+      showToast(
+        language === 'id' 
+          ? `Berhasil menghapus ${selectedIds.length} transaksi.` 
+          : `Successfully deleted ${selectedIds.length} transactions.`,
+        'success',
+        language === 'id' ? 'Transaksi Dihapus' : 'Transactions Deleted'
+      );
+      setSelectedIds([]);
+      setIsBulkConfirmOpen(false);
+    } catch (err: any) {
+      console.error("Failed to delete transactions in bulk:", err);
+      showToast(
+        err.message || (language === 'id' ? 'Gagal menghapus transaksi massal.' : 'Failed to delete transactions.'),
+        'error',
+        'Gagal Hapus'
+      );
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -40,10 +92,15 @@ export function CashFlow() {
     return matchWs && matchType && matchSearch;
   });
 
-  const fixedIncome = wsTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'fixed').reduce((acc, t) => acc + t.amount, 0);
-  const variableIncome = wsTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'variable').reduce((acc, t) => acc + t.amount, 0);
+  const isTransferTx = (t: { category?: string }) => {
+    const c = (t.category || '').toLowerCase();
+    return c.includes('transfer') || c.includes('pindah') || c.includes('saldo');
+  };
+
+  const fixedIncome = wsTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'fixed' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
+  const variableIncome = wsTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'variable' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
   const totalIncome = fixedIncome + variableIncome;
-  const totalExpense = wsTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const totalExpense = wsTransactions.filter(t => t.type === 'expense' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
   const netCashFlow = totalIncome - totalExpense;
 
   const handleConfirmDelete = async () => {
@@ -187,6 +244,16 @@ export function CashFlow() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <h3 className="font-headline-sm font-bold text-on-surface">{t('transactionList')}</h3>
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              {selectedIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsBulkConfirmOpen(true)}
+                  className="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-label-sm px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
+                  <span>{language === 'id' ? `Hapus Terpilih (${selectedIds.length})` : `Delete Selected (${selectedIds.length})`}</span>
+                </button>
+              )}
               <div className="relative flex-1 sm:w-64">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
                 <input
@@ -215,6 +282,19 @@ export function CashFlow() {
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="border-b border-outline-variant bg-surface-container-low/50">
+                  <th className="py-3 px-4 w-12 text-center">
+                    <input 
+                      type="checkbox"
+                      checked={wsTransactions.length > 0 && selectedIds.length === wsTransactions.length}
+                      ref={input => {
+                        if (input) {
+                          input.indeterminate = selectedIds.length > 0 && selectedIds.length < wsTransactions.length;
+                        }
+                      }}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      className="w-4 h-4 rounded border-outline text-primary focus:ring-primary cursor-pointer accent-primary"
+                    />
+                  </th>
                   <th className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider">{t('date')}</th>
                   <th className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider">{t('description')}</th>
                   <th className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider">{t('category')}</th>
@@ -226,23 +306,42 @@ export function CashFlow() {
               <tbody className="font-body-sm text-on-surface divide-y divide-outline-variant/50">
                 {wsTransactions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-on-surface-variant">
+                    <td colSpan={7} className="py-12 text-center text-on-surface-variant">
                       {t('emptyTransactions')}
                     </td>
                   </tr>
                 ) : (
                   wsTransactions.map(t => (
-                    <tr key={t.id} className="hover:bg-surface-container-low transition-colors group">
+                    <tr 
+                      key={t.id} 
+                      onClick={() => openTransactionDetailModal(t)}
+                      className={`hover:bg-surface-container-low transition-colors group cursor-pointer ${selectedIds.includes(t.id) ? 'bg-primary-container/10' : ''}`}
+                    >
+                      <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input 
+                          type="checkbox"
+                          checked={selectedIds.includes(t.id)}
+                          onChange={(e) => handleSelectOne(t.id, e.target.checked)}
+                          className="w-4 h-4 rounded border-outline text-primary focus:ring-primary cursor-pointer accent-primary"
+                        />
+                      </td>
                       <td className="py-4 px-4 text-on-surface-variant whitespace-nowrap">
                         {new Date(t.date).toLocaleDateString('id-ID', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
                       <td className="py-4 px-4 font-medium text-on-surface flex items-center gap-3 whitespace-nowrap">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${t.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                          <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
-                            {t.type === 'income' ? 'payments' : 'shopping_cart'}
-                          </span>
-                        </div>
-                        {t.title || t.description}
+                        {(() => {
+                          const isTransfer = (t.category || '').toLowerCase().includes('transfer') || (t.category || '').toLowerCase().includes('pindah') || (t.category || '').toLowerCase().includes('saldo');
+                          return (
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                              isTransfer ? 'bg-blue-100 text-blue-700' : t.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                            }`}>
+                              <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                {isTransfer ? 'sync_alt' : t.type === 'income' ? 'payments' : 'shopping_cart'}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                        <span className="group-hover:text-primary transition-colors font-semibold">{t.title || t.description}</span>
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap">
                         <span className="px-2.5 py-1 bg-surface-container rounded-lg text-xs font-medium text-on-surface border border-outline-variant">
@@ -253,7 +352,14 @@ export function CashFlow() {
                       <td className={`py-4 px-4 text-right font-bold whitespace-nowrap ${t.type === 'income' ? 'text-emerald-600' : 'text-on-surface'}`}>
                         {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
                       </td>
-                      <td className="py-4 px-4 text-center whitespace-nowrap">
+                      <td className="py-4 px-4 text-center whitespace-nowrap flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => openTransactionDetailModal(t)}
+                          className="text-on-surface-variant hover:text-primary hover:bg-primary-container/30 p-1.5 rounded-lg transition-colors cursor-pointer"
+                          title={language === 'id' ? 'Detail Transaksi' : 'Transaction Detail'}
+                        >
+                          <span className="material-symbols-outlined text-lg">info</span>
+                        </button>
                         <button
                           onClick={() => setDeleteTarget(t)}
                           disabled={deletingId === t.id}
@@ -311,6 +417,29 @@ export function CashFlow() {
 
         {/* Transaction Feed */}
         <section>
+          {selectedIds.length > 0 && (
+            <div className="flex items-center justify-between p-3.5 mb-4 bg-rose-50 border border-rose-100 rounded-2xl">
+              <span className="font-label-md font-bold text-rose-700 text-xs shrink-0">
+                {selectedIds.length} {language === 'id' ? 'Terpilih' : 'Selected'}
+              </span>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setSelectedIds([])} 
+                  className="px-3 py-1.5 bg-surface border border-outline-variant hover:bg-surface-container text-on-surface-variant rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  {language === 'id' ? 'Batal' : 'Cancel'}
+                </button>
+                <button 
+                  onClick={() => setIsBulkConfirmOpen(true)} 
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">delete_sweep</span>
+                  {language === 'id' ? 'Hapus' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-headline-sm font-bold text-on-surface">{t('transactionList')}</h3>
             <span className="font-body-sm text-on-surface-variant">{wsTransactions.length} items</span>
@@ -323,25 +452,50 @@ export function CashFlow() {
               </div>
             ) : (
               wsTransactions.map(t => (
-                <div key={`mob-${t.id}`} className="flex items-center justify-between p-4 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm active:scale-[0.98] transition-all">
+                <div 
+                  key={`mob-${t.id}`} 
+                  onClick={() => openTransactionDetailModal(t)}
+                  className={`flex items-center justify-between p-4 bg-surface-container-lowest rounded-xl border transition-all cursor-pointer active:scale-[0.99] ${selectedIds.includes(t.id) ? 'border-primary bg-primary-container/10' : 'border-outline-variant shadow-sm'}`}
+                >
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${t.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                      <span className="material-symbols-outlined text-[20px]">{t.type === 'income' ? 'payments' : 'shopping_cart'}</span>
-                    </div>
-                    <div>
-                      <div className="font-body-md font-semibold text-on-surface">{t.title || t.description}</div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="px-2 py-0.5 rounded bg-surface-container text-[11px] font-medium text-on-surface-variant">{t.category}</span>
-                        <span className="text-[11px] text-on-surface-variant">{new Date(t.date).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}</span>
+                    <input 
+                      type="checkbox"
+                      checked={selectedIds.includes(t.id)}
+                      onChange={(e) => handleSelectOne(t.id, e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 rounded border-outline text-primary focus:ring-primary cursor-pointer accent-primary shrink-0"
+                    />
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const isTransfer = (t.category || '').toLowerCase().includes('transfer') || (t.category || '').toLowerCase().includes('pindah') || (t.category || '').toLowerCase().includes('saldo');
+                        return (
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                            isTransfer ? 'bg-blue-100 text-blue-700' : t.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                          }`}>
+                            <span className="material-symbols-outlined text-[20px]">
+                              {isTransfer ? 'sync_alt' : t.type === 'income' ? 'payments' : 'shopping_cart'}
+                            </span>
+                          </div>
+                        );
+                      })()}
+                      <div>
+                        <div className="font-body-md font-semibold text-on-surface truncate max-w-[120px]">{t.title || t.description}</div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="px-2 py-0.5 rounded bg-surface-container text-[11px] font-medium text-on-surface-variant">{t.category}</span>
+                          <span className="text-[11px] text-on-surface-variant whitespace-nowrap">{new Date(t.date).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 shrink-0">
                     <div className={`font-body-lg font-bold text-right ${t.type === 'income' ? 'text-emerald-600' : 'text-on-surface'}`}>
                       {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
                     </div>
                     <button
-                      onClick={() => setDeleteTarget(t)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(t);
+                      }}
                       disabled={deletingId === t.id}
                       className="text-on-surface-variant hover:text-error p-1 rounded transition-colors cursor-pointer"
                     >
@@ -378,6 +532,19 @@ export function CashFlow() {
         ] : []}
         confirmText="Hapus Transaksi"
         isLoading={Boolean(deletingId)}
+      />
+
+      {/* Confirm Bulk Delete Dialog */}
+      <ConfirmDialog
+        isOpen={isBulkConfirmOpen}
+        onClose={() => setIsBulkConfirmOpen(false)}
+        onConfirm={handleBulkDelete}
+        title={language === 'id' ? 'Konfirmasi Hapus Banyak Transaksi' : 'Confirm Bulk Transaction Deletion'}
+        message={language === 'id' 
+          ? `Apakah Anda yakin ingin menghapus ${selectedIds.length} catatan transaksi yang dipilih secara massal? Tindakan ini tidak dapat dibatalkan.`
+          : `Are you sure you want to delete ${selectedIds.length} selected transactions in bulk? This action cannot be undone.`}
+        confirmText={language === 'id' ? 'Hapus Semua Terpilih' : 'Delete All Selected'}
+        isLoading={isBulkDeleting}
       />
     </>
   );

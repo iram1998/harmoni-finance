@@ -199,6 +199,7 @@ export function Assets() {
   // Asset Categories
   const CATEGORIES = [
     'Rekening Bank / E-Wallet',
+    'Unit Usaha / Bisnis',
     'Properti / Lahan',
     'Kendaraan',
     'Emas / Logam Mulia',
@@ -210,6 +211,7 @@ export function Assets() {
 
   // Preset Images gallery for quick selection
   const IMAGE_PRESETS = [
+    { label: 'Unit Usaha / Toko', url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80' },
     { label: 'Rekening Bank / E-Wallet', url: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=800&q=80' },
     { label: 'Tanah Kavling', url: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80' },
     { label: 'Rumah / Bangunan', url: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=80' },
@@ -228,6 +230,7 @@ export function Assets() {
     if (language === 'en') {
       switch (cat) {
         case 'Rekening Bank / E-Wallet': return 'Bank Account / E-Wallet';
+        case 'Unit Usaha / Bisnis': return 'Business Unit / Enterprise';
         case 'Properti / Lahan': return 'Property & Land';
         case 'Kendaraan': return 'Vehicles';
         case 'Emas / Logam Mulia': return 'Gold & Precious Metals';
@@ -243,6 +246,36 @@ export function Assets() {
   // Render dynamic form fields based on selected asset category
   const renderCategorySpecificFields = () => {
     switch (formCategory) {
+      case 'Unit Usaha / Bisnis':
+        return (
+          <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant space-y-3">
+            <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-amber-600 text-[18px]">store</span>
+              {language === 'id' ? 'Detail Unit Usaha / Toko' : 'Business Unit Details'}
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label={language === 'id' ? 'Bidang Usaha / Sektor' : 'Industry / Sector'}
+                placeholder="cth. Kuliner / Perdagangan / Jasa"
+                value={formNotes}
+                onChange={(e) => setFormNotes(e.target.value)}
+              />
+              <Input
+                label={language === 'id' ? 'Persentase Kepemilikan (%)' : 'Ownership Share (%)'}
+                placeholder="cth. 100 atau 50"
+                value={formAreaSize}
+                onChange={(e) => setFormAreaSize(e.target.value)}
+              />
+            </div>
+            <Input
+              label={language === 'id' ? 'Lokasi / Alamat Toko (Opsional)' : 'Store Location / Address (Optional)'}
+              placeholder="cth. Jl. Sudirman No. 12, Jakarta"
+              value={formLocationName}
+              onChange={(e) => setFormLocationName(e.target.value)}
+            />
+          </div>
+        );
+
       case 'Rekening Bank / E-Wallet':
         return (
           <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant space-y-3">
@@ -260,8 +293,8 @@ export function Assets() {
               <Input
                 label={language === 'id' ? 'Atas Nama / Pemilik' : 'Account Holder'}
                 placeholder="cth. Ahmad Ramli"
-                value={formAreaSize}
-                onChange={(e) => setFormAreaSize(e.target.value)}
+                value={formNotes}
+                onChange={(e) => setFormNotes(e.target.value)}
               />
             </div>
           </div>
@@ -291,24 +324,63 @@ export function Assets() {
               onChange={(e) => setFormLocationName(e.target.value)}
             />
 
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label={language === 'id' ? 'Luas Area (m²)' : 'Area Size (m²)'}
-                type="number"
-                placeholder="Contoh: 250"
-                value={formAreaSize}
-                onChange={(e) => setFormAreaSize(e.target.value)}
-              />
-              <div className="flex items-end">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleDetectGPS}
-                  className="w-full text-xs h-10 flex items-center justify-center gap-1 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[16px]">my_location</span>
-                  {language === 'id' ? 'Deteksi GPS' : 'GPS Detect'}
-                </Button>
+            <div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label={language === 'id' ? 'Luas Area (m²)' : 'Area Size (m²)'}
+                  type="number"
+                  placeholder="Contoh: 250"
+                  value={formAreaSize}
+                  onChange={(e) => setFormAreaSize(e.target.value)}
+                />
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleDetectGPS}
+                    className="w-full text-xs h-10 flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">my_location</span>
+                    {language === 'id' ? 'Deteksi GPS' : 'GPS Detect'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Borongan Helper Kalsel */}
+              <div className="mt-2 text-[11px] bg-primary/5 text-primary p-2.5 rounded-lg border border-primary/20 space-y-1">
+                <div className="font-bold flex items-center justify-between flex-wrap gap-1">
+                  <span className="flex items-center gap-1">
+                    🌾 {language === 'id' ? 'Satuan Borongan (Kalsel):' : 'Borongan Unit (South Kalimantan):'}
+                  </span>
+                  {formAreaSize && !isNaN(parseFloat(formAreaSize)) && parseFloat(formAreaSize) > 0 ? (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-black text-xs">
+                      ≈ {((parseFloat(formAreaSize) * 35) / 10000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} Borongan
+                    </span>
+                  ) : (
+                    <span className="text-on-surface-variant font-normal text-[10px]">
+                      1 Hektar (10.000 m²) = 35 Borongan
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-on-surface-variant pt-1 border-t border-primary/10">
+                  <span>1 Borongan ≈ 285,7 m²</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const inputBorongan = prompt(language === 'id' ? 'Masukkan luas dalam satuan Borongan (misal: 2 atau 3.5):' : 'Enter area size in Borongan:');
+                      if (inputBorongan) {
+                        const bNum = parseFloat(inputBorongan);
+                        if (!isNaN(bNum) && bNum > 0) {
+                          const convertedM2 = Math.round((bNum * 10000) / 35);
+                          setFormAreaSize(convertedM2.toString());
+                        }
+                      }
+                    }}
+                    className="text-primary hover:underline font-bold cursor-pointer"
+                  >
+                    ⚡ {language === 'id' ? 'Isi dengan Borongan' : 'Fill in Borongan'}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -880,7 +952,7 @@ export function Assets() {
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              {language === 'id' ? 'Semua (Gabungan)' : 'All Workspaces'}
+              {language === 'id' ? 'Semua Workspace' : 'All Workspaces'}
             </button>
           </div>
 
@@ -1315,7 +1387,8 @@ export function Assets() {
               : null;
 
             let iconName = 'inventory_2';
-            if (asset.category.includes('Rekening') || asset.category.includes('Bank') || asset.category.includes('E-Wallet')) iconName = 'account_balance_wallet';
+            if (asset.category.includes('Usaha') || asset.category.includes('Bisnis') || asset.category.includes('Toko')) iconName = 'store';
+            else if (asset.category.includes('Rekening') || asset.category.includes('Bank') || asset.category.includes('E-Wallet')) iconName = 'account_balance_wallet';
             else if (asset.category.includes('Properti') || asset.category.includes('Lahan')) iconName = 'home_work';
             else if (asset.category.includes('Kendaraan')) iconName = 'directions_car';
             else if (asset.category.includes('Emas') || asset.category.includes('Mulia')) iconName = 'diamond';
@@ -1404,6 +1477,14 @@ export function Assets() {
                         <p className="text-[11px] text-on-surface-variant">{language === 'id' ? 'Nilai Sekarang' : 'Current Value'}</p>
                         <p className="text-xs sm:text-sm font-bold text-primary mt-0.5">{formatCurrency(effectiveValue)}</p>
                       </div>
+                      {(asset.category.toLowerCase().includes('properti') || asset.category.toLowerCase().includes('lahan') || asset.category.toLowerCase().includes('tanah')) && Number(asset.areaSize) > 0 && (
+                        <div className="col-span-2 text-[10px] bg-primary/5 p-1.5 rounded-md border border-primary/10 flex items-center justify-between font-bold text-primary">
+                          <span>📐 {formatCurrency(Math.round(effectiveValue / Number(asset.areaSize)))} / m²</span>
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            🌾 {formatCurrency(Math.round(effectiveValue / ((Number(asset.areaSize) * 35) / 10000)))} / borongan
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex justify-between items-center text-xs text-on-surface-variant">
@@ -1411,9 +1492,13 @@ export function Assets() {
                         <span className="material-symbols-outlined text-[14px]">calendar_today</span>
                         {asset.purchaseDate}
                       </span>
-                      {asset.areaSize && (
-                        <span className="font-semibold text-primary">
-                          📐 {asset.areaSize} m²
+                      {Boolean(asset.areaSize) && (
+                        <span className="font-semibold text-primary text-[11px]">
+                          {asset.category.includes('Usaha') || asset.category.includes('Bisnis')
+                            ? `🤝 ${asset.areaSize}% Kepemilikan`
+                            : asset.category.toLowerCase().includes('properti') || asset.category.toLowerCase().includes('lahan') || asset.category.toLowerCase().includes('tanah')
+                            ? `📐 ${asset.areaSize} m² (~${((Number(asset.areaSize) * 35) / 10000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} Borongan)`
+                            : `${asset.areaSize}`}
                         </span>
                       )}
                     </div>

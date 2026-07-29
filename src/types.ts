@@ -1,4 +1,4 @@
-export type WorkspaceType = 'pribadi' | 'keluarga';
+export type WorkspaceType = 'pribadi' | 'keluarga' | 'all';
 export type IncomeCategory = 'fixed' | 'variable';
 export type TransactionType = 'income' | 'expense';
 
@@ -14,6 +14,7 @@ export interface Transaction {
   familyMember?: string;
   createdAt?: string;
   goalId?: string;
+  paymentAccountId?: string;
 }
 
 export interface Envelope {
@@ -59,6 +60,14 @@ export interface FamilyMember {
   email?: string;
 }
 
+export interface AssetValuationHistory {
+  id: string;
+  date: string;
+  value: number;
+  note?: string;
+  createdAt?: string;
+}
+
 export interface Asset {
   id: string;
   userId: string;
@@ -80,6 +89,7 @@ export interface Asset {
   locationName?: string;
   areaSize?: number;
   createdAt?: string;
+  valuationHistory?: AssetValuationHistory[];
 }
 
 export interface PaymentAccount {

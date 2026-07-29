@@ -7,6 +7,7 @@ import { TransferModal } from './TransferModal';
 import { EnvelopeModal } from './EnvelopeModal';
 import { GoalModal } from './GoalModal';
 import { BillModal } from './BillModal';
+import { TransactionDetailModal } from './TransactionDetailModal';
 import { GlobalSearchBar } from './GlobalSearchBar';
 
 export function Layout({ children, currentView, setCurrentView }: { children: React.ReactNode; currentView: string; setCurrentView: (view: string) => void }) {
@@ -21,6 +22,7 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
     isEnvelopeModalOpen, closeEnvelopeModal, envelopeEditTarget,
     isGoalModalOpen, closeGoalModal,
     isBillModalOpen, closeBillModal,
+    selectedDetailTransaction, isTransactionDetailModalOpen, closeTransactionDetailModal,
     isDemo, setShowDemoLimitModal, setDemoModalReason
   } = useFinance();
   const { language, toggleLanguage, theme, toggleTheme, t } = useThemeLanguage();
@@ -545,6 +547,7 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
       )}
 
       <TransactionModal isOpen={isTransactionModalOpen} onClose={closeTransactionModal} />
+      <TransactionDetailModal transaction={selectedDetailTransaction} isOpen={isTransactionDetailModalOpen} onClose={closeTransactionDetailModal} />
       <TransferModal isOpen={isTransferModalOpen} onClose={closeTransferModal} />
       <EnvelopeModal isOpen={isEnvelopeModalOpen} onClose={closeEnvelopeModal} editTarget={envelopeEditTarget} />
       <GoalModal isOpen={isGoalModalOpen} onClose={closeGoalModal} />

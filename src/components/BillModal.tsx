@@ -31,7 +31,7 @@ export function BillModal({ isOpen, onClose }: BillModalProps) {
         setName('');
         setAmount('');
         setDueDate(new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0]);
-        setTargetWorkspace(workspace);
+        setTargetWorkspace(workspace === 'all' ? 'keluarga' : workspace);
       }
     }
   }, [isOpen, billEditTarget, workspace]);

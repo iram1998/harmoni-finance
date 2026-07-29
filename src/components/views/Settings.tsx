@@ -8,7 +8,7 @@ import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { useToast } from '../../context/ToastContext';
 import { useFinance } from '../../store';
 import { SettingsSkeleton } from '../ui/Skeleton';
-import { Plus, Pencil, Trash2, Check, X, Shield, Fingerprint, Clock, Key, Lock, AlertCircle, CheckCircle, UserPlus, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Shield, Fingerprint, Clock, Key, Lock, AlertCircle, CheckCircle, UserPlus, Users, Scale } from 'lucide-react';
 import { FamilyMember, PaymentAccount, WorkspaceType } from '../../types';
 import { formatCurrency } from '../../utils';
 
@@ -33,6 +33,7 @@ export function Settings() {
     addPaymentAccount,
     updatePaymentAccount,
     deletePaymentAccount,
+    reconcilePaymentAccount,
     user
   } = useFinance();
 
@@ -96,6 +97,52 @@ export function Settings() {
 
   const [deletePayAccTarget, setDeletePayAccTarget] = useState<PaymentAccount | null>(null);
   const [isDeletingPayAcc, setIsDeletingPayAcc] = useState(false);
+
+  // Reconciliation (Rekonsiliasi Saldo) State
+  const [isReconcileModalOpen, setIsReconcileModalOpen] = useState(false);
+  const [reconcileTarget, setReconcileTarget] = useState<PaymentAccount | null>(null);
+  const [reconcileRealBalance, setReconcileRealBalance] = useState('');
+  const [reconcileReason, setReconcileReason] = useState('Penyesuaian Akhir Bulan');
+  const [isSubmittingReconcile, setIsSubmittingReconcile] = useState(false);
+
+  const handleOpenReconcileModal = (acc: PaymentAccount) => {
+    setReconcileTarget(acc);
+    setReconcileRealBalance(acc.balance.toString());
+    setReconcileReason(language === 'id' ? 'Penyesuaian Akhir Bulan' : 'End of Month Adjustment');
+    setIsReconcileModalOpen(true);
+  };
+
+  const handleSaveReconcile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reconcileTarget) return;
+    const realBalanceNum = parseFloat(reconcileRealBalance);
+    if (isNaN(realBalanceNum)) {
+      showToast(language === 'id' ? 'Saldo riil harus diisi dengan angka.' : 'Real balance must be a number.', 'error', 'Validasi Gagal');
+      return;
+    }
+    if (!reconcileReason.trim()) {
+      showToast(language === 'id' ? 'Alasan penyesuaian harus diisi.' : 'Adjustment reason is required.', 'error', 'Validasi Gagal');
+      return;
+    }
+
+    setIsSubmittingReconcile(true);
+    try {
+      await reconcilePaymentAccount(reconcileTarget.id, realBalanceNum, reconcileReason.trim());
+      showToast(
+        language === 'id' 
+          ? `Rekonsiliasi saldo "${reconcileTarget.name}" berhasil dilakukan.` 
+          : `Reconciliation of "${reconcileTarget.name}" completed successfully.`,
+        'success',
+        language === 'id' ? 'Rekonsiliasi Berhasil' : 'Reconciliation Success'
+      );
+      setIsReconcileModalOpen(false);
+    } catch (err: any) {
+      console.error('Error in reconciliation:', err);
+      showToast(err.message || 'Gagal melakukan rekonsiliasi.', 'error', 'Gagal');
+    } finally {
+      setIsSubmittingReconcile(false);
+    }
+  };
 
   const handleOpenAddFamilyModal = () => {
     setEditingFamilyMember(null);
@@ -1182,6 +1229,14 @@ export function Settings() {
                         <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                           <button
                             type="button"
+                            onClick={() => handleOpenReconcileModal(acc)}
+                            className="p-1.5 rounded-lg text-on-surface-variant hover:text-emerald-600 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                            title={language === 'id' ? 'Rekonsiliasi Saldo' : 'Reconcile Balance'}
+                          >
+                            <Scale className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleOpenEditPayAccModal(acc)}
                             className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                             title="Edit Rekening"
@@ -1630,6 +1685,91 @@ export function Settings() {
                   isLoading={isSubmittingPayAcc}
                 >
                   {editingPayAcc ? 'Simpan Perubahan' : 'Tambah Rekening'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reconciliation Modal (Rekonsiliasi Saldo) */}
+      {isReconcileModalOpen && reconcileTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-surface rounded-2xl border border-outline-variant shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-5 border-b border-outline-variant bg-surface-container-low">
+              <div className="flex items-center gap-2 text-on-surface text-lg font-bold">
+                <Scale className="w-5 h-5 text-emerald-600" />
+                <span>Rekonsiliasi Saldo</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReconcileModalOpen(false)}
+                className="text-on-surface-variant hover:text-on-surface bg-surface-container-highest p-1.5 rounded-full transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveReconcile} className="p-5 space-y-4">
+              <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant text-sm">
+                <div className="font-semibold text-on-surface mb-1">Akun: {reconcileTarget.name}</div>
+                <div className="text-on-surface-variant flex justify-between items-center mt-2">
+                  <span>Saldo Aplikasi Saat Ini:</span>
+                  <span className="font-bold">{formatCurrency(reconcileTarget.balance)}</span>
+                </div>
+              </div>
+
+              <Input
+                label="Saldo Riil Saat Ini (Real)"
+                type="number"
+                value={reconcileRealBalance}
+                onChange={e => setReconcileRealBalance(e.target.value)}
+                placeholder="Masukkan saldo nyata di buku tabungan/e-wallet Anda"
+                icon="payments"
+                required
+              />
+
+              <Input
+                label="Alasan Rekonsiliasi / Penyesuaian"
+                type="text"
+                value={reconcileReason}
+                onChange={e => setReconcileReason(e.target.value)}
+                placeholder="cth. Penyesuaian Akhir Bulan, Selisih Transaksi Kecil"
+                icon="notes"
+                required
+              />
+
+              {reconcileTarget && reconcileRealBalance !== '' && !isNaN(parseFloat(reconcileRealBalance)) && (
+                <div className="p-3.5 rounded-xl text-xs space-y-2.5 border bg-surface-container-lowest/50 border-outline-variant">
+                  <div className="flex justify-between items-center font-medium">
+                    <span className="text-on-surface-variant">Selisih Penyesuaian:</span>
+                    <span className={parseFloat(reconcileRealBalance) - reconcileTarget.balance > 0 ? 'text-emerald-600 font-bold' : parseFloat(reconcileRealBalance) - reconcileTarget.balance < 0 ? 'text-error font-bold' : 'text-on-surface font-bold'}>
+                      {parseFloat(reconcileRealBalance) - reconcileTarget.balance > 0 ? '+' : ''}
+                      {formatCurrency(parseFloat(reconcileRealBalance) - reconcileTarget.balance)}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                    Sistem akan mencatat transaksi penyesuaian otomatis di kategori <strong className="text-on-surface">"Penyesuaian Saldo"</strong> sebesar selisih di atas agar riwayat keuangan Anda tetap terlacak secara 1:1 antara aplikasi dan realitas.
+                  </p>
+                </div>
+              )}
+
+              <div className="pt-3 flex gap-3 border-t border-outline-variant">
+                <Button
+                  type="button"
+                  variant="outline"
+                  fullWidth
+                  onClick={() => setIsReconcileModalOpen(false)}
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  fullWidth
+                  isLoading={isSubmittingReconcile}
+                >
+                  Terapkan Penyesuaian
                 </Button>
               </div>
             </form>

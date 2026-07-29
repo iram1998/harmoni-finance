@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../store';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
-import { formatCurrency } from '../../utils';
+import { formatCurrency, getAssetEffectiveValue } from '../../utils';
 import { ReportsSkeleton } from '../ui/Skeleton';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 
@@ -151,7 +151,7 @@ export function Reports() {
         csvContent += `${isId ? '(Tidak ada data aset)' : '(No assets data recorded)'}\n`;
       } else {
         periodAssets.forEach(a => {
-          csvContent += `"${a.name}","${a.category}","${a.workspaceId || 'keluarga'}",${a.purchasePrice},${a.currentValue},"${a.purchaseDate}","${(a.notes || '').replace(/"/g, '""')}"\n`;
+          csvContent += `"${a.name}","${a.category}","${a.workspaceId || 'keluarga'}",${a.purchasePrice},${getAssetEffectiveValue(a)},"${a.purchaseDate}","${(a.notes || '').replace(/"/g, '""')}"\n`;
         });
       }
       csvContent += `\n`;
@@ -216,7 +216,7 @@ export function Reports() {
     const periodBudget = getBudgetDataForPeriod(exportMonth, exportYear);
 
     const totalLiquidCash = periodPayAccs.reduce((sum, acc) => sum + acc.balance, 0);
-    const totalPhysicalAssets = periodAssets.reduce((sum, a) => sum + a.currentValue, 0);
+    const totalPhysicalAssets = periodAssets.reduce((sum, a) => sum + getAssetEffectiveValue(a), 0);
 
     const backupData = {
       appName: "Harmoni Finansial",
@@ -254,13 +254,18 @@ export function Reports() {
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
+  const isTransferTx = (t: { category?: string }) => {
+    const c = (t.category || '').toLowerCase();
+    return c.includes('transfer') || c.includes('pindah') || c.includes('saldo');
+  };
+
   const filteredTransactions = transactions.filter(t => 
     reportWorkspaceFilter === 'all' ? true : (t.workspaceId || 'keluarga') === reportWorkspaceFilter
   );
 
-  // Prepare data for Pie Chart (Expenses by Category)
+  // Prepare data for Pie Chart (Expenses by Category - excluding internal transfers)
   const expenseByCategory = filteredTransactions
-    .filter(t => t.type === 'expense')
+    .filter(t => t.type === 'expense' && !isTransferTx(t))
     .reduce((acc, t) => {
       acc[t.category] = (acc[t.category] || 0) + t.amount;
       return acc;
@@ -269,14 +274,6 @@ export function Reports() {
   let pieData: { name: string; value: number }[] = Object.entries(expenseByCategory)
     .map(([name, value]) => ({ name, value: Number(value) }))
     .sort((a, b) => b.value - a.value);
-    
-  if (pieData.length === 0) {
-    pieData = [
-      { name: 'Perumahan & Tagihan', value: 3500000 },
-      { name: 'Konsumsi & Pangan', value: 2400000 },
-      { name: 'Transportasi', value: 1200000 },
-    ];
-  }
 
   const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1'];
   const totalSpend = pieData.reduce((sum, item) => sum + item.value, 0);
@@ -285,15 +282,15 @@ export function Reports() {
     return <ReportsSkeleton />;
   }
 
-  // Dynamic Income vs Expense Area Chart Data from transactions
+  // Dynamic Income vs Expense Area Chart Data from transactions (excluding internal transfers)
   const areaData = ['01', '02', '03', '04', '05', '06']
     .map(mCode => {
       const monthTrs = transactions.filter(t => {
         const matchWs = reportWorkspaceFilter === 'all' ? true : (t.workspaceId || 'keluarga') === reportWorkspaceFilter;
         return matchWs && t.date.startsWith(`${exportYear}-${mCode}`);
       });
-      const income = monthTrs.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-      const expense = monthTrs.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      const income = monthTrs.filter(t => t.type === 'income' && !isTransferTx(t)).reduce((sum, t) => sum + t.amount, 0);
+      const expense = monthTrs.filter(t => t.type === 'expense' && !isTransferTx(t)).reduce((sum, t) => sum + t.amount, 0);
       const monthObj = monthsList.find(m => m.code === mCode);
       return {
         name: monthObj ? monthObj.name.slice(0, 3) : mCode,
@@ -302,16 +299,7 @@ export function Reports() {
       };
     });
 
-  // Check if areaData has all zeroes, if so provide realistic guidance data
-  const hasChartData = areaData.some(d => d.Income > 0 || d.Expense > 0);
-  const chartDisplayData = hasChartData ? areaData : [
-    { name: 'Jan', Income: 8500000, Expense: 6200000 },
-    { name: 'Feb', Income: 9200000, Expense: 6500000 },
-    { name: 'Mar', Income: 8900000, Expense: 7800000 },
-    { name: 'Apr', Income: 11000000, Expense: 7100000 },
-    { name: 'May', Income: 10500000, Expense: 6800000 },
-    { name: 'Jun', Income: 12000000, Expense: 7500000 },
-  ];
+  const chartDisplayData = areaData;
 
   // Calculations for PDF Preview Paper
   const periodTrs = filterTransactionsForPeriod(exportMonth, exportYear);
@@ -320,13 +308,67 @@ export function Reports() {
   const periodBudget = getBudgetDataForPeriod(exportMonth, exportYear);
 
   const pdfTotalLiquidCash = periodPayAccs.reduce((sum, acc) => sum + acc.balance, 0);
-  const pdfTotalPhysicalAssets = periodAssets.reduce((sum, a) => sum + a.currentValue, 0);
+  const pdfTotalPhysicalAssets = periodAssets.reduce((sum, a) => sum + getAssetEffectiveValue(a), 0);
   const pdfTotalNetWorth = pdfTotalLiquidCash + pdfTotalPhysicalAssets;
 
-  const pdfTotalIncome = periodTrs.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-  const pdfTotalExpense = periodTrs.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  const pdfTotalIncome = periodTrs.filter(t => t.type === 'income' && !isTransferTx(t)).reduce((sum, t) => sum + t.amount, 0);
+  const pdfTotalExpense = periodTrs.filter(t => t.type === 'expense' && !isTransferTx(t)).reduce((sum, t) => sum + t.amount, 0);
   const pdfNetSavings = pdfTotalIncome - pdfTotalExpense;
   const pdfMonthName = monthsList.find(m => m.code === exportMonth)?.name || exportMonth;
+
+  // Dynamic Financial Health Score calculation based on actual transactions
+  const currentMonthNum = parseInt(exportMonth, 10);
+  const currentYearNum = parseInt(exportYear, 10);
+
+  const healthScoreMonths = [];
+  for (let i = 0; i < 4; i++) {
+    let m = currentMonthNum - i;
+    let y = currentYearNum;
+    if (m <= 0) {
+      m += 12;
+      y -= 1;
+    }
+    const mStr = String(m).padStart(2, '0');
+    const yStr = String(y);
+    const monthTrs = transactions.filter(t => {
+      const matchWs = reportWorkspaceFilter === 'all' ? true : (t.workspaceId || 'keluarga') === reportWorkspaceFilter;
+      return matchWs && t.date.startsWith(`${yStr}-${mStr}`);
+    });
+    const income = monthTrs.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const expense = monthTrs.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    
+    const savingsRatio = income > 0 ? Math.round(((income - expense) / income) * 100) : (expense > 0 ? -100 : 0);
+    const debtRatio = income > 0 ? Math.min(100, Math.max(0, Math.round((expense / income) * 20))) : (expense > 0 ? 30 : 0);
+    
+    let statusLabel = isId ? 'Kondisi Cukup' : 'Good Condition';
+    let badgeClass = 'bg-amber-500/10 text-amber-600';
+
+    if (savingsRatio >= 20 && debtRatio <= 35) {
+      statusLabel = isId ? 'Sangat Sehat (Prima)' : 'Excellent Condition';
+      badgeClass = 'bg-emerald-500/10 text-emerald-600';
+    } else if (savingsRatio >= 10) {
+      statusLabel = isId ? 'Sehat' : 'Healthy';
+      badgeClass = 'bg-primary/10 text-primary';
+    } else if (savingsRatio < 0 || expense > income) {
+      statusLabel = isId ? 'Perlu Perhatian' : 'Needs Attention';
+      badgeClass = 'bg-rose-500/10 text-rose-600';
+    }
+
+    const monthObj = monthsList.find(item => item.code === mStr);
+    const monthName = monthObj ? `${monthObj.name} ${yStr}` : `${mStr}/${yStr}`;
+
+    healthScoreMonths.push({
+      monthKey: `${yStr}-${mStr}`,
+      monthName,
+      income,
+      expense,
+      savingsRatio,
+      debtRatio,
+      statusLabel,
+      badgeClass,
+      hasData: income > 0 || expense > 0
+    });
+  }
 
   return (
     <>
@@ -474,7 +516,7 @@ export function Reports() {
                           <td className="p-2 text-slate-500">{a.category}</td>
                           <td className="p-2 text-slate-500 capitalize">{a.workspaceId || 'keluarga'}</td>
                           <td className="p-2 text-slate-500">{a.purchaseDate}</td>
-                          <td className="p-2 text-right font-semibold">{formatCurrency(a.currentValue)}</td>
+                          <td className="p-2 text-right font-semibold">{formatCurrency(getAssetEffectiveValue(a))}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -849,49 +891,62 @@ export function Reports() {
             <h3 className="font-headline-sm text-on-surface mb-6">{t('spendingByCategory')}</h3>
             
             <div className="flex-1 flex flex-col items-center justify-center relative min-h-[250px]">
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={100}
-                    paddingAngle={0}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border-outline-variant)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-on-surface)' }}
-                    itemStyle={{ color: 'var(--text-on-surface)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="font-label-sm text-on-surface-variant uppercase">{t('totalSpend')}</span>
-                <span className="font-headline-md text-on-surface mt-1">{formatCurrency(totalSpend)}</span>
-              </div>
+              {pieData.length === 0 ? (
+                <div className="text-center py-10">
+                  <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 mb-2">donut_large</span>
+                  <p className="text-xs text-on-surface-variant font-medium">
+                    {isId ? 'Belum ada data pengeluaran tercatat' : 'No expense data recorded yet'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={100}
+                        paddingAngle={0}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number) => formatCurrency(value)}
+                        contentStyle={{ borderRadius: '8px', border: '1px solid var(--border-outline-variant)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-on-surface)' }}
+                        itemStyle={{ color: 'var(--text-on-surface)' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="font-label-sm text-on-surface-variant uppercase">{t('totalSpend')}</span>
+                    <span className="font-headline-md text-on-surface mt-1">{formatCurrency(totalSpend)}</span>
+                  </div>
+                </>
+              )}
             </div>
 
-            <div className="mt-6 space-y-3">
-              {pieData.slice(0, 3).map((item, index) => (
-                <div key={item.name} className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                    <span className="font-body-sm text-on-surface-variant">{item.name}</span>
+            {pieData.length > 0 && (
+              <div className="mt-6 space-y-3">
+                {pieData.slice(0, 3).map((item, index) => (
+                  <div key={item.name} className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      <span className="font-body-sm text-on-surface-variant">{item.name}</span>
+                    </div>
+                    <span className="font-label-md text-on-surface">
+                      {totalSpend > 0 ? Math.round((item.value / totalSpend) * 100) : item.value}%
+                    </span>
                   </div>
-                  <span className="font-label-md text-on-surface">
-                    {totalSpend > 0 ? Math.round((item.value / totalSpend) * 100) : item.value}%
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Income vs Expenses Area Chart */}
@@ -966,26 +1021,20 @@ export function Reports() {
                 </tr>
               </thead>
               <tbody className="font-body-sm text-on-surface">
-                <tr className="border-b border-outline-variant hover:bg-surface-container-low transition-colors h-[56px]">
-                  <td className="p-4 font-medium">Juni 2026</td>
-                  <td className="p-4 text-primary font-bold">22%</td>
-                  <td className="p-4">15%</td>
-                  <td className="p-4">
-                    <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold text-xs">
-                      {t('excellentCondition')}
-                    </span>
-                  </td>
-                </tr>
-                <tr className="border-b border-outline-variant hover:bg-surface-container-low transition-colors h-[56px]">
-                  <td className="p-4 font-medium">Mei 2026</td>
-                  <td className="p-4 text-primary font-bold">20%</td>
-                  <td className="p-4">16%</td>
-                  <td className="p-4">
-                    <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold text-xs">
-                      {t('excellentCondition')}
-                    </span>
-                  </td>
-                </tr>
+                {healthScoreMonths.map((item) => (
+                  <tr key={item.monthKey} className="border-b border-outline-variant hover:bg-surface-container-low transition-colors h-[56px]">
+                    <td className="p-4 font-medium">{item.monthName}</td>
+                    <td className={`p-4 font-bold ${item.savingsRatio >= 0 ? 'text-primary' : 'text-rose-600'}`}>
+                      {item.savingsRatio}%
+                    </td>
+                    <td className="p-4">{item.debtRatio}%</td>
+                    <td className="p-4">
+                      <span className={`${item.badgeClass} px-3 py-1 rounded-full font-bold text-xs`}>
+                        {item.statusLabel}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

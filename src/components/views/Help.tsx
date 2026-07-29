@@ -193,12 +193,13 @@ export function Help({ onNavigate }: HelpProps) {
       menu: isId ? 'Aset & Barang (Assets)' : 'Physical Assets & Goods',
       icon: 'home_work',
       description: isId 
-        ? 'Modul inventarisasi fisik barang, tanah, bangunan, kendaraan, dan barang berharga lengkap dengan harga beli, nilai pasar saat ini, dan kalkulasi depresiasi.'
-        : 'Inventory module for land, property, vehicles, and valuables with purchase cost, current market value, and automatic depreciation math.',
+        ? 'Modul inventarisasi fisik barang, tanah, bangunan, kendaraan, dan barang berharga lengkap dengan harga beli, nilai pasar saat ini, revaluasi riwayat harga, konversi Borongan Kalsel, dan kalkulasi depresiasi.'
+        : 'Inventory module for land, property, vehicles, and valuables with purchase cost, current market value, historical revaluation logs, Borongan unit conversion, and automatic depreciation math.',
       howToRead: [
         isId ? '1. Total Nilai Aset Fisik: Menjumlahkan nilai estimasi pasar seluruh barang fisik milik Anda.' : '1. Total Asset Value: Sum of current estimated market valuation of all physical property.',
-        isId ? '2. Depresiasi Otomatis: Nilai barang disesuaikan dari waktu ke waktu sesuai tanggal pembelian dan kondisi.' : '2. Auto Depreciation: Asset values depreciate over time based on acquisition date and condition.',
-        isId ? '3. Opsi Status Aset: Menandai barang aktif ("Tersimpan/Dimiliki") atau barang yang sudah "Dijual/Dilepas".' : '3. Asset Status: Mark items as "Owned" or "Sold/Disposed".'
+        isId ? '2. Konversi Satuan Borongan (Kalsel): Untuk aset tanah/lahan, sistem otomatis mengonversi luas m²/Hektar ke satuan tradisional Borongan (1 Hektar = 35 Borongan, 1 Borongan ≈ 285,7 m²) beserta estimasi harga per m² dan per borongan.' : '2. Borongan Unit Conversion (Kalsel): For land assets, automatically converts m²/Hectare into traditional Borongan units (1 Hectare = 35 Borongan, 1 Borongan ≈ 285.7 m²) with price per m² & per borongan.',
+        isId ? '3. Histori Revaluasi & Depresiasi: Catat kenaikan nilai tanah/properti secara berkala via tombol "+ Tambah Revaluasi" atau aktifkan penyusutan harga otomatis untuk aset seperti kendaraan atau elektronik.' : '3. Revaluation History & Depreciation: Log periodic land/property appreciation via "+ Add Revaluation" or enable auto depreciation for vehicles/electronics.',
+        isId ? '4. Lokasi & Koordinat GPS DMS: Simpan nama toko/lokasi lahan dan format koordinat GPS (Derajat/Menit/Detik atau Desimal) yang dapat diklik langsung untuk membuka Google Maps.' : '4. Location & GPS Coordinates: Store store/location names and GPS coordinates (DMS or Decimal) with direct Google Maps integration.'
       ]
     },
     {
@@ -287,6 +288,18 @@ export function Help({ onNavigate }: HelpProps) {
       a: isId 
         ? 'Ya. Data Anda disimpan secara terenkripsi di Firestore. Selain itu, Anda dapat mengaktifkan opsi "Keamanan PIN 6-Digit" di menu Pengaturan. Setiap kali aplikasi dibuka atau ditinggalkan, layar pengunci PIN akan muncul untuk menjaga privasi keuangan Anda.'
         : 'Yes. Data is securely stored in encrypted Firestore. Furthermore, enable "6-Digit Security PIN" in Settings. The app will prompt for the PIN whenever opened to safeguard your financial privacy.'
+    },
+    {
+      q: isId ? 'Bagaimana perhitungan Satuan Borongan (Kalsel) dan Revaluasi Nilai Aset?' : 'How does traditional Borongan unit conversion and asset revaluation work?',
+      a: isId 
+        ? 'Untuk aset kategori Tanah/Lahan, sistem mengodekan rumus standar Kalimantan Selatan di mana 1 Hektar (10.000 m²) setara dengan 35 Borongan (1 Borongan ≈ 285,7 m²). Harga beli dan nilai efektif saat ini dikalkulasi otomatis dalam rupiah per m² serta rupiah per borongan. Anda juga dapat menambah riwayat Revaluasi harga tanah/bangunan di modal detail aset untuk melacak kenaikan apresiasi nilai investasi.'
+        : 'For land assets, the app converts area into traditional South Kalimantan Borongan units (1 Hectare = 35 Borongan, 1 Borongan ≈ 285.7 m²). Price per m² and per borongan are calculated automatically. You can also append revaluation records in asset details to track real estate appreciation over time.'
+    },
+    {
+      q: isId ? 'Bagaimana cara melakukan Rekonsiliasi Saldo Kas & Rekening Bank?' : 'How does Bank Account & Cash Reconciliation work?',
+      a: isId 
+        ? 'Di menu Pengaturan / Rekening, klik tombol "Rekonsiliasi" pada rekening yang ingin disesuaikan. Masukkan saldo fisik riil saat ini (hasil opname kas atau cetak koran). Jika terdapat selisih, sistem akan otomatis membuat transaksi penyesuaian kas (Adjustment) sehingga saldo aplikasi dan saldo nyata selalu sinkron 100%.'
+        : 'In Settings / Accounts, click the "Reconcile" button on any account. Enter the actual real balance (from bank statement or cash audit). If a gap exists, the app generates a balancing adjustment transaction to ensure 100% balance alignment.'
     }
   ];
 

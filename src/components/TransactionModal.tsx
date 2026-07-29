@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useFinance } from '../store';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
 import { useToast } from '../context/ToastContext';
-import { TransactionType, IncomeCategory } from '../types';
+import { TransactionType, IncomeCategory, WorkspaceType } from '../types';
 import { X, Check } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -38,9 +38,10 @@ const INCOME_CATEGORIES = [
 ];
 
 export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
-  const { workspace, addTransaction, customCategories, familyMembers, transactionDefaultCategory, goals } = useFinance();
+  const { workspace, addTransaction, customCategories, familyMembers, transactionDefaultCategory, goals, paymentAccounts, envelopes } = useFinance();
   const { language, t } = useThemeLanguage();
   const { showToast } = useToast();
+  const [targetWorkspace, setTargetWorkspace] = useState<WorkspaceType>(workspace === 'all' ? 'keluarga' : workspace);
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
@@ -49,20 +50,58 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
   const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>('fixed');
   const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>('');
   const [linkedGoalId, setLinkedGoalId] = useState<string>('');
+  const [paymentAccountId, setPaymentAccountId] = useState<string>('');
+  const [expenseCategoryMode, setExpenseCategoryMode] = useState<'envelope' | 'custom'>('envelope');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto select budget category if opened from budget section
+  const workspaceEnvelopes = (envelopes || []).filter(e => workspace === 'all' ? true : e.workspaceId === (targetWorkspace || 'keluarga'));
+  
+  // Sort payment accounts so accounts matching targetWorkspace appear first
+  const sortedPaymentAccounts = [...(paymentAccounts || [])].sort((a, b) => {
+    const wsA = a.workspaceId || 'keluarga';
+    const wsB = b.workspaceId || 'keluarga';
+    if (wsA === targetWorkspace && wsB !== targetWorkspace) return -1;
+    if (wsA !== targetWorkspace && wsB === targetWorkspace) return 1;
+    return 0;
+  });
+
+  // Initialize paymentAccountId, targetWorkspace and category mode
   useEffect(() => {
     if (isOpen) {
-      if (transactionDefaultCategory) {
-        setType('expense');
-        setCategory(transactionDefaultCategory);
+      const initialWs = workspace === 'all' ? 'keluarga' : workspace;
+      setTargetWorkspace(initialWs);
+
+      const availableAccs = paymentAccounts || [];
+      if (availableAccs.length > 0) {
+        const matching = availableAccs.find(acc => (acc.workspaceId || 'keluarga') === initialWs) || availableAccs[0];
+        setPaymentAccountId(matching.id);
       } else {
-        // Reset category/type if not coming from budget selection so it doesn't carry over
-        setCategory('');
+        setPaymentAccountId('');
+      }
+
+      if (workspaceEnvelopes.length > 0) {
+        setExpenseCategoryMode('envelope');
+        if (transactionDefaultCategory) {
+          const matchingEnv = workspaceEnvelopes.find(e => e.category === transactionDefaultCategory);
+          if (matchingEnv) {
+            setCategory(matchingEnv.category);
+          } else {
+            setExpenseCategoryMode('custom');
+            setCategory(transactionDefaultCategory);
+          }
+        } else {
+          setCategory(workspaceEnvelopes[0].category);
+        }
+      } else {
+        setExpenseCategoryMode('custom');
+        if (transactionDefaultCategory) {
+          setCategory(transactionDefaultCategory);
+        } else {
+          setCategory('');
+        }
       }
     }
-  }, [isOpen, transactionDefaultCategory]);
+  }, [isOpen, workspace, envelopes, paymentAccounts, transactionDefaultCategory]);
 
   // Scanner State Variables
   const [scanState, setScanState] = useState<'idle' | 'camera_active' | 'analyzing' | 'success' | 'error'>('idle');
@@ -193,9 +232,27 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
       if (data) {
         setType('expense'); // Receipt scanning maps to an expense
         if (data.amount) setAmount(String(data.amount));
-        if (data.category) setCategory(data.category);
         if (data.description) setDescription(data.description);
         if (data.date) setDate(data.date);
+        
+        if (data.category) {
+          const matchingEnv = workspaceEnvelopes.find(e => e.category.toLowerCase() === data.category.toLowerCase());
+          if (matchingEnv) {
+            setExpenseCategoryMode('envelope');
+            setCategory(matchingEnv.category);
+          } else {
+            setExpenseCategoryMode('custom');
+            setCategory(data.category);
+          }
+        } else {
+          if (workspaceEnvelopes.length > 0) {
+            setExpenseCategoryMode('envelope');
+            setCategory(workspaceEnvelopes[0].category);
+          } else {
+            setExpenseCategoryMode('custom');
+            setCategory('');
+          }
+        }
         
         setScannedSummary({
           amount: data.amount,
@@ -235,12 +292,13 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
     try {
       const parsedAmount = parseFloat(amount);
       await addTransaction({
-        workspaceId: workspace,
+        workspaceId: targetWorkspace,
         type,
         amount: parsedAmount,
         category,
         description,
         date: new Date(date).toISOString(),
+        ...(paymentAccountId ? { paymentAccountId } : {}),
         ...(type === 'income' ? { incomeCategory } : {}),
         ...(selectedFamilyMember ? { familyMember: selectedFamilyMember } : {}),
         ...(linkedGoalId ? { goalId: linkedGoalId } : {})
@@ -511,36 +569,150 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
             min="1"
           />
 
-          {/* Preset Category Chips */}
-          <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-2">
-              {t('category')}
+          {/* Workspace Transaksi */}
+          <div className="flex flex-col gap-1.5">
+            <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+              {isId ? 'Workspace Transaksi' : 'Transaction Workspace'}
             </label>
-            <div className="flex flex-wrap gap-1.5 mb-2 max-h-32 overflow-y-auto pr-1">
-              {presetCategories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategory(cat)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                    category === cat 
-                      ? 'bg-primary text-on-primary border-primary shadow-sm' 
-                      : 'bg-surface-container-low border-outline-variant text-on-surface hover:bg-surface-container-high'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+            <div className="grid grid-cols-2 gap-2 bg-surface-container-low p-1.5 rounded-xl border border-outline-variant">
+              <button
+                type="button"
+                onClick={() => setTargetWorkspace('pribadi')}
+                className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                  targetWorkspace === 'pribadi'
+                    ? 'bg-primary text-on-primary shadow-sm font-bold'
+                    : 'text-on-surface hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">person</span>
+                Pribadi
+              </button>
+              <button
+                type="button"
+                onClick={() => setTargetWorkspace('keluarga')}
+                className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                  targetWorkspace === 'keluarga'
+                    ? 'bg-primary text-on-primary shadow-sm font-bold'
+                    : 'text-on-surface hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">group</span>
+                Keluarga
+              </button>
             </div>
-            <Input 
-              type="text" 
-              value={category} 
-              onChange={e => setCategory(e.target.value)}
-              placeholder="..."
-              icon="category"
-              required
-            />
           </div>
+
+          {/* Dompet / Rekening Pembayaran */}
+          <Select
+            label={isId ? 'Pilih Rekening / Dompet' : 'Select Account / Wallet'}
+            value={paymentAccountId}
+            onChange={e => {
+              const selectedId = e.target.value;
+              setPaymentAccountId(selectedId);
+              const selectedAcc = (paymentAccounts || []).find(acc => acc.id === selectedId);
+              if (selectedAcc && selectedAcc.workspaceId) {
+                setTargetWorkspace(selectedAcc.workspaceId);
+              }
+            }}
+            icon="account_balance_wallet"
+            required
+          >
+            {sortedPaymentAccounts.length === 0 ? (
+              <option value="">{isId ? '-- Belum ada rekening terdaftar (Tambah di Aset/Pengaturan) --' : '-- No registered accounts --'}</option>
+            ) : (
+              sortedPaymentAccounts.map(acc => {
+                const wsBadge = (acc.workspaceId || 'keluarga') === 'pribadi' 
+                  ? (isId ? 'Pribadi' : 'Personal') 
+                  : (isId ? 'Keluarga' : 'Family');
+                return (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.type.toUpperCase()}) - Rp {acc.balance.toLocaleString('id-ID')} [{wsBadge}]
+                  </option>
+                );
+              })
+            )}
+          </Select>
+
+          {/* Category Toggle (Expense Only, and when Envelopes exist) */}
+          {type === 'expense' && workspaceEnvelopes.length > 0 && (
+            <div className="flex bg-surface-container-low rounded-xl p-1 border border-outline-variant text-[11px] font-semibold gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setExpenseCategoryMode('envelope');
+                  if (workspaceEnvelopes.length > 0) {
+                    setCategory(workspaceEnvelopes[0].category);
+                  }
+                }}
+                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${
+                  expenseCategoryMode === 'envelope' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">mail</span>
+                {isId ? 'Sesuai Pos Anggaran (Amplop)' : 'With Budget Envelope'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setExpenseCategoryMode('custom');
+                  setCategory('');
+                }}
+                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${
+                  expenseCategoryMode === 'custom' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">edit_note</span>
+                {isId ? 'Kategori Lain (Luar Anggaran)' : 'Other/Custom Category'}
+              </button>
+            </div>
+          )}
+
+          {/* Preset Category or Envelope Selection */}
+          {type === 'expense' && expenseCategoryMode === 'envelope' && workspaceEnvelopes.length > 0 ? (
+            <Select
+              label={isId ? 'Pilih Pos Anggaran (Amplop)' : 'Select Budget Envelope'}
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              icon="mail"
+              required
+            >
+              {workspaceEnvelopes.map(env => (
+                <option key={env.id} value={env.category}>
+                  ✉️ {env.category} (Alokasi: Rp {env.allocatedAmount.toLocaleString('id-ID')})
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <div>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-2">
+                {isId ? 'Kategori / Tag' : 'Category / Tag'}
+              </label>
+              <div className="flex flex-wrap gap-1.5 mb-2 max-h-32 overflow-y-auto pr-1">
+                {presetCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategory(cat)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                      category === cat 
+                        ? 'bg-primary text-on-primary border-primary shadow-sm' 
+                        : 'bg-surface-container-low border-outline-variant text-on-surface hover:bg-surface-container-high'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <Input 
+                type="text" 
+                value={category} 
+                onChange={e => setCategory(e.target.value)}
+                placeholder={isId ? "Ketik kategori kustom..." : "Type custom category..."}
+                icon="category"
+                required
+              />
+            </div>
+          )}
 
           {type === 'income' && (
             <Select 
@@ -631,7 +803,7 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
             ) : (
               <span className="flex items-center gap-2 justify-center font-semibold text-sm">
                 <Check className="w-4 h-4" />
-                {t('save')} ({workspace.toUpperCase()})
+                {t('save')} ({targetWorkspace.toUpperCase()})
               </span>
             )}
           </Button>

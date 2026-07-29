@@ -43,7 +43,7 @@ export function GoalModal({ isOpen, onClose }: GoalModalProps) {
         setCurrentAmount('');
         setStartDate(new Date().toISOString().split('T')[0]);
         setDeadline(new Date(Date.now() + 86400000 * 180).toISOString().split('T')[0]);
-        setTargetWorkspace(workspace);
+        setTargetWorkspace(workspace === 'all' ? 'keluarga' : workspace);
       }
     }
   }, [isOpen, goalEditTarget, workspace]);

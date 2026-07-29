@@ -14,49 +14,75 @@ interface TransferModalProps {
 }
 
 export function TransferModal({ isOpen, onClose }: TransferModalProps) {
-  const { addTransaction } = useFinance();
+  const { paymentAccounts, addTransaction } = useFinance();
   const { showToast } = useToast();
   const [fromWorkspace, setFromWorkspace] = useState<WorkspaceType>('pribadi');
   const [toWorkspace, setToWorkspace] = useState<WorkspaceType>('keluarga');
+  const [fromAccountId, setFromAccountId] = useState<string>('');
+  const [toAccountId, setToAccountId] = useState<string>('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Available accounts filtered by chosen workspace
+  const fromAccounts = (paymentAccounts || []).filter(a => (a.workspaceId || 'keluarga') === fromWorkspace);
+  const toAccounts = (paymentAccounts || []).filter(a => (a.workspaceId || 'keluarga') === toWorkspace);
+
+  const isSameAccount = Boolean(fromAccountId && toAccountId && fromAccountId === toAccountId);
+  const isSameWorkspaceWithoutAccounts = Boolean((!fromAccountId || !toAccountId) && fromWorkspace === toWorkspace);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || fromWorkspace === toWorkspace) return;
+    if (!amount) return;
+    if (fromAccountId && toAccountId && fromAccountId === toAccountId) {
+      showToast('Rekening asal dan tujuan tidak boleh sama.', 'error', 'Validasi Gagal');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const transferAmount = parseFloat(amount);
-      const sharedId = `transfer-${Date.now()}`;
+      const fromAcc = paymentAccounts.find(a => a.id === fromAccountId);
+      const toAcc = paymentAccounts.find(a => a.id === toAccountId);
       
-      // Expense from source workspace
+      const sourceDetail = fromAcc ? `${fromAcc.name} (${fromAcc.type.toUpperCase()})` : `Workspace ${fromWorkspace.toUpperCase()}`;
+      const destDetail = toAcc ? `${toAcc.name} (${toAcc.type.toUpperCase()})` : `Workspace ${toWorkspace.toUpperCase()}`;
+      const userNote = description.trim() ? ` • Catatan: ${description.trim()}` : '';
+
+      const defaultOutDesc = `Pindah Saldo ke: ${destDetail}${userNote}`;
+      const defaultInDesc = `Pindah Saldo dari: ${sourceDetail}${userNote}`;
+
+      // Expense from source account / workspace
       await addTransaction({
         workspaceId: fromWorkspace,
         type: 'expense',
         amount: transferAmount,
-        category: 'Transfer Keluar',
-        description: description || `Transfer ke ${toWorkspace}`,
+        category: 'Pindah Saldo (Keluar)',
+        description: defaultOutDesc,
         date: new Date(date).toISOString(),
+        paymentAccountId: fromAccountId || undefined,
       });
 
-      // Income to destination workspace
+      // Income to destination account / workspace
       await addTransaction({
         workspaceId: toWorkspace,
         type: 'income',
         amount: transferAmount,
-        category: 'Transfer Masuk',
-        description: description || `Transfer dari ${fromWorkspace}`,
+        category: 'Pindah Saldo (Masuk)',
+        description: defaultInDesc,
         date: new Date(date).toISOString(),
-        incomeCategory: 'variable'
+        incomeCategory: 'variable',
+        paymentAccountId: toAccountId || undefined,
       });
       
+      const sourceName = fromAcc ? fromAcc.name : fromWorkspace.toUpperCase();
+      const destName = toAcc ? toAcc.name : toWorkspace.toUpperCase();
+
       showToast(
-        `Transfer dana Rp ${transferAmount.toLocaleString('id-ID')} dari ${fromWorkspace.toUpperCase()} ke ${toWorkspace.toUpperCase()} berhasil!`,
+        `Transfer Rp ${transferAmount.toLocaleString('id-ID')} dari ${sourceName} ke ${destName} berhasil!`,
         'success',
         'Transfer Berhasil'
       );
@@ -123,9 +149,44 @@ export function TransferModal({ isOpen, onClose }: TransferModalProps) {
             </div>
           </div>
 
-          {fromWorkspace === toWorkspace && (
-            <p className="text-error font-label-sm">Pilih workspace tujuan yang berbeda.</p>
+          {isSameAccount && (
+            <p className="text-error font-label-sm">Rekening sumber dan rekening tujuan tidak boleh sama.</p>
           )}
+
+          {isSameWorkspaceWithoutAccounts && (
+            <p className="text-error font-label-sm">Pilih rekening asal dan tujuan, atau pilih workspace tujuan yang berbeda.</p>
+          )}
+
+          {/* Account Selectors */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Select
+              label="Rekening Sumber"
+              value={fromAccountId}
+              onChange={e => setFromAccountId(e.target.value)}
+              icon="account_balance_wallet"
+            >
+              <option value="">-- Pilih Rekening asal --</option>
+              {fromAccounts.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.name} (Rp {a.balance.toLocaleString('id-ID')})
+                </option>
+              ))}
+            </Select>
+
+            <Select
+              label="Rekening Tujuan"
+              value={toAccountId}
+              onChange={e => setToAccountId(e.target.value)}
+              icon="account_balance_wallet"
+            >
+              <option value="">-- Pilih Rekening tujuan --</option>
+              {toAccounts.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.name} (Rp {a.balance.toLocaleString('id-ID')})
+                </option>
+              ))}
+            </Select>
+          </div>
 
           <Input 
             label="Nominal Transfer (Rp)"
@@ -161,7 +222,7 @@ export function TransferModal({ isOpen, onClose }: TransferModalProps) {
             variant="primary" 
             fullWidth 
             className="mt-2 py-3 shrink-0" 
-            disabled={isSubmitting || fromWorkspace === toWorkspace}
+            disabled={isSubmitting || isSameAccount || isSameWorkspaceWithoutAccounts}
           >
             {isSubmitting ? (
               <span className="flex items-center gap-2 justify-center">

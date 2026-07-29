@@ -89,7 +89,13 @@ export function AssetMapView({ assets, onSelectAsset }: AssetMapViewProps) {
         : '';
 
       const valueText = formatCurrency(getAssetEffectiveValue(asset));
-      const areaText = asset.areaSize ? `<div style="font-size: 11px; color: #475569; margin-top: 2px;">📐 Luas: <b>${asset.areaSize} m²</b></div>` : '';
+      const areaText = asset.areaSize
+        ? asset.category.includes('Usaha') || asset.category.includes('Bisnis')
+          ? `<div style="font-size: 11px; color: #475569; margin-top: 2px;">🤝 Kepemilikan: <b>${asset.areaSize}%</b></div>`
+          : asset.category.includes('Properti') || asset.category.includes('Lahan')
+          ? `<div style="font-size: 11px; color: #475569; margin-top: 2px;">📐 Luas: <b>${asset.areaSize} m²</b></div>`
+          : `<div style="font-size: 11px; color: #475569; margin-top: 2px;"><b>${asset.areaSize}</b></div>`
+        : '';
       const locText = asset.locationName ? `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">📍 ${asset.locationName}</div>` : '';
 
       const popupHtml = `

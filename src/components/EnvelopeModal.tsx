@@ -44,7 +44,7 @@ export function EnvelopeModal({ isOpen, onClose, editTarget }: EnvelopeModalProp
       } else {
         setCategory('');
         setAllocatedAmount('');
-        setTargetWorkspace(workspace);
+        setTargetWorkspace(workspace === 'all' ? 'keluarga' : workspace);
       }
     }
   }, [isOpen, editTarget, workspace]);

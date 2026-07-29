@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { WorkspaceType, Transaction, Envelope, Goal, Bill, TransactionCategory, FamilyMember, Asset, ActivityLog, PaymentAccount } from './types';
 import { 
   auth, 
@@ -27,6 +27,7 @@ interface FinanceState {
   transactions: Transaction[];
   addTransaction: (t: Omit<Transaction, 'id'>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  deleteTransactions: (ids: string[]) => Promise<void>;
   envelopes: Envelope[];
   addEnvelope: (e: Omit<Envelope, 'id'>) => Promise<void>;
   updateEnvelope: (id: string, e: Partial<Envelope>) => Promise<void>;
@@ -53,6 +54,7 @@ interface FinanceState {
   addPaymentAccount: (name: string, type: 'bank' | 'ewallet' | 'cash' | 'investment', balance: number, accountNumber?: string, holderName?: string, color?: string, wsId?: WorkspaceType) => Promise<void>;
   updatePaymentAccount: (id: string, name: string, type: 'bank' | 'ewallet' | 'cash' | 'investment', balance: number, accountNumber?: string, holderName?: string, color?: string, wsId?: WorkspaceType) => Promise<void>;
   deletePaymentAccount: (id: string) => Promise<void>;
+  reconcilePaymentAccount: (id: string, realBalance: number, reason: string) => Promise<void>;
   assets: Asset[];
   addAsset: (
     name: string,
@@ -97,6 +99,8 @@ interface FinanceState {
     }
   ) => Promise<void>;
   deleteAsset: (id: string) => Promise<void>;
+  addAssetValuation: (assetId: string, newValue: number, date: string, note?: string) => Promise<void>;
+  deleteAssetValuation: (assetId: string, valuationId: string) => Promise<void>;
   activityLogs: ActivityLog[];
   logActivity: (action: 'CREATE' | 'UPDATE' | 'DELETE', entityType: ActivityLog['entityType'], title: string, details: string, wsId?: WorkspaceType) => Promise<void>;
   deleteActivityLog: (id: string) => Promise<void>;
@@ -111,6 +115,10 @@ interface FinanceState {
   openTransactionModal: (defaultCategory?: string) => void;
   closeTransactionModal: () => void;
   transactionDefaultCategory?: string;
+  selectedDetailTransaction: Transaction | null;
+  isTransactionDetailModalOpen: boolean;
+  openTransactionDetailModal: (transaction: Transaction) => void;
+  closeTransactionDetailModal: () => void;
   isTransferModalOpen: boolean;
   openTransferModal: () => void;
   closeTransferModal: () => void;
@@ -684,10 +692,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (t.goalId) {
         const goal = goals.find(g => g.id === t.goalId);
         if (goal) {
-          const adjustment = t.type === 'expense' ? t.amount : -t.amount;
+          const isDeposit = (t.type === 'expense' && t.category === 'Investasi & Tabungan') || t.type === 'income';
+          const adjustment = isDeposit ? t.amount : -t.amount;
           const updatedGoals = goals.map(g => g.id === t.goalId ? { ...g, currentAmount: Math.max(0, g.currentAmount + adjustment) } : g);
           setGoals(updatedGoals);
           sessionStorage.setItem(`demo_goals_${user?.uid || 'guest'}`, JSON.stringify(updatedGoals));
+        }
+      }
+
+      // Handle linked payment account balance update
+      if (t.paymentAccountId) {
+        const acc = paymentAccounts.find(a => a.id === t.paymentAccountId);
+        if (acc) {
+          const adjustment = t.type === 'income' ? t.amount : -t.amount;
+          const updatedAccs = paymentAccounts.map(a => a.id === t.paymentAccountId ? { ...a, balance: a.balance + adjustment } : a);
+          setPaymentAccounts(updatedAccs);
+          sessionStorage.setItem(`demo_pa_${user?.uid || 'guest'}`, JSON.stringify(updatedAccs));
         }
       }
 
@@ -712,9 +732,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (t.goalId) {
       const goal = goals.find(g => g.id === t.goalId);
       if (goal) {
-        const adjustment = t.type === 'expense' ? t.amount : -t.amount;
+        const isDeposit = (t.type === 'expense' && t.category === 'Investasi & Tabungan') || t.type === 'income';
+        const adjustment = isDeposit ? t.amount : -t.amount;
         await updateDoc(doc(db, 'goals', t.goalId), {
           currentAmount: Math.max(0, goal.currentAmount + adjustment)
+        });
+      }
+    }
+
+    // Handle linked payment account balance update in DB
+    if (t.paymentAccountId) {
+      const acc = paymentAccounts.find(a => a.id === t.paymentAccountId);
+      if (acc) {
+        const adjustment = t.type === 'income' ? t.amount : -t.amount;
+        await updateDoc(doc(db, 'payment_accounts', t.paymentAccountId), {
+          balance: acc.balance + adjustment
         });
       }
     }
@@ -740,10 +772,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         if (target.goalId) {
           const goal = goals.find(g => g.id === target.goalId);
           if (goal) {
-            const adjustment = target.type === 'expense' ? -target.amount : target.amount;
+            const isDeposit = (target.type === 'expense' && target.category === 'Investasi & Tabungan') || target.type === 'income';
+            const adjustment = isDeposit ? -target.amount : target.amount;
             const updatedGoals = goals.map(g => g.id === target.goalId ? { ...g, currentAmount: Math.max(0, g.currentAmount + adjustment) } : g);
             setGoals(updatedGoals);
             sessionStorage.setItem(`demo_goals_${user?.uid || 'guest'}`, JSON.stringify(updatedGoals));
+          }
+        }
+
+        // Adjust linked payment account balance
+        if (target.paymentAccountId) {
+          const acc = paymentAccounts.find(a => a.id === target.paymentAccountId);
+          if (acc) {
+            const adjustment = target.type === 'income' ? -target.amount : target.amount;
+            const updatedAccs = paymentAccounts.map(a => a.id === target.paymentAccountId ? { ...a, balance: a.balance + adjustment } : a);
+            setPaymentAccounts(updatedAccs);
+            sessionStorage.setItem(`demo_pa_${user?.uid || 'guest'}`, JSON.stringify(updatedAccs));
           }
         }
 
@@ -765,9 +809,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (target.goalId) {
         const goal = goals.find(g => g.id === target.goalId);
         if (goal) {
-          const adjustment = target.type === 'expense' ? -target.amount : target.amount;
+          const isDeposit = (target.type === 'expense' && target.category === 'Investasi & Tabungan') || target.type === 'income';
+          const adjustment = isDeposit ? -target.amount : target.amount;
           await updateDoc(doc(db, 'goals', target.goalId), {
             currentAmount: Math.max(0, goal.currentAmount + adjustment)
+          });
+        }
+      }
+
+      // Adjust linked payment account balance in DB
+      if (target.paymentAccountId) {
+        const acc = paymentAccounts.find(a => a.id === target.paymentAccountId);
+        if (acc) {
+          const adjustment = target.type === 'income' ? -target.amount : target.amount;
+          await updateDoc(doc(db, 'payment_accounts', target.paymentAccountId), {
+            balance: acc.balance + adjustment
           });
         }
       }
@@ -778,6 +834,116 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         `Hapus Transaksi: ${target.description || target.category}`, 
         `Nominal Rp ${target.amount.toLocaleString('id-ID')} (${target.type})`, 
         target.workspaceId
+      );
+    }
+  };
+
+  const deleteTransactions = async (ids: string[]) => {
+    if (isDemo) {
+      const targets = transactions.filter(t => ids.includes(t.id));
+      const updated = transactions.filter(t => !ids.includes(t.id));
+      setTransactions(updated);
+      sessionStorage.setItem(`demo_tx_${user?.uid || 'guest'}`, JSON.stringify(updated));
+
+      // Group adjustments by goalId to apply them efficiently
+      const goalAdjustments: Record<string, number> = {};
+      // Group adjustments by paymentAccountId to apply them efficiently
+      const payAccAdjustments: Record<string, number> = {};
+
+      targets.forEach(target => {
+        if (target.goalId) {
+          const isDeposit = (target.type === 'expense' && target.category === 'Investasi & Tabungan') || target.type === 'income';
+          const adjustment = isDeposit ? -target.amount : target.amount;
+          goalAdjustments[target.goalId] = (goalAdjustments[target.goalId] || 0) + adjustment;
+        }
+
+        if (target.paymentAccountId) {
+          const adjustment = target.type === 'income' ? -target.amount : target.amount;
+          payAccAdjustments[target.paymentAccountId] = (payAccAdjustments[target.paymentAccountId] || 0) + adjustment;
+        }
+      });
+
+      let updatedGoals = [...goals];
+      Object.entries(goalAdjustments).forEach(([goalId, adj]) => {
+        updatedGoals = updatedGoals.map(g => g.id === goalId ? { ...g, currentAmount: Math.max(0, g.currentAmount + adj) } : g);
+      });
+      setGoals(updatedGoals);
+      sessionStorage.setItem(`demo_goals_${user?.uid || 'guest'}`, JSON.stringify(updatedGoals));
+
+      let updatedAccs = [...paymentAccounts];
+      Object.entries(payAccAdjustments).forEach(([accId, adj]) => {
+        updatedAccs = updatedAccs.map(a => a.id === accId ? { ...a, balance: a.balance + adj } : a);
+      });
+      setPaymentAccounts(updatedAccs);
+      sessionStorage.setItem(`demo_pa_${user?.uid || 'guest'}`, JSON.stringify(updatedAccs));
+
+      if (targets.length > 0) {
+        addDemoActivity(
+          'DELETE', 
+          'TRANSACTION', 
+          `Hapus ${targets.length} Transaksi`, 
+          `Berhasil menghapus ${targets.length} catatan transaksi secara massal.`, 
+          targets[0].workspaceId
+        );
+      }
+      return;
+    }
+
+    if (!user) return;
+    const targets = transactions.filter(t => ids.includes(t.id));
+
+    // Delete in Firestore
+    await Promise.all(ids.map(id => deleteDoc(doc(db, 'transactions', id))));
+
+    // Group adjustments by goalId to apply them efficiently
+    const goalAdjustments: Record<string, number> = {};
+    // Group adjustments by paymentAccountId to apply them efficiently
+    const payAccAdjustments: Record<string, number> = {};
+
+    targets.forEach(target => {
+      if (target.goalId) {
+        const isDeposit = (target.type === 'expense' && target.category === 'Investasi & Tabungan') || target.type === 'income';
+        const adjustment = isDeposit ? -target.amount : target.amount;
+        goalAdjustments[target.goalId] = (goalAdjustments[target.goalId] || 0) + adjustment;
+      }
+
+      if (target.paymentAccountId) {
+        const adjustment = target.type === 'income' ? -target.amount : target.amount;
+        payAccAdjustments[target.paymentAccountId] = (payAccAdjustments[target.paymentAccountId] || 0) + adjustment;
+      }
+    });
+
+    // Update goals in DB
+    await Promise.all(
+      Object.entries(goalAdjustments).map(async ([goalId, adj]) => {
+        const goal = goals.find(g => g.id === goalId);
+        if (goal) {
+          await updateDoc(doc(db, 'goals', goalId), {
+            currentAmount: Math.max(0, goal.currentAmount + adj)
+          });
+        }
+      })
+    );
+
+    // Update payment accounts in DB
+    await Promise.all(
+      Object.entries(payAccAdjustments).map(async ([accId, adj]) => {
+        const acc = paymentAccounts.find(a => a.id === accId);
+        if (acc) {
+          await updateDoc(doc(db, 'payment_accounts', accId), {
+            balance: acc.balance + adj
+          });
+        }
+      })
+    );
+
+    if (targets.length > 0) {
+      await logActivity(
+        'DELETE', 
+        'TRANSACTION', 
+        `Hapus ${targets.length} Transaksi`, 
+        `Berhasil menghapus ${targets.length} catatan transaksi secara massal.`, 
+        targets[0].workspaceId
       );
     }
   };
@@ -1214,6 +1380,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   ) => {
     if (isDemo) {
       const newId = 'demo-asset-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+      const initialValuationHistory = [
+        {
+          id: 'val-init-' + Date.now(),
+          date: purchaseDate || new Date().toISOString().slice(0, 10),
+          value: currentValue || purchasePrice,
+          note: 'Nilai Perolehan / Pembelian Awal',
+          createdAt: new Date().toISOString()
+        }
+      ];
       const newA: Asset = {
         id: newId,
         userId: user?.uid || 'guest',
@@ -1234,7 +1409,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         longitude: extraFields?.longitude ?? null,
         locationName: extraFields?.locationName || '',
         areaSize: extraFields?.areaSize ?? null,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        valuationHistory: initialValuationHistory
       };
       const updated = [...assets, newA];
       setAssets(updated);
@@ -1263,7 +1439,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       longitude: extraFields?.longitude ?? null,
       locationName: extraFields?.locationName || '',
       areaSize: extraFields?.areaSize ?? null,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      valuationHistory: [
+        {
+          id: 'val-init-' + Date.now(),
+          date: purchaseDate || new Date().toISOString().slice(0, 10),
+          value: currentValue || purchasePrice,
+          note: 'Nilai Perolehan / Pembelian Awal',
+          createdAt: new Date().toISOString()
+        }
+      ]
     });
     await logActivity('CREATE', 'ASSET', `Aset Baru: ${name}`, `Kategori ${category}, Nilai Beli Rp ${purchasePrice.toLocaleString('id-ID')}`, workspaceId || workspace);
   };
@@ -1368,6 +1553,89 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (target) {
       await logActivity('DELETE', 'ASSET', `Hapus Aset: ${target.name}`, `Nilai Rp ${target.currentValue.toLocaleString('id-ID')}`, target.workspaceId);
     }
+  };
+
+  const addAssetValuation = async (
+    assetId: string,
+    newValue: number,
+    date: string,
+    note?: string
+  ) => {
+    const target = assets.find(a => a.id === assetId);
+    if (!target) return;
+
+    const currentHistory = target.valuationHistory && target.valuationHistory.length > 0
+      ? target.valuationHistory
+      : [
+          {
+            id: 'val-init-' + (target.createdAt || Date.now()),
+            date: target.purchaseDate || new Date().toISOString().slice(0, 10),
+            value: target.purchasePrice || target.currentValue,
+            note: 'Nilai Perolehan / Pembelian Awal',
+            createdAt: target.createdAt || new Date().toISOString()
+          }
+        ];
+
+    const newEntry = {
+      id: 'val-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5),
+      date: date || new Date().toISOString().slice(0, 10),
+      value: newValue,
+      note: note || 'Penilaian Ulang / Revaluasi',
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedHistory = [...currentHistory, newEntry].sort((a, b) => a.date.localeCompare(b.date));
+
+    if (isDemo) {
+      const updated = assets.map(a => {
+        if (a.id !== assetId) return a;
+        return {
+          ...a,
+          currentValue: newValue,
+          valuationHistory: updatedHistory
+        };
+      });
+      setAssets(updated);
+      sessionStorage.setItem(`demo_assets_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('UPDATE', 'ASSET', `Revaluasi Aset: ${target.name}`, `Nilai Baru: Rp ${newValue.toLocaleString('id-ID')} (${note || 'Pembaruan Nilai'})`, target.workspaceId);
+      return;
+    }
+
+    if (!user) return;
+    await updateDoc(doc(db, 'assets', assetId), {
+      currentValue: newValue,
+      valuationHistory: updatedHistory
+    });
+    await logActivity('UPDATE', 'ASSET', `Revaluasi Aset: ${target.name}`, `Nilai Baru: Rp ${newValue.toLocaleString('id-ID')} (${note || 'Pembaruan Nilai'})`, target.workspaceId);
+  };
+
+  const deleteAssetValuation = async (assetId: string, valuationId: string) => {
+    const target = assets.find(a => a.id === assetId);
+    if (!target || !target.valuationHistory) return;
+
+    const updatedHistory = target.valuationHistory.filter(v => v.id !== valuationId);
+    const latestEntry = updatedHistory[updatedHistory.length - 1];
+    const newCurrentValue = latestEntry ? latestEntry.value : target.purchasePrice;
+
+    if (isDemo) {
+      const updated = assets.map(a => {
+        if (a.id !== assetId) return a;
+        return {
+          ...a,
+          currentValue: newCurrentValue,
+          valuationHistory: updatedHistory
+        };
+      });
+      setAssets(updated);
+      sessionStorage.setItem(`demo_assets_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      return;
+    }
+
+    if (!user) return;
+    await updateDoc(doc(db, 'assets', assetId), {
+      currentValue: newCurrentValue,
+      valuationHistory: updatedHistory
+    });
   };
 
   const addPaymentAccount = async (
@@ -1512,6 +1780,27 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const reconcilePaymentAccount = async (id: string, realBalance: number, reason: string) => {
+    const acc = paymentAccounts.find(a => a.id === id);
+    if (!acc) return;
+    
+    const difference = realBalance - acc.balance;
+    if (difference === 0) return; // already matches
+
+    const adjustmentType = difference > 0 ? 'income' : 'expense';
+    const absDiff = Math.abs(difference);
+
+    await addTransaction({
+      workspaceId: acc.workspaceId || workspace,
+      type: adjustmentType,
+      amount: absDiff,
+      category: 'Penyesuaian Saldo',
+      date: new Date().toISOString(),
+      description: `[Rekonsiliasi] ${reason}`,
+      paymentAccountId: id
+    });
+  };
+
   const deleteActivityLog = async (id: string) => {
     if (isDemo) {
       const updated = activityLogs.filter(log => log.id !== id);
@@ -1591,11 +1880,24 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
+  const isLoggingInRef = useRef(false);
+
   const loginWithGoogle = async () => {
+    if (isLoggingInRef.current) return;
+    isLoggingInRef.current = true;
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Google Login Error:", error);
+    } catch (error: any) {
+      if (
+        error?.code === 'auth/cancelled-popup-request' ||
+        error?.code === 'auth/popup-closed-by-user'
+      ) {
+        console.log("Google Login popup closed or cancelled by user.");
+      } else {
+        console.error("Google Login Error:", error);
+      }
+    } finally {
+      isLoggingInRef.current = false;
     }
   };
 
@@ -1625,6 +1927,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [transactionDefaultCategory, setTransactionDefaultCategory] = useState<string | undefined>(undefined);
+  const [selectedDetailTransaction, setSelectedDetailTransaction] = useState<Transaction | null>(null);
+  const [isTransactionDetailModalOpen, setIsTransactionDetailModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isEnvelopeModalOpen, setIsEnvelopeModalOpen] = useState(false);
   const [envelopeEditTarget, setEnvelopeEditTarget] = useState<Envelope | null>(null);
@@ -1641,6 +1945,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const closeTransactionModal = () => {
     setIsTransactionModalOpen(false);
     setTimeout(() => setTransactionDefaultCategory(undefined), 300);
+  };
+
+  const openTransactionDetailModal = (t: Transaction) => {
+    setSelectedDetailTransaction(t);
+    setIsTransactionDetailModalOpen(true);
+  };
+  const closeTransactionDetailModal = () => {
+    setIsTransactionDetailModalOpen(false);
+    setTimeout(() => setSelectedDetailTransaction(null), 300);
   };
 
   const openTransferModal = () => setIsTransferModalOpen(true);
@@ -1679,18 +1992,19 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   return (
     <FinanceContext.Provider value={{
       workspace, setWorkspace,
-      transactions, addTransaction, deleteTransaction,
+      transactions, addTransaction, deleteTransaction, deleteTransactions,
       envelopes, addEnvelope, updateEnvelope, deleteEnvelope,
       goals, addGoal, updateGoal, deleteGoal, addGoalContribution,
       bills, addBill, updateBill, deleteBill, markBillPaid,
       customCategories, addCategory, updateCategory, deleteCategory,
       familyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember,
-      paymentAccounts, addPaymentAccount, updatePaymentAccount, deletePaymentAccount,
-      assets, addAsset, updateAsset, deleteAsset,
+      paymentAccounts, addPaymentAccount, updatePaymentAccount, deletePaymentAccount, reconcilePaymentAccount,
+      assets, addAsset, updateAsset, deleteAsset, addAssetValuation, deleteAssetValuation,
       activityLogs, logActivity, deleteActivityLog, clearActivityLogs, autoCleanActivityLogs,
       user, superAdminId, isAuthLoading,
       loginWithGoogle, logout,
       isTransactionModalOpen, openTransactionModal, closeTransactionModal, transactionDefaultCategory,
+      selectedDetailTransaction, isTransactionDetailModalOpen, openTransactionDetailModal, closeTransactionDetailModal,
       isTransferModalOpen, openTransferModal, closeTransferModal,
       isEnvelopeModalOpen, openEnvelopeModal, closeEnvelopeModal, envelopeEditTarget,
       isGoalModalOpen, openGoalModal, closeGoalModal, goalEditTarget,
