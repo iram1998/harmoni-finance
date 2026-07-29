@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, setDoc, doc, updateDoc } from 'firebase/firestore';
-import { db as dbDev, auth } from '../lib/firebase';
+import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc } from 'firebase/firestore';
+import { db as dbDev } from '../lib/firebase';
 
 export function DatabaseMigration() {
   const [configStr, setConfigStr] = useState('');
+  const [uidMappingStr, setUidMappingStr] = useState('');
   const [isMigrating, setIsMigrating] = useState(false);
   const [status, setStatus] = useState('');
-  const [isFixingUid, setIsFixingUid] = useState(false);
-  const [fixStatus, setFixStatus] = useState('');
+  const [isClearing, setIsClearing] = useState(false);
+  const [clearStatus, setClearStatus] = useState('');
 
   const parseConfig = () => {
     let cleanStr = configStr;
@@ -19,46 +20,82 @@ export function DatabaseMigration() {
     return new Function('return ' + cleanStr)();
   };
 
+  const COLLECTIONS = [
+    'activity_logs', 
+    'family_members', 
+    'transactions', 
+    'envelopes', 
+    'goals', 
+    'bills', 
+    'categories', 
+    'assets', 
+    'payment_accounts'
+  ];
+
+  const handleClearProd = async () => {
+    try {
+      if (!confirm('AWAS! Ini akan MENGHAPUS SEMUA DATA di database Production Anda. Anda yakin?')) return;
+      
+      setIsClearing(true);
+      setClearStatus('Menghubungkan ke Production...');
+      const prodConfig = parseConfig();
+      const appProd = initializeApp(prodConfig, 'prod_clear_' + Date.now());
+      const dbProd = getFirestore(appProd);
+
+      let totalDeleted = 0;
+      for (const collName of COLLECTIONS) {
+        setClearStatus(`Menghapus koleksi ${collName}...`);
+        const snapshot = await getDocs(collection(dbProd, collName));
+        for (const document of snapshot.docs) {
+          await deleteDoc(doc(dbProd, collName, document.id));
+          totalDeleted++;
+        }
+      }
+      setClearStatus(`Selesai! Berhasil menghapus ${totalDeleted} dokumen di Production.`);
+    } catch (err: any) {
+      console.error(err);
+      setClearStatus(`Error: ${err.message}`);
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   const handleMigrate = async () => {
     try {
       setIsMigrating(true);
-      setStatus('Parsing configuration...');
+      setStatus('Menyiapkan migrasi...');
       
-      let prodConfig;
-      try {
-        prodConfig = parseConfig();
-      } catch (err) {
-        throw new Error('Format config Firebase tidak valid. Pastikan Anda menempelkan object JSON dengan benar.');
-      }
-
-      setStatus('Menghubungkan ke Database Production...');
+      const prodConfig = parseConfig();
       const appProd = initializeApp(prodConfig, 'prod_migration_' + Date.now());
       const dbProd = getFirestore(appProd);
 
-      const collections = [
-        'activity_logs', 
-        'family_members', 
-        'transactions', 
-        'envelopes', 
-        'goals', 
-        'bills', 
-        'categories', 
-        'assets', 
-        'payment_accounts'
-      ];
+      let totalMigrated = 0;
 
-      for (const collName of collections) {
+      for (const collName of COLLECTIONS) {
         setStatus(`Migrasi ${collName}...`);
         const snapshot = await getDocs(collection(dbDev, collName));
-        let count = 0;
         for (const document of snapshot.docs) {
-          await setDoc(doc(dbProd, collName, document.id), document.data());
-          count++;
+          const data = document.data();
+          
+          // Ganti userId berdasarkan mapping JSON
+          let updatedData = { ...data };
+          if (uidMappingStr && updatedData.userId) {
+            try {
+              const mapping = JSON.parse(uidMappingStr);
+              if (mapping[updatedData.userId]) {
+                updatedData.userId = mapping[updatedData.userId];
+              }
+            } catch (e) {
+              // Abaikan jika bukan JSON valid, biarkan apa adanya
+            }
+          }
+
+          await setDoc(doc(dbProd, collName, document.id), updatedData);
+          totalMigrated++;
         }
-        console.log(`Migrated ${count} documents in ${collName}`);
       }
 
-      setStatus('Migrasi selesai dengan sukses!');
+      setStatus(`Migrasi selesai! ${totalMigrated} data berhasil dipindahkan ke Production.`);
     } catch (err: any) {
       console.error(err);
       setStatus(`Error: ${err.message}`);
@@ -67,120 +104,61 @@ export function DatabaseMigration() {
     }
   };
 
-  const handleFixUid = async () => {
-    try {
-      if (!auth.currentUser) {
-        throw new Error('Anda harus login terlebih dahulu.');
-      }
-      
-      let prodConfig;
-      try {
-        prodConfig = parseConfig();
-      } catch (err) {
-        throw new Error('Format config Firebase tidak valid. Tempelkan config dari project Production Anda terlebih dahulu.');
-      }
-
-      const newUid = auth.currentUser.uid;
-
-      setIsFixingUid(true);
-      setFixStatus('Menghubungkan ke Database Production...');
-      
-      const appProd = initializeApp(prodConfig, 'prod_fixuid_' + Date.now());
-      const dbProd = getFirestore(appProd);
-      
-      const collections = [
-        'activity_logs', 
-        'family_members', 
-        'transactions', 
-        'envelopes', 
-        'goals', 
-        'bills', 
-        'categories', 
-        'assets', 
-        'payment_accounts'
-      ];
-
-      let totalUpdated = 0;
-      let totalFound = 0;
-
-      for (const collName of collections) {
-        setFixStatus(`Memproses ${collName}...`);
-        const snapshot = await getDocs(collection(dbProd, collName));
-        totalFound += snapshot.docs.length;
-        
-        let count = 0;
-        for (const document of snapshot.docs) {
-          const data = document.data();
-          if (data.userId && data.userId !== newUid) {
-            await updateDoc(doc(dbProd, collName, document.id), {
-              userId: newUid
-            });
-            count++;
-            totalUpdated++;
-          }
-        }
-        console.log(`Updated ${count} documents in ${collName}`);
-      }
-
-      setFixStatus(`Selesai! Dari total ${totalFound} data di DB, berhasil memperbarui UID pada ${totalUpdated} data.`);
-    } catch (err: any) {
-      console.error(err);
-      setFixStatus(`Error: ${err.message}`);
-    } finally {
-      setIsFixingUid(false);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-6 mt-6">
       <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant">
-        <h3 className="font-headline-sm font-bold text-on-surface mb-2">Migrasi Database ke Production (Vercel)</h3>
+        <h3 className="font-headline-sm font-bold text-on-surface mb-2">Alat Migrasi Database Cerdas</h3>
         <p className="text-sm text-on-surface-variant mb-4">
-          Tempelkan <code>firebaseConfig</code> dari project baru (Production) Anda di bawah ini untuk menyalin semua data dari database Sandbox/Dev ke database Production.
+          Jalankan alat ini di <strong>versi Sandbox (AI Studio)</strong>. Alat ini memungkinkan Anda menghapus data lama di Production dan menyalin ulang dari Sandbox dengan pemetaan ID User (UID).
         </p>
-        
-        <textarea
-          value={configStr}
-          onChange={(e) => setConfigStr(e.target.value)}
-          placeholder="{\n  apiKey: '...', \n  authDomain: '...', \n  ...\n}"
-          className="w-full h-40 p-3 bg-surface border border-outline rounded-xl font-mono text-xs mb-4 focus:outline-none focus:border-primary"
-        />
-        
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleMigrate}
-            disabled={isMigrating || !configStr.trim()}
-            className="bg-primary text-on-primary px-4 py-2 rounded-xl font-bold text-sm disabled:opacity-50"
-          >
-            {isMigrating ? 'Memigrasi Data...' : 'Mulai Migrasi Data'}
-          </button>
-          {status && (
-            <span className={`text-sm font-bold ${status.includes('Error') ? 'text-error' : 'text-primary'}`}>
-              {status}
-            </span>
-          )}
-        </div>
-      </div>
 
-      <div className="bg-primary-container/20 p-6 rounded-2xl border border-primary/30">
-        <h3 className="font-headline-sm font-bold text-on-surface mb-2">Ambil Alih Data Hasil Migrasi (Fix UID)</h3>
-        <p className="text-sm text-on-surface-variant mb-4">
-          PENTING: Pastikan Anda sudah login ke akun Google Anda, lalu tempelkan <code>firebaseConfig</code> Production di kotak teks atas, kemudian klik tombol di bawah ini.
-        </p>
-        
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleFixUid}
-            disabled={isFixingUid || !configStr.trim()}
-            className="bg-primary text-on-primary px-4 py-2 rounded-xl font-bold text-sm disabled:opacity-50"
-          >
-            {isFixingUid ? 'Memproses...' : 'Ambil Alih Data Sekarang'}
-          </button>
-          {fixStatus && (
-            <span className={`text-sm font-bold ${fixStatus.includes('Error') ? 'text-error' : 'text-primary'}`}>
-              {fixStatus}
-            </span>
-          )}
+        <div className="space-y-4">
+          <div>
+            <label className="font-label-sm text-on-surface-variant mb-1 block">1. Config Firebase Production (Vercel)</label>
+            <textarea
+              value={configStr}
+              onChange={(e) => setConfigStr(e.target.value)}
+              placeholder="{\n  apiKey: '...', \n  authDomain: '...', \n  ...\n}"
+              className="w-full h-32 p-3 bg-surface border border-outline rounded-xl font-mono text-xs focus:outline-none focus:border-primary"
+            />
+          </div>
+
+          <div className="pt-2 border-t border-outline-variant">
+            <button
+              onClick={handleClearProd}
+              disabled={isClearing || !configStr.trim()}
+              className="bg-error/10 text-error hover:bg-error/20 px-4 py-2 rounded-xl font-bold text-sm transition-colors disabled:opacity-50"
+            >
+              {isClearing ? 'Menghapus...' : 'Kosongkan Database Production (Reset)'}
+            </button>
+            {clearStatus && <p className="text-sm mt-2 font-medium text-on-surface-variant">{clearStatus}</p>}
+          </div>
+
+          <div className="pt-2 border-t border-outline-variant">
+            <label className="font-label-sm text-on-surface-variant mb-1 block">2. Pemetaan UID (Opsional, Format JSON)</label>
+            <p className="text-xs text-on-surface-variant mb-2">Gunakan format JSON untuk mengganti UID lama dari Sandbox dengan UID baru di Production (Hanya untuk dokumen yang cocok).</p>
+            <textarea
+              value={uidMappingStr}
+              onChange={(e) => setUidMappingStr(e.target.value)}
+              placeholder="{\n  &#34;UID_LAMA_SANDBOX_1&#34;: &#34;UID_BARU_PRODUCTION_1&#34;,\n  &#34;UID_LAMA_SANDBOX_2&#34;: &#34;UID_BARU_PRODUCTION_2&#34;\n}"
+              className="w-full h-32 p-3 bg-surface border border-outline rounded-xl font-mono text-xs focus:outline-none focus:border-primary"
+            />
+          </div>
+          
+          <div className="pt-2">
+            <button
+              onClick={handleMigrate}
+              disabled={isMigrating || !configStr.trim()}
+              className="bg-primary text-on-primary px-4 py-2 rounded-xl font-bold text-sm disabled:opacity-50"
+            >
+              {isMigrating ? 'Memigrasi Data...' : 'Mulai Migrasi Data & Replace UID'}
+            </button>
+            {status && (
+              <p className={`text-sm mt-2 font-bold ${status.includes('Error') ? 'text-error' : 'text-primary'}`}>
+                {status}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
