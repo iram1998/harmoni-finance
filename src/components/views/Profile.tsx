@@ -5,7 +5,8 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ProfileSkeleton } from '../ui/Skeleton';
 import { formatCurrency } from '../../utils';
-import { Plus, Pencil, Trash2, X, Users, CreditCard, Mail } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Users, CreditCard, Mail, Database } from 'lucide-react';
+import { isVercel, isAIStudio, isProdOverride, firebaseConfig } from '../../lib/firebase';
 
 export function Profile() {
   const { user, superAdminId, loginWithGoogle, logout, familyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember } = useFinance();
@@ -338,9 +339,27 @@ export function Profile() {
               <span>Keamanan Akses:</span>
               <span className="font-semibold text-on-surface">Aturan Firestore Aktif</span>
             </div>
-            <div className="flex justify-between py-1">
+            <div className="flex justify-between py-1 border-b border-outline-variant">
               <span>ID Pengguna (UID):</span>
-              <span className="font-mono text-xs text-on-surface truncate max-w-[180px]">{user?.uid || '-'}</span>
+              <span className="font-mono text-xs text-on-surface truncate max-w-[180px]" title={user?.uid}>{user?.uid || '-'}</span>
+            </div>
+            <div className="flex flex-col py-1 gap-1 border-b border-outline-variant">
+              <div className="flex justify-between">
+                <span>Environment:</span>
+                <span className={`font-semibold ${isVercel ? 'text-primary' : isProdOverride ? 'text-blue-500' : 'text-amber-600'}`}>
+                  {isVercel ? 'Production (Vercel)' : isProdOverride ? 'Sandbox (Overridden -> Prod)' : 'Sandbox (AI Studio)'}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col py-1 gap-1">
+              <div className="flex justify-between">
+                <span>Project ID:</span>
+                <span className="font-mono text-xs text-on-surface">{firebaseConfig.projectId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Database ID:</span>
+                <span className="font-mono text-xs text-on-surface truncate max-w-[150px]" title={firebaseConfig.firestoreDatabaseId}>{firebaseConfig.firestoreDatabaseId || '(default)'}</span>
+              </div>
             </div>
           </div>
         </Card>
