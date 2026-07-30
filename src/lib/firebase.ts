@@ -35,25 +35,14 @@ const isAIStudio = typeof window !== 'undefined' && (
 
 const isVercel = !isAIStudio && !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
 
-let overrideConfig: any = null;
 let isProdOverride = false;
 if (typeof window !== 'undefined') {
   isProdOverride = localStorage.getItem('override_sandbox_db') === 'true';
-  if (isProdOverride) {
-    try {
-      overrideConfig = JSON.parse(localStorage.getItem('sandbox_override_config') || '{}');
-    } catch(e) {
-      console.error("Invalid override config");
-    }
-  }
 }
 
 // helper to get the config value
 const getConfigValue = (key: string, envKey: string, fallback: string) => {
-  if (isAIStudio && isProdOverride && overrideConfig && overrideConfig[key]) {
-    return overrideConfig[key];
-  }
-  if (!isAIStudio && import.meta.env[envKey]) {
+  if ((isProdOverride || !isAIStudio) && import.meta.env[envKey]) {
     return import.meta.env[envKey];
   }
   return localConfig[key] || fallback;
@@ -64,11 +53,9 @@ const firebaseConfig = {
   appId: getConfigValue('appId', 'VITE_FIREBASE_APP_ID', "1:648361121013:web:3ff5f7deba9360a1e1e1bc"),
   apiKey: getConfigValue('apiKey', 'VITE_FIREBASE_API_KEY', "AIzaSyAaxXSnoWQZPZasoqc7Yy6_rh2SkhqrhGA"),
   authDomain: getConfigValue('authDomain', 'VITE_FIREBASE_AUTH_DOMAIN', "organic-loader-grmnt.firebaseapp.com"),
-  firestoreDatabaseId: isAIStudio && isProdOverride && overrideConfig && overrideConfig.firestoreDatabaseId 
-    ? overrideConfig.firestoreDatabaseId 
-    : (!isAIStudio && import.meta.env.VITE_FIREBASE_DATABASE_ID)
-      ? import.meta.env.VITE_FIREBASE_DATABASE_ID
-      : isVercel 
+  firestoreDatabaseId: ((isProdOverride || !isAIStudio) && import.meta.env.VITE_FIREBASE_DATABASE_ID)
+    ? import.meta.env.VITE_FIREBASE_DATABASE_ID
+    : isVercel 
         ? "(default)" 
         : localConfig.firestoreDatabaseId || "ai-studio-harmonifinansial-3841d967-f381-4803-b6e7-b0b4fcdc5ca8",
   storageBucket: getConfigValue('storageBucket', 'VITE_FIREBASE_STORAGE_BUCKET', "organic-loader-grmnt.firebasestorage.app"),
