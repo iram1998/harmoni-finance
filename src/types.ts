@@ -104,12 +104,25 @@ export interface PaymentAccount {
   color?: string;
 }
 
+export interface Debt {
+  id: string;
+  userId: string;
+  workspaceId: WorkspaceType;
+  name: string;
+  type: 'payable' | 'receivable';
+  amount: number;
+  remainingAmount: number;
+  dueDate?: string;
+  status: 'active' | 'paid';
+  createdAt?: string;
+}
+
 export interface ActivityLog {
   id: string;
   userId: string;
   workspaceId: WorkspaceType;
   action: 'CREATE' | 'UPDATE' | 'DELETE';
-  entityType: 'TRANSACTION' | 'ASSET' | 'BILL' | 'ENVELOPE' | 'GOAL' | 'CATEGORY' | 'FAMILY_MEMBER' | 'PAYMENT_ACCOUNT' | 'SYSTEM';
+  entityType: 'TRANSACTION' | 'ASSET' | 'BILL' | 'ENVELOPE' | 'GOAL' | 'CATEGORY' | 'FAMILY_MEMBER' | 'PAYMENT_ACCOUNT' | 'DEBT' | 'SYSTEM';
   title: string;
   details: string;
   timestamp: string;

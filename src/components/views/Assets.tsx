@@ -15,6 +15,7 @@ import { AssetMapView } from '../AssetMapView';
 import { AssetMapPickerModal } from '../AssetMapPickerModal';
 import { AssetDetailModal } from '../AssetDetailModal';
 import { AssetSimulationModal } from '../AssetSimulationModal';
+import { PaymentAccountDetailsModal } from '../modals/PaymentAccountDetailsModal';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line
@@ -53,6 +54,7 @@ export function Assets() {
   const [isSubmittingPayAcc, setIsSubmittingPayAcc] = useState(false);
 
   const [deletePayAccTarget, setDeletePayAccTarget] = useState<PaymentAccount | null>(null);
+  const [detailPayAccTarget, setDetailPayAccTarget] = useState<PaymentAccount | null>(null);
   const [isDeletingPayAcc, setIsDeletingPayAcc] = useState(false);
 
   // Pagination & Fullscreen Chart State
@@ -1171,7 +1173,8 @@ export function Assets() {
                   return (
                     <div 
                       key={acc.id}
-                      className="p-3 rounded-xl border border-outline-variant bg-surface-container-low hover:border-primary/50 transition-all flex items-center justify-between group shadow-2xs"
+                      onClick={() => setDetailPayAccTarget(acc)}
+                      className="p-3 rounded-xl border border-outline-variant bg-surface-container-low hover:border-primary/50 transition-all flex items-center justify-between group shadow-2xs cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div 
@@ -1203,7 +1206,7 @@ export function Assets() {
                         <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity mt-0.5">
                           <button
                             type="button"
-                            onClick={() => handleOpenEditPayAccModal(acc)}
+                            onClick={(e) => { e.stopPropagation(); handleOpenEditPayAccModal(acc); }}
                             className="p-1 rounded text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                             title="Edit Rekening"
                           >
@@ -1211,7 +1214,7 @@ export function Assets() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setDeletePayAccTarget(acc)}
+                            onClick={(e) => { e.stopPropagation(); setDeletePayAccTarget(acc); }}
                             className="p-1 rounded text-on-surface-variant hover:text-red-600 hover:bg-red-500/10 transition-colors cursor-pointer"
                             title="Hapus Rekening"
                           >
@@ -2264,6 +2267,13 @@ export function Assets() {
         ] : []}
         confirmText="Hapus Rekening"
         isLoading={isDeletingPayAcc}
+      />
+
+      {/* Payment Account Details Modal */}
+      <PaymentAccountDetailsModal 
+        isOpen={Boolean(detailPayAccTarget)}
+        onClose={() => setDetailPayAccTarget(null)}
+        account={detailPayAccTarget}
       />
 
       {/* Add / Edit Payment Account Modal */}

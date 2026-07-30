@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { WorkspaceType, Transaction, Envelope, Goal, Bill, TransactionCategory, FamilyMember, Asset, ActivityLog, PaymentAccount } from './types';
+import { WorkspaceType, Transaction, Envelope, Goal, Bill, TransactionCategory, FamilyMember, Asset, ActivityLog, PaymentAccount, Debt } from './types';
 import { 
   auth, 
   db, 
@@ -55,6 +55,11 @@ interface FinanceState {
   updatePaymentAccount: (id: string, name: string, type: 'bank' | 'ewallet' | 'cash' | 'investment', balance: number, accountNumber?: string, holderName?: string, color?: string, wsId?: WorkspaceType) => Promise<void>;
   deletePaymentAccount: (id: string) => Promise<void>;
   reconcilePaymentAccount: (id: string, realBalance: number, reason: string) => Promise<void>;
+  debts: Debt[];
+  addDebt: (name: string, type: 'payable' | 'receivable', amount: number, dueDate?: string, wsId?: WorkspaceType) => Promise<void>;
+  updateDebt: (id: string, d: Partial<Debt>) => Promise<void>;
+  deleteDebt: (id: string) => Promise<void>;
+  payDebt: (debtId: string, paymentAmount: number, paymentAccountId?: string) => Promise<void>;
   assets: Asset[];
   addAsset: (
     name: string,
@@ -282,6 +287,11 @@ const DEFAULT_PAYMENT_ACCOUNTS = [
   { workspaceId: 'keluarga' as const, name: 'Kas Tunai Dompet', type: 'cash' as const, accountNumber: '-', holderName: 'Kas Rumah', balance: 850000, color: '#d97706' }
 ];
 
+const DEFAULT_DEBTS = [
+  { workspaceId: 'keluarga' as const, name: 'Pinjaman Renovasi Rumah (KPR)', type: 'payable' as const, amount: 15000000, remainingAmount: 10000000, dueDate: new Date(Date.now() + 86400000 * 30).toISOString(), status: 'active' as const },
+  { workspaceId: 'pribadi' as const, name: 'Piutang ke Budi (Pinjam Uang Usaha)', type: 'receivable' as const, amount: 2500000, remainingAmount: 1500000, dueDate: new Date(Date.now() + 86400000 * 14).toISOString(), status: 'active' as const }
+];
+
 const seedDemoTransactions = () => DEFAULT_TRANSACTIONS.map((t, idx) => ({ id: `demo-tx-${idx}`, ...t } as Transaction));
 const seedDemoEnvelopes = () => DEFAULT_ENVELOPES.map((e, idx) => ({ id: `demo-env-${idx}`, ...e } as Envelope));
 const seedDemoGoals = () => DEFAULT_GOALS.map((g, idx) => ({ id: `demo-goal-${idx}`, ...g } as Goal));
@@ -290,6 +300,7 @@ const seedDemoCategories = () => DEFAULT_CATEGORIES.map((c, idx) => ({ id: `demo
 const seedDemoFamilyMembers = () => DEFAULT_FAMILY_MEMBERS.map((m, idx) => ({ id: `demo-fm-${idx}`, ...m } as FamilyMember));
 const seedDemoAssets = () => DEFAULT_ASSETS.map((a, idx) => ({ id: `demo-asset-${idx}`, ...a } as Asset));
 const seedDemoPaymentAccounts = () => DEFAULT_PAYMENT_ACCOUNTS.map((p, idx) => ({ id: `demo-pa-${idx}`, ...p } as PaymentAccount));
+const seedDemoDebts = () => DEFAULT_DEBTS.map((d, idx) => ({ id: `demo-debt-${idx}`, ...d } as Debt));
 const seedDemoActivityLogs = () => [
   {
     id: 'demo-log-0',
@@ -317,6 +328,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [customCategories, setCustomCategories] = useState<TransactionCategory[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
 
@@ -491,6 +503,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setFamilyMembers(loadFromSession(`demo_fm_${uid}`, seedDemoFamilyMembers));
       setAssets(loadFromSession(`demo_assets_${uid}`, seedDemoAssets));
       setPaymentAccounts(loadFromSession(`demo_pa_${uid}`, seedDemoPaymentAccounts));
+      setDebts(loadFromSession(`demo_debts_${uid}`, seedDemoDebts));
       setActivityLogs(loadFromSession(`demo_logs_${uid}`, seedDemoActivityLogs));
       return; // Do NOT setup Firestore listeners
     }
@@ -656,6 +669,23 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    // Debts listener
+    const qDebts = query(collection(db, 'debts'), where('userId', 'in', userIds));
+    const unSubDebts = onSnapshot(qDebts, (snapshot) => {
+      const seededKey = `harmoni_seeded_debts_${userId}`;
+      if (snapshot.empty && !localStorage.getItem(seededKey)) {
+        localStorage.setItem(seededKey, 'true');
+        DEFAULT_DEBTS.forEach(d => {
+          addDoc(collection(db, 'debts'), { ...d, userId });
+        });
+      } else {
+        const list: Debt[] = snapshot.docs
+          .map(doc => ({ id: doc.id, ...(doc.data() as Omit<Debt, 'id'>) }))
+          .filter(isDocAllowed) as Debt[];
+        setDebts(list);
+      }
+    });
+
     // 8. Activity Logs
     const qLogs = query(collection(db, 'activity_logs'), where('userId', 'in', userIds));
     const unSubLogs = onSnapshot(qLogs, (snapshot) => {
@@ -675,6 +705,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       unSubFamily();
       unSubAssets();
       unSubPayAcc();
+      unSubDebts();
       unSubLogs();
     };
   }, [user, superAdminId]);
@@ -1801,6 +1832,106 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const addDebt = async (name: string, type: 'payable' | 'receivable', amount: number, dueDate?: string, wsId?: WorkspaceType) => {
+    const targetWs = wsId || workspace;
+    const newD: Omit<Debt, 'id'> = {
+      workspaceId: targetWs,
+      name,
+      type,
+      amount,
+      remainingAmount: amount,
+      dueDate,
+      status: 'active',
+      createdAt: new Date().toISOString()
+    };
+    if (isDemo) {
+      const created: Debt = { id: `demo-debt-${Date.now()}`, ...newD, userId: user?.uid || 'guest' };
+      const updated = [created, ...debts];
+      setDebts(updated);
+      sessionStorage.setItem(`demo_debts_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('CREATE', 'DEBT', `Tambah ${type === 'payable' ? 'Utang' : 'Piutang'}: ${name}`, `Nominal Rp ${amount.toLocaleString('id-ID')}`, targetWs);
+      return;
+    }
+    if (!user) return;
+    const targetUid = getTargetUserId(targetWs);
+    await addDoc(collection(db, 'debts'), { ...newD, userId: targetUid });
+    await logActivity('CREATE', 'DEBT', `Tambah ${type === 'payable' ? 'Utang' : 'Piutang'}: ${name}`, `Nominal Rp ${amount.toLocaleString('id-ID')}`, targetWs);
+  };
+
+  const updateDebt = async (id: string, d: Partial<Debt>) => {
+    if (isDemo) {
+      const updated = debts.map(item => item.id === id ? { ...item, ...d } : item);
+      setDebts(updated);
+      sessionStorage.setItem(`demo_debts_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      return;
+    }
+    if (!user) return;
+    await updateDoc(doc(db, 'debts', id), d);
+  };
+
+  const deleteDebt = async (id: string) => {
+    const target = debts.find(d => d.id === id);
+    if (isDemo) {
+      const updated = debts.filter(d => d.id !== id);
+      setDebts(updated);
+      sessionStorage.setItem(`demo_debts_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      if (target) {
+        addDemoActivity('DELETE', 'DEBT', `Hapus ${target.type === 'payable' ? 'Utang' : 'Piutang'}: ${target.name}`, `Terhapus dari sistem.`, target.workspaceId);
+      }
+      return;
+    }
+    if (!user) return;
+    await deleteDoc(doc(db, 'debts', id));
+    if (target) {
+      await logActivity('DELETE', 'DEBT', `Hapus ${target.type === 'payable' ? 'Utang' : 'Piutang'}: ${target.name}`, `Terhapus dari sistem.`, target.workspaceId);
+    }
+  };
+
+  const payDebt = async (debtId: string, paymentAmount: number, paymentAccountId?: string) => {
+    const target = debts.find(d => d.id === debtId);
+    if (!target || paymentAmount <= 0) return;
+    const newRemaining = Math.max(0, target.remainingAmount - paymentAmount);
+    const newStatus = newRemaining === 0 ? 'paid' : 'active';
+
+    if (isDemo) {
+      const updated = debts.map(d => d.id === debtId ? { ...d, remainingAmount: newRemaining, status: newStatus as 'active' | 'paid' } : d);
+      setDebts(updated);
+      sessionStorage.setItem(`demo_debts_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      
+      const isPayable = target.type === 'payable';
+      await addTransaction({
+        workspaceId: target.workspaceId,
+        type: isPayable ? 'expense' : 'income',
+        amount: paymentAmount,
+        category: 'Cicilan & Utang',
+        date: new Date().toISOString(),
+        description: isPayable ? `Pembayaran Cicilan Utang: ${target.name}` : `Penerimaan Pelunasan Piutang: ${target.name}`,
+        paymentAccountId
+      });
+      addDemoActivity('UPDATE', 'DEBT', `Pembayaran ${isPayable ? 'Utang' : 'Piutang'}: ${target.name}`, `Pembayaran sebesar Rp ${paymentAmount.toLocaleString('id-ID')}`, target.workspaceId);
+      return;
+    }
+
+    if (!user) return;
+    await updateDoc(doc(db, 'debts', debtId), {
+      remainingAmount: newRemaining,
+      status: newStatus
+    });
+
+    const isPayable = target.type === 'payable';
+    await addTransaction({
+      workspaceId: target.workspaceId,
+      type: isPayable ? 'expense' : 'income',
+      amount: paymentAmount,
+      category: 'Cicilan & Utang',
+      date: new Date().toISOString(),
+      description: isPayable ? `Pembayaran Cicilan Utang: ${target.name}` : `Penerimaan Pelunasan Piutang: ${target.name}`,
+      paymentAccountId
+    });
+
+    await logActivity('UPDATE', 'DEBT', `Pembayaran ${isPayable ? 'Utang' : 'Piutang'}: ${target.name}`, `Pembayaran sebesar Rp ${paymentAmount.toLocaleString('id-ID')}`, target.workspaceId);
+  };
+
   const deleteActivityLog = async (id: string) => {
     if (isDemo) {
       const updated = activityLogs.filter(log => log.id !== id);
@@ -1999,6 +2130,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       customCategories, addCategory, updateCategory, deleteCategory,
       familyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember,
       paymentAccounts, addPaymentAccount, updatePaymentAccount, deletePaymentAccount, reconcilePaymentAccount,
+      debts, addDebt, updateDebt, deleteDebt, payDebt,
       assets, addAsset, updateAsset, deleteAsset, addAssetValuation, deleteAssetValuation,
       activityLogs, logActivity, deleteActivityLog, clearActivityLogs, autoCleanActivityLogs,
       user, superAdminId, isAuthLoading,

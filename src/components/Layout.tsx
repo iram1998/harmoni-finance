@@ -168,6 +168,7 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
             <div className="border-t border-slate-700/50 my-1 w-full" />
           )}
           <NavItem icon="home_work" label={t('assetsAndGoods')} active={currentView === 'assets'} onClick={() => handleViewNavigation('assets')} isOpen={isSidebarOpen} />
+          <NavItem icon="account_balance" label={t('debtsAndReceivables')} active={currentView === 'debts'} onClick={() => handleViewNavigation('debts')} isOpen={isSidebarOpen} />
           <NavItem icon="assessment" label={t('reports')} active={currentView === 'reports'} onClick={() => handleViewNavigation('reports')} isOpen={isSidebarOpen} />
 
           {/* Kelompok 4: Aplikasi */}

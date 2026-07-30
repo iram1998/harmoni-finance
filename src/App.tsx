@@ -19,6 +19,7 @@ import { Help } from './components/views/Help';
 import { Settings } from './components/views/Settings';
 import { Profile } from './components/views/Profile';
 import { Assets } from './components/views/Assets';
+import { Debts } from './components/views/Debts';
 import { PrivacyPolicy } from './components/views/PrivacyPolicy';
 import { TermsOfService } from './components/views/TermsOfService';
 import { SecurityLockScreen } from './components/SecurityLockScreen';
@@ -34,6 +35,7 @@ function AppContent() {
         {currentView === 'cash-flow' && <CashFlow />}
         {currentView === 'budgeting' && <Budgeting />}
         {currentView === 'assets' && <Assets />}
+        {currentView === 'debts' && <Debts />}
         {currentView === 'bills' && <Bills />}
         {currentView === 'goals' && <Goals />}
         {currentView === 'reports' && <Reports />}
