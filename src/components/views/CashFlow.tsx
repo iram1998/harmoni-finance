@@ -22,20 +22,49 @@ export function CashFlow() {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
 
-  // Local filter states
+  // Local filter & sort states
+  type SortField = 'date' | 'description' | 'category' | 'workspace' | 'amount';
+  type SortDirection = 'asc' | 'desc';
+
   const [cfWorkspaceFilter, setCfWorkspaceFilter] = useState<'pribadi' | 'keluarga' | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
-  // Clear selected ids when workspace filter changes
+  // Pagination states
+  const [pageSize, setPageSize] = useState<number | 'all'>(15);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  const handleHeaderSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'date' || field === 'amount' ? 'desc' : 'asc');
+    }
+  };
+
+  const handleSelectSort = (val: string) => {
+    const [field, dir] = val.split('-') as [SortField, SortDirection];
+    setSortField(field);
+    setSortDirection(dir);
+  };
+
+  // Clear selected ids when workspace, type, search, sort, or page size changes
   useEffect(() => {
     setSelectedIds([]);
-  }, [cfWorkspaceFilter]);
+  }, [cfWorkspaceFilter, typeFilter, searchTerm, sortField, sortDirection, pageSize, currentPage]);
+
+  // Reset page to 1 whenever filters, search, sort, or page size change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [cfWorkspaceFilter, searchTerm, typeFilter, sortField, sortDirection, pageSize]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allFilteredIds = wsTransactions.map(t => t.id);
-      setSelectedIds(allFilteredIds);
+      const allPaginatedIds = paginatedTransactions.map(t => t.id);
+      setSelectedIds(allPaginatedIds);
     } else {
       setSelectedIds([]);
     }
@@ -82,7 +111,8 @@ export function CashFlow() {
     return () => clearTimeout(timer);
   }, [cfWorkspaceFilter]);
   
-  const wsTransactions = transactions.filter(t => {
+  // 1. Filtered list
+  const filteredTransactions = transactions.filter(t => {
     const matchWs = cfWorkspaceFilter === 'all' ? true : (t.workspaceId || 'keluarga') === cfWorkspaceFilter;
     const matchType = typeFilter === 'all' ? true : t.type === typeFilter;
     const desc = (t.description || t.title || '').toLowerCase();
@@ -92,15 +122,72 @@ export function CashFlow() {
     return matchWs && matchType && matchSearch;
   });
 
+  // 2. Sorted list
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    let result = 0;
+    if (sortField === 'date') {
+      const timeA = new Date(a.date).getTime() || 0;
+      const timeB = new Date(b.date).getTime() || 0;
+      result = timeA - timeB;
+    } else if (sortField === 'description') {
+      const descA = a.description || a.title || '';
+      const descB = b.description || b.title || '';
+      result = descA.localeCompare(descB, language === 'id' ? 'id' : 'en', { sensitivity: 'base' });
+    } else if (sortField === 'category') {
+      const catA = a.category || '';
+      const catB = b.category || '';
+      result = catA.localeCompare(catB, language === 'id' ? 'id' : 'en', { sensitivity: 'base' });
+    } else if (sortField === 'workspace') {
+      const wsA = a.workspaceId || 'keluarga';
+      const wsB = b.workspaceId || 'keluarga';
+      result = wsA.localeCompare(wsB, language === 'id' ? 'id' : 'en', { sensitivity: 'base' });
+    } else if (sortField === 'amount') {
+      result = a.amount - b.amount;
+    }
+
+    return sortDirection === 'asc' ? result : -result;
+  });
+
+  // 3. Paginated list
+  const totalItems = sortedTransactions.length;
+  const effectivePageSize = pageSize === 'all' ? totalItems || 1 : Number(pageSize);
+  const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(totalItems / effectivePageSize));
+
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * effectivePageSize;
+  const endIndex = pageSize === 'all' ? totalItems : Math.min(startIndex + effectivePageSize, totalItems);
+
+  const paginatedTransactions = pageSize === 'all' ? sortedTransactions : sortedTransactions.slice(startIndex, endIndex);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('...');
+      
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      if (currentPage < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
   const isTransferTx = (t: { category?: string }) => {
     const c = (t.category || '').toLowerCase();
     return c.includes('transfer') || c.includes('pindah') || c.includes('saldo');
   };
 
-  const fixedIncome = wsTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'fixed' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
-  const variableIncome = wsTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'variable' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
+  const fixedIncome = filteredTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'fixed' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
+  const variableIncome = filteredTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'variable' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
   const totalIncome = fixedIncome + variableIncome;
-  const totalExpense = wsTransactions.filter(t => t.type === 'expense' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
+  const totalExpense = filteredTransactions.filter(t => t.type === 'expense' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
   const netCashFlow = totalIncome - totalExpense;
 
   const handleConfirmDelete = async () => {
@@ -254,7 +341,7 @@ export function CashFlow() {
                   <span>{language === 'id' ? `Hapus Terpilih (${selectedIds.length})` : `Delete Selected (${selectedIds.length})`}</span>
                 </button>
               )}
-              <div className="relative flex-1 sm:w-64">
+              <div className="relative flex-1 sm:w-56">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
                 <input
                   type="text"
@@ -267,11 +354,27 @@ export function CashFlow() {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as any)}
-                className="bg-surface border border-outline-variant px-3 py-1.5 rounded-lg text-xs font-bold text-on-surface focus:outline-none focus:border-primary"
+                className="bg-surface border border-outline-variant px-3 py-1.5 rounded-lg text-xs font-bold text-on-surface focus:outline-none focus:border-primary cursor-pointer"
               >
                 <option value="all">{language === 'id' ? 'Semua Tipe' : 'All Types'}</option>
                 <option value="income">{language === 'id' ? 'Pemasukan' : 'Income'}</option>
                 <option value="expense">{language === 'id' ? 'Pengeluaran' : 'Expense'}</option>
+              </select>
+              <select
+                value={`${sortField}-${sortDirection}`}
+                onChange={(e) => handleSelectSort(e.target.value)}
+                className="bg-surface border border-outline-variant px-3 py-1.5 rounded-lg text-xs font-bold text-on-surface focus:outline-none focus:border-primary cursor-pointer"
+              >
+                <option value="date-desc">{language === 'id' ? 'Tanggal: Terbaru' : 'Date: Newest'}</option>
+                <option value="date-asc">{language === 'id' ? 'Tanggal: Terlama' : 'Date: Oldest'}</option>
+                <option value="amount-desc">{language === 'id' ? 'Nominal: Terbesar' : 'Amount: Highest'}</option>
+                <option value="amount-asc">{language === 'id' ? 'Nominal: Terkecil' : 'Amount: Lowest'}</option>
+                <option value="description-asc">{language === 'id' ? 'Deskripsi: A-Z' : 'Description: A-Z'}</option>
+                <option value="description-desc">{language === 'id' ? 'Deskripsi: Z-A' : 'Description: Z-A'}</option>
+                <option value="category-asc">{language === 'id' ? 'Kategori: A-Z' : 'Category: A-Z'}</option>
+                <option value="category-desc">{language === 'id' ? 'Kategori: Z-A' : 'Category: Z-A'}</option>
+                <option value="workspace-asc">{language === 'id' ? 'Workspace: A-Z' : 'Workspace: A-Z'}</option>
+                <option value="workspace-desc">{language === 'id' ? 'Workspace: Z-A' : 'Workspace: Z-A'}</option>
               </select>
               <Button variant="primary" size="sm" icon="add" onClick={openTransactionModal}>
                 {t('addTransaction')}
@@ -285,33 +388,88 @@ export function CashFlow() {
                   <th className="py-3 px-4 w-12 text-center">
                     <input 
                       type="checkbox"
-                      checked={wsTransactions.length > 0 && selectedIds.length === wsTransactions.length}
+                      checked={paginatedTransactions.length > 0 && paginatedTransactions.every(t => selectedIds.includes(t.id))}
                       ref={input => {
                         if (input) {
-                          input.indeterminate = selectedIds.length > 0 && selectedIds.length < wsTransactions.length;
+                          input.indeterminate = paginatedTransactions.some(t => selectedIds.includes(t.id)) && !paginatedTransactions.every(t => selectedIds.includes(t.id));
                         }
                       }}
                       onChange={(e) => handleSelectAll(e.target.checked)}
                       className="w-4 h-4 rounded border-outline text-primary focus:ring-primary cursor-pointer accent-primary"
                     />
                   </th>
-                  <th className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider">{t('date')}</th>
-                  <th className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider">{t('description')}</th>
-                  <th className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider">{t('category')}</th>
-                  <th className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider">Workspace</th>
-                  <th className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider text-right">{t('amount')}</th>
+                  <th 
+                    onClick={() => handleHeaderSort('date')}
+                    className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider cursor-pointer hover:bg-surface-container/80 transition-colors select-none group"
+                    title={language === 'id' ? 'Klik untuk mengurutkan berdasarkan tanggal' : 'Click to sort by date'}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>{t('date')}</span>
+                      <span className={`material-symbols-outlined text-sm transition-opacity ${sortField === 'date' ? 'text-primary opacity-100 font-bold' : 'text-on-surface-variant/40 opacity-0 group-hover:opacity-100'}`}>
+                        {sortField === 'date' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                      </span>
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleHeaderSort('description')}
+                    className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider cursor-pointer hover:bg-surface-container/80 transition-colors select-none group"
+                    title={language === 'id' ? 'Klik untuk mengurutkan berdasarkan deskripsi' : 'Click to sort by description'}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>{t('description')}</span>
+                      <span className={`material-symbols-outlined text-sm transition-opacity ${sortField === 'description' ? 'text-primary opacity-100 font-bold' : 'text-on-surface-variant/40 opacity-0 group-hover:opacity-100'}`}>
+                        {sortField === 'description' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                      </span>
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleHeaderSort('category')}
+                    className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider cursor-pointer hover:bg-surface-container/80 transition-colors select-none group"
+                    title={language === 'id' ? 'Klik untuk mengurutkan berdasarkan kategori' : 'Click to sort by category'}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>{t('category')}</span>
+                      <span className={`material-symbols-outlined text-sm transition-opacity ${sortField === 'category' ? 'text-primary opacity-100 font-bold' : 'text-on-surface-variant/40 opacity-0 group-hover:opacity-100'}`}>
+                        {sortField === 'category' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                      </span>
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleHeaderSort('workspace')}
+                    className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider cursor-pointer hover:bg-surface-container/80 transition-colors select-none group"
+                    title={language === 'id' ? 'Klik untuk mengurutkan berdasarkan workspace' : 'Click to sort by workspace'}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Workspace</span>
+                      <span className={`material-symbols-outlined text-sm transition-opacity ${sortField === 'workspace' ? 'text-primary opacity-100 font-bold' : 'text-on-surface-variant/40 opacity-0 group-hover:opacity-100'}`}>
+                        {sortField === 'workspace' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                      </span>
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleHeaderSort('amount')}
+                    className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider cursor-pointer hover:bg-surface-container/80 transition-colors select-none group text-right"
+                    title={language === 'id' ? 'Klik untuk mengurutkan berdasarkan nominal' : 'Click to sort by amount'}
+                  >
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>{t('amount')}</span>
+                      <span className={`material-symbols-outlined text-sm transition-opacity ${sortField === 'amount' ? 'text-primary opacity-100 font-bold' : 'text-on-surface-variant/40 opacity-0 group-hover:opacity-100'}`}>
+                        {sortField === 'amount' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                      </span>
+                    </div>
+                  </th>
                   <th className="py-3 px-4 font-label-md text-on-surface-variant uppercase tracking-wider text-center">{t('action')}</th>
                 </tr>
               </thead>
               <tbody className="font-body-sm text-on-surface divide-y divide-outline-variant/50">
-                {wsTransactions.length === 0 ? (
+                {paginatedTransactions.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-on-surface-variant">
                       {t('emptyTransactions')}
                     </td>
                   </tr>
                 ) : (
-                  wsTransactions.map(t => (
+                  paginatedTransactions.map(t => (
                     <tr 
                       key={t.id} 
                       onClick={() => openTransactionDetailModal(t)}
@@ -375,8 +533,73 @@ export function CashFlow() {
               </tbody>
             </table>
           </div>
-          <div className="mt-6 flex justify-between items-center">
-            <span className="font-body-sm text-on-surface-variant">Menampilkan {wsTransactions.length} transaksi</span>
+
+          {/* Desktop Pagination */}
+          <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-outline-variant/60">
+            <div className="font-body-sm text-on-surface-variant">
+              {totalItems === 0
+                ? (language === 'id' ? 'Menampilkan 0 transaksi' : 'Showing 0 transactions')
+                : (language === 'id' 
+                    ? `Menampilkan ${startIndex + 1} - ${endIndex} dari ${totalItems} transaksi` 
+                    : `Showing ${startIndex + 1} - ${endIndex} of ${totalItems} transactions`)}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-xs font-medium text-on-surface-variant">
+                <span>{language === 'id' ? 'Per halaman:' : 'Per page:'}</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                  className="bg-surface border border-outline-variant px-2.5 py-1 rounded-lg text-xs font-bold text-on-surface focus:outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value={15}>15</option>
+                  <option value={30}>30</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value="all">{language === 'id' ? 'Semua' : 'All'}</option>
+                </select>
+              </div>
+
+              {pageSize !== 'all' && totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1.5 rounded-lg border border-outline-variant text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container transition-colors cursor-pointer"
+                    title={language === 'id' ? 'Halaman Sebelumnya' : 'Previous Page'}
+                  >
+                    <span className="material-symbols-outlined text-sm">chevron_left</span>
+                  </button>
+
+                  {getPageNumbers().map((p, idx) => (
+                    typeof p === 'number' ? (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentPage(p)}
+                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          currentPage === p
+                            ? 'bg-primary text-on-primary shadow-2xs'
+                            : 'border border-outline-variant hover:bg-surface-container text-on-surface'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ) : (
+                      <span key={idx} className="px-1 text-xs text-on-surface-variant">...</span>
+                    )
+                  ))}
+
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-1.5 rounded-lg border border-outline-variant text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container transition-colors cursor-pointer"
+                    title={language === 'id' ? 'Halaman Berikutnya' : 'Next Page'}
+                  >
+                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </Card>
       </div>
@@ -440,18 +663,72 @@ export function CashFlow() {
             </div>
           )}
 
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="font-headline-sm font-bold text-on-surface">{t('transactionList')}</h3>
-            <span className="font-body-sm text-on-surface-variant">{wsTransactions.length} items</span>
+            <span className="font-body-sm text-on-surface-variant">{totalItems} {language === 'id' ? 'transaksi' : 'items'}</span>
+          </div>
+
+          {/* Mobile Search, Filters, Sort & PageSize */}
+          <div className="flex flex-col gap-2.5 mb-4">
+            <div className="relative w-full">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+              <input
+                type="text"
+                placeholder={language === 'id' ? 'Cari deskripsi / kategori...' : 'Search description / category...'}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-surface border border-outline-variant pl-9 pr-3 py-2 rounded-xl text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as any)}
+                className="bg-surface border border-outline-variant px-2.5 py-1.5 rounded-xl text-xs font-bold text-on-surface focus:outline-none focus:border-primary shrink-0 cursor-pointer"
+              >
+                <option value="all">{language === 'id' ? 'Semua Tipe' : 'All Types'}</option>
+                <option value="income">{language === 'id' ? 'Pemasukan' : 'Income'}</option>
+                <option value="expense">{language === 'id' ? 'Pengeluaran' : 'Expense'}</option>
+              </select>
+
+              <select
+                value={`${sortField}-${sortDirection}`}
+                onChange={(e) => handleSelectSort(e.target.value)}
+                className="bg-surface border border-outline-variant px-2.5 py-1.5 rounded-xl text-xs font-bold text-on-surface focus:outline-none focus:border-primary shrink-0 cursor-pointer"
+              >
+                <option value="date-desc">{language === 'id' ? 'Tanggal (Terbaru)' : 'Date (Newest)'}</option>
+                <option value="date-asc">{language === 'id' ? 'Tanggal (Terlama)' : 'Date (Oldest)'}</option>
+                <option value="amount-desc">{language === 'id' ? 'Nominal (Terbesar)' : 'Amount (Highest)'}</option>
+                <option value="amount-asc">{language === 'id' ? 'Nominal (Terkecil)' : 'Amount (Lowest)'}</option>
+                <option value="description-asc">{language === 'id' ? 'Deskripsi (A-Z)' : 'Description (A-Z)'}</option>
+                <option value="description-desc">{language === 'id' ? 'Deskripsi (Z-A)' : 'Description (Z-A)'}</option>
+                <option value="category-asc">{language === 'id' ? 'Kategori (A-Z)' : 'Category (A-Z)'}</option>
+                <option value="category-desc">{language === 'id' ? 'Kategori (Z-A)' : 'Category (Z-A)'}</option>
+                <option value="workspace-asc">{language === 'id' ? 'Workspace (A-Z)' : 'Workspace (A-Z)'}</option>
+                <option value="workspace-desc">{language === 'id' ? 'Workspace (Z-A)' : 'Workspace (Z-A)'}</option>
+              </select>
+
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                className="bg-surface border border-outline-variant px-2.5 py-1.5 rounded-xl text-xs font-bold text-on-surface focus:outline-none focus:border-primary shrink-0 cursor-pointer"
+              >
+                <option value={15}>15 / hal</option>
+                <option value={30}>30 / hal</option>
+                <option value={50}>50 / hal</option>
+                <option value={100}>100 / hal</option>
+                <option value="all">{language === 'id' ? 'Semua' : 'All'}</option>
+              </select>
+            </div>
           </div>
           
           <div className="space-y-3">
-            {wsTransactions.length === 0 ? (
+            {paginatedTransactions.length === 0 ? (
               <div className="p-8 text-center text-on-surface-variant font-body-sm bg-surface-container-lowest rounded-xl border border-outline-variant">
                 {t('emptyTransactions')}
               </div>
             ) : (
-              wsTransactions.map(t => (
+              paginatedTransactions.map(t => (
                 <div 
                   key={`mob-${t.id}`} 
                   onClick={() => openTransactionDetailModal(t)}
@@ -506,6 +783,40 @@ export function CashFlow() {
               ))
             )}
           </div>
+
+          {/* Mobile Pagination Controls */}
+          {totalItems > 0 && (
+            <div className="mt-4 p-4 bg-surface-container-lowest rounded-xl border border-outline-variant space-y-3">
+              <div className="text-center text-xs text-on-surface-variant font-medium">
+                {language === 'id' 
+                  ? `Menampilkan ${startIndex + 1} - ${endIndex} dari ${totalItems} transaksi` 
+                  : `Showing ${startIndex + 1} - ${endIndex} of ${totalItems} transactions`}
+              </div>
+              {pageSize !== 'all' && totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 rounded-lg border border-outline-variant text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container cursor-pointer flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-sm">chevron_left</span>
+                    {language === 'id' ? 'Prev' : 'Prev'}
+                  </button>
+                  <span className="text-xs font-bold text-on-surface px-2">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 rounded-lg border border-outline-variant text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container cursor-pointer flex items-center gap-1"
+                  >
+                    {language === 'id' ? 'Next' : 'Next'}
+                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </section>
       </div>
 
