@@ -15,12 +15,12 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
     {
       id: '1',
       icon: 'check_circle',
-      title: '1. Penerimaan Syarat',
-      summary: 'Pernyataan persetujuan saat mendaftar atau menggunakan platform.',
+      title: '1. Penerimaan Syarat & Ketentuan',
+      summary: 'Pernyataan persetujuan saat mendaftar, mengautentikasi, atau menggunakan fitur platform.',
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Dengan membuat akun atau menggunakan fitur di Harmoni Finansial, Anda menyatakan bahwa Anda telah membaca, memahami, dan menyetujui seluruh ketentuan dalam dokumen ini serta Kebijakan Privasi kami. Jika Anda tidak menyetujui syarat ini, Anda dapat menghentikan penggunaan platform.
+            Dengan membuat akun, melakukan autentikasi, atau mengakses layanan Harmoni Finansial, Anda menyatakan secara sadar telah membaca, memahami, dan menyetujui seluruh ketentuan dalam dokumen Syarat & Ketentuan ini beserta Kebijakan Privasi kami. Jika Anda tidak menyetujui bagian mana pun dari ketentuan ini, Anda dipersilakan menghentikan penggunaan platform.
           </p>
         </div>
       )
@@ -28,18 +28,19 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
     {
       id: '2',
       icon: 'apps',
-      title: '2. Deskripsi Layanan',
-      summary: 'Cakupan fitur pencatatan cash flow, amplop anggaran, target tabungan, dan laporan.',
+      title: '2. Cakupan Fitur & Modul Layanan',
+      summary: 'Cakupan fitur pencatatan cash flow, utang-piutang, aset, tagihan, anggaran, dan laporan.',
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Harmoni Finansial menyediakan alat perencanaan dan penganggaran keuangan mandiri, termasuk namun tidak terbatas pada:
+            Harmoni Finansial menyediakan platform peranti lunak perencanaan dan pengelolaan keuangan mandiri yang mencakup:
           </p>
           <ul className="list-disc list-inside space-y-2 font-body-md text-on-surface-variant pl-2">
-            <li>Pencatatan transaksi arus kas masuk dan keluar (Cash Flow) secara otomatis dan manual.</li>
-            <li>Sistem alokasi anggaran berbasis amplop digital (Envelope Budgeting).</li>
-            <li>Pemantauan target pencapaian tabungan (Goal Tracking) dan pendaftaran tagihan rutin.</li>
-            <li>Laporan analitis dan statistik kesehatan keuangan harian dan bulanan.</li>
+            <li>Modul Arus Kas (Cash Flow) & Rekening Pembayaran untuk pencatatan transaksi Pemasukan, Pengeluaran, dan Transfer.</li>
+            <li>Modul Utang & Piutang (Debts & Receivables) untuk mencatat kewajiban, klaim pembayaran, dan pelunasan bertahap.</li>
+            <li>Modul Aset & Barang (Assets & Property) untuk pemantauan inventaris fisik/keuangan, peta lokasi, dan simulasi penyusutan.</li>
+            <li>Modul Amplop Anggaran (Envelope Budgeting), Pengingat Tagihan (Bills), dan Target Tabungan (Goals).</li>
+            <li>Laporan Analitis Lintas Workspace dan fitur ekspor cetak PDF/CSV.</li>
           </ul>
         </div>
       )
@@ -47,25 +48,30 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
     {
       id: '3',
       icon: 'account_circle',
-      title: '3. Akun & Kerahasiaan',
-      summary: 'Tanggung jawab penuh pengguna dalam menjaga kredensial kata sandi.',
+      title: '3. Tanggung Jawab Akun, Workspace & Pengunci Layar',
+      summary: 'Kerahasiaan akun, otorisasi ruang kerja Keluarga vs Pribadi, serta PIN Passcode.',
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Anda bertanggung jawab penuh untuk menjaga kerahasiaan kredensial akun Anda. Segala aktivitas yang terjadi di bawah akun Anda merupakan tanggung jawab Anda sepenuhnya. Harmoni tidak bertanggung jawab atas kerugian akibat kelalaian pengguna dalam menjaga kata sandi atau informasi rahasia.
+            Pengguna bertanggung jawab penuh atas kerahasiaan kredensial dan penggunaan fitur keamanan:
           </p>
+          <ul className="list-disc list-inside space-y-2 font-body-md text-on-surface-variant pl-2">
+            <li><strong className="text-on-surface">Kerahasiaan Kredensial:</strong> Pengguna wajib menjaga kata sandi akun dan tidak membagikannya kepada pihak yang tidak berhak.</li>
+            <li><strong className="text-on-surface">Pengaturan Workspace:</strong> Pengguna bertanggung jawab atas anggota keluarga yang diundang ke dalam Workspace Keluarga. Data di Workspace Pribadi tetap terisolasi penuh.</li>
+            <li><strong className="text-on-surface">Pengunci Layar (Passcode Security):</strong> Fitur kunci PIN lokal disediakan untuk perlindungan tambahan dari akses langsung pada fisik perangkat pengguna.</li>
+          </ul>
         </div>
       )
     },
     {
       id: '4',
       icon: 'warning',
-      title: '4. Penafian Nasihat Keuangan',
-      summary: 'Platform ini adalah alat pencatatan peranti lunak, bukan konsultan resmi.',
+      title: '4. Penafian Nasihat Keuangan & Hukum',
+      summary: 'Platform ini adalah alat peranti lunak pencatatan mandiri, bukan konsultan keuangan resmi.',
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Harmoni Finansial adalah platform peranti lunak manajemen keuangan dan pencatatan pribadi. Layanan ini <strong className="text-on-surface">TIDAK memberikan nasihat keuangan, investasi, pajak, atau hukum berlisensi</strong>. Informasi dan grafik yang disajikan bersifat edukatif dan bantu pencatatan belaka. Silakan berkonsultasi dengan penasihat keuangan profesional untuk keputusan finansial penting.
+            Harmoni Finansial adalah platform pencatatan peranti lunak independen. Layanan ini <strong className="text-on-surface">TIDAK memberikan nasihat keuangan, investasi, perpajakan, atau hukum berlisensi</strong>. Seluruh perhitungan, grafik, dan estimasi penyusutan bersifat informatif dan bantu pencatatan belaka. Silakan berkonsultasi dengan penasihat keuangan terdaftar untuk keputusan finansial penting.
           </p>
         </div>
       )
@@ -74,11 +80,11 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
       id: '5',
       icon: 'copyright',
       title: '5. Hak Kekayaan Intelektual',
-      summary: 'Perlindungan atas seluruh antarmuka, kode sumber, logo, dan desain platform.',
+      summary: 'Perlindungan atas antarmuka, kode sumber, sistem komponen, logo, dan ikon platform.',
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Seluruh elemen dalam aplikasi ini, termasuk antarmuka, logo, desain visual, ikon, kode sumber, dan konten teks merupakan hak milik intelektual Harmoni Finansial. Dilarang menggandakan, mendistribusikan, atau memodifikasi bagian mana pun dari layanan ini tanpa izin tertulis dari kami.
+            Seluruh elemen dalam platform ini, termasuk sistem antarmuka UI/UX, desain komponen, logo Harmoni Finansial, kode sumber, dan konten teks merupakan hak kekayaan intelektual milik Harmoni Finansial. Dilarang menggandakan, mendistribusikan, merekayasa balik (reverse engineer), atau memodifikasi bagian mana pun tanpa izin tertulis dari kami.
           </p>
         </div>
       )
@@ -86,12 +92,12 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
     {
       id: '6',
       icon: 'update',
-      title: '6. Perubahan Ketentuan',
-      summary: 'Hak untuk memperbarui syarat layanan sewaktu-waktu dengan publikasi revisi.',
+      title: '6. Perubahan Ketentuan Layanan',
+      summary: 'Hak untuk memperbarui syarat dan ketentuan layanan secara berkala.',
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Kami berhak memperbarui Syarat dan Ketentuan Layanan ini sewaktu-waktu. Perubahan akan berlaku segera setelah dipublikasikan di halaman ini dengan pembaruan tanggal revisi.
+            Kami berhak memperbarui dan menyempurnakan Syarat & Ketentuan ini sewaktu-waktu sesuai perkembangan fitur atau aturan hukum. Perubahan akan berlaku efektif setelah dipublikasikan di halaman ini dengan pembaruan tanggal revisi.
           </p>
         </div>
       )
@@ -137,7 +143,7 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
           </div>
           <h1 className="font-headline-lg font-bold text-on-surface">Syarat & Ketentuan Interaktif</h1>
           <p className="font-body-md text-on-surface-variant mt-1">
-            Terakhir Diperbarui: 22 Juli 2026
+            Terakhir Diperbarui: 30 Juli 2026
           </p>
         </div>
         {onBack && (

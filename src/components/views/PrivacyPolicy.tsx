@@ -15,17 +15,20 @@ export function PrivacyPolicy({ onBack }: { onBack?: () => void }) {
     {
       id: '1',
       icon: 'database',
-      title: '1. Informasi yang Kami Kumpulkan',
-      summary: 'Penjelasan jenis data profil, transaksi, dan log penggunaan yang dicatat.',
+      title: '1. Informasi & Data yang Kami Kumpulkan',
+      summary: 'Penjelasan lengkap jenis data profil, data keuangan, aset, utang, dan log aktivitas yang disimpan.',
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Untuk memberikan layanan manajemen keuangan keluarga dan pribadi yang optimal, kami dapat mengumpulkan informasi berikut:
+            Untuk memberikan layanan pencatatan dan perencanaan keuangan keluarga maupun pribadi secara akurat, Harmoni Finansial mengumpulkan data yang Anda masukkan secara mandiri meliputi:
           </p>
           <ul className="list-disc list-inside space-y-2 font-body-md text-on-surface-variant pl-2">
-            <li><strong className="text-on-surface">Informasi Akun:</strong> Nama lengkap, alamat email, foto profil, dan preferensi workspace.</li>
-            <li><strong className="text-on-surface">Data Transaksi Keuangan:</strong> Catatan pemasukan, pengeluaran, tagihan mendatang, target tabungan (goals), serta kategori anggaran amplop yang Anda masukkan secara mandiri.</li>
-            <li><strong className="text-on-surface">Informasi Penggunaan:</strong> Log aktivitas sistem, preferensi tampilan, dan riwayat navigasi di dalam aplikasi untuk meningkatkan performa layanan.</li>
+            <li><strong className="text-on-surface">Informasi Akun & Pengguna:</strong> Nama lengkap, email, foto profil, preferensi bahasa, dan opsi penguncian PIN/Passcode keamanan.</li>
+            <li><strong className="text-on-surface">Data Transaksi & Arus Kas:</strong> Catatan transaksi Pemasukan, Pengeluaran, dan Transfer Antar Rekening beserta kategori, tanggal, catatan, dan bukti lampiran (jika ada).</li>
+            <li><strong className="text-on-surface">Utang & Piutang (Debts & Receivables):</strong> Catatan kewajiban utang, tagihan piutang, jadwal jatuh tempo, dan riwayat cicilan/pelunasan.</li>
+            <li><strong className="text-on-surface">Aset & Barang (Assets):</strong> Catatan kepemilikan aset fisik/finansial, estimasi nilai, lokasi/titik peta aset, dan simulasi penyusutan.</li>
+            <li><strong className="text-on-surface">Amplop Anggaran & Target Tabungan:</strong> Alokasi anggaran (Envelope Budgeting), daftar tagihan rutin (Bills), dan progres target finansial (Goals).</li>
+            <li><strong className="text-on-surface">Pengaturan Workspace & Log Aktivitas:</strong> Pemisahan data ruang kerja (Personal vs Keluarga) dan catat audit trail log aktivitas pengguna.</li>
           </ul>
         </div>
       )
@@ -33,18 +36,18 @@ export function PrivacyPolicy({ onBack }: { onBack?: () => void }) {
     {
       id: '2',
       icon: 'insights',
-      title: '2. Penggunaan Informasi',
-      summary: 'Tujuan penggunaan data untuk visualisasi, analisis, dan fitur kolaborasi.',
+      title: '2. Penggunaan & Isolasi Data Workspace',
+      summary: 'Prinsip pemisahan data antara Workspace Pribadi dan Keluarga serta analisis otomatis.',
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Informasi yang dikumpulkan digunakan secara khusus untuk:
+            Data yang dikumpulkan diolah untuk menyajikan analisis keuangan dan menjamin privasi pengguna:
           </p>
           <ul className="list-disc list-inside space-y-2 font-body-md text-on-surface-variant pl-2">
-            <li>Menyajikan visualisasi arus kas (cash flow), alokasi amplop anggaran, dan laporan keuangan secara real-time.</li>
-            <li>Memberikan pengingat tagihan (bill reminders) dan melacak kemajuan target finansial Anda.</li>
-            <li>Memfasilitasi kolaborasi ruang kerja (workspace) antara anggota keluarga atau akun pribadi.</li>
-            <li>Meningkatkan fitur keamanan, stabilitas aplikasi, dan pengalaman pengguna secara keseluruhan.</li>
+            <li><strong className="text-on-surface">Isolasi Workspace Pribadi:</strong> Data di Workspace Pribadi bersifat terisolasi dan hanya dapat diakses oleh pemilik akun sendiri.</li>
+            <li><strong className="text-on-surface">Kolaborasi Workspace Keluarga:</strong> Data di Workspace Keluarga dibagikan secara aman kepada anggota keluarga terdaftar yang memiliki otorisasi.</li>
+            <li><strong className="text-on-surface">Kalkulasi Kekayaan Bersih (Net Worth):</strong> Mengagregasi saldo rekening, aset, utang, dan piutang untuk menampilkan ringkasan posisi keuangan yang presisi.</li>
+            <li><strong className="text-on-surface">Pengingat Tagihan & Proyeksi:</strong> Memberikan notifikasi jadwal jatuh tempo tagihan rutin dan batas anggaran bulanan.</li>
           </ul>
         </div>
       )
@@ -52,17 +55,18 @@ export function PrivacyPolicy({ onBack }: { onBack?: () => void }) {
     {
       id: '3',
       icon: 'verified_user',
-      title: '3. Keamanan & Perlindungan Data',
-      summary: 'Standar enkripsi HTTPS, keamanan Firestore, dan jaminan tanpa penjualan data.',
+      title: '3. Keamanan & Perlindungan Data Firebase',
+      summary: 'Aturan Firestore Security Rules, enkripsi HTTPS, penguncian layar PIN, dan jaminan bebas komersialisasi.',
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Keamanan data Anda adalah prioritas utama kami. Kami menerapkan standar perlindungan data yang ketat:
+            Kami berkomitmen penuh menjaga kerahasiaan data finansial Anda melalui infrastruktur keamanan berlapis:
           </p>
           <ul className="list-disc list-inside space-y-2 font-body-md text-on-surface-variant pl-2">
-            <li><strong className="text-on-surface">Enkripsi Data:</strong> Seluruh data dikirim melalui koneksi HTTPS yang terenkripsi dan disimpan dengan protokol enkripsi standar industri.</li>
-            <li><strong className="text-on-surface">Tanpa Penjualan Data:</strong> Kami <span className="text-error font-medium">TIDAK PERNAH</span> menjual, menyewakan, atau memperdagangkan data pribadi maupun transaksi finansial Anda kepada pihak ketiga mana pun.</li>
-            <li><strong className="text-on-surface">Akses Terbatas:</strong> Hanya Anda dan anggota workspace yang Anda beri izin yang dapat melihat detail keuangan Anda.</li>
+            <li><strong className="text-on-surface">Aturan Keamanan Server (Firestore Rules):</strong> Setiap dokumen transaksi dan data pengguna diproteksi dengan verifikasi identitas `auth.uid` di level basis data.</li>
+            <li><strong className="text-on-surface">Enkripsi Jalur Transmisi:</strong> Seluruh komunikasi data menggunakan protokol enkripsi TLS/HTTPS yang aman.</li>
+            <li><strong className="text-on-surface">Pengunci Layar Aplikasi (Security Passcode):</strong> Anda dapat mengaktifkan kode PIN/Passcode lokal untuk mencegah akses fisik yang tidak diinginkan pada perangkat Anda.</li>
+            <li><strong className="text-on-surface">Tanpa Komersialisasi Data:</strong> Kami <span className="text-error font-medium">TIDAK PERNAH</span> menjual, menyewakan, atau membagikan data keuangan Anda kepada pihak ketiga atau pengiklan.</li>
           </ul>
         </div>
       )
@@ -70,17 +74,17 @@ export function PrivacyPolicy({ onBack }: { onBack?: () => void }) {
     {
       id: '4',
       icon: 'manage_accounts',
-      title: '4. Hak Pengguna',
-      summary: 'Hak untuk mengakses, memperbarui, mengunduh laporan, dan menghapus akun.',
+      title: '4. Hak Kendali & Ekspor Laporan Pengguna',
+      summary: 'Hak mengunduh dokumen laporan PDF/CSV, memperbarui data, dan hapus akun permanen.',
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Anda memiliki kontrol penuh atas data keuangan Anda di Harmoni Finansial, termasuk hak untuk:
+            Sebagai pemilik data, Anda memiliki hak penuh atas pengelolaan informasi Anda:
           </p>
           <ul className="list-disc list-inside space-y-2 font-body-md text-on-surface-variant pl-2">
-            <li>Mengakses dan memperbarui informasi profil serta riwayat transaksi kapan saja.</li>
-            <li>Mengekspor laporan keuangan ke format terstruktur (seperti CSV atau PDF).</li>
-            <li>Menghapus data transaksi, kategori anggaran, atau mengajukan penghapusan akun secara permanen.</li>
+            <li><strong className="text-on-surface">Ekspor Laporan:</strong> Mengunduh cetakan laporan keuangan dalam format PDF atau CSV kapan saja.</li>
+            <li><strong className="text-on-surface">Perubahan & Koreksi Data:</strong> Mengedit atau menghapus catatan transaksi, aset, utang, dan anggaran sesuai kebutuhan.</li>
+            <li><strong className="text-on-surface">Penghapusan Permanen:</strong> Mengajukan penghapusan akun beserta seluruh riwayat transaksi dari server Firestore.</li>
           </ul>
         </div>
       )
@@ -88,12 +92,12 @@ export function PrivacyPolicy({ onBack }: { onBack?: () => void }) {
     {
       id: '5',
       icon: 'mail',
-      title: '5. Pertanyaan & Hubungi Kami',
-      summary: 'Kanal komunikasi resmi untuk bantuan dan pertanyaan seputar privasi.',
+      title: '5. Hubungi Tim Pengembang & Dukungan',
+      summary: 'Layanan bantuan resmi untuk pertanyaan privasi dan keamanan.',
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Jika Anda memiliki pertanyaan, saran, atau kekhawatiran terkait Kebijakan Privasi ini, silakan hubungi tim dukungan kami melalui email di <a href="mailto:support@harmoni.id" className="text-primary font-semibold hover:underline">support@harmoni.id</a> atau melalui halaman Bantuan & Dukungan di aplikasi.
+            Jika Anda memiliki pertanyaan, saran, atau masalah terkait Kebijakan Privasi ini, Anda dapat menghubungi tim dukungan resmi kami melalui email di <a href="mailto:support@harmoni.id" className="text-primary font-semibold hover:underline">support@harmoni.id</a> atau melalui fitur Bantuan & Dukungan di menu Pengaturan.
           </p>
         </div>
       )
@@ -140,7 +144,7 @@ export function PrivacyPolicy({ onBack }: { onBack?: () => void }) {
           </div>
           <h1 className="font-headline-lg font-bold text-on-surface">Kebijakan Privasi Interaktif</h1>
           <p className="font-body-md text-on-surface-variant mt-1">
-            Terakhir Diperbarui: 22 Juli 2026
+            Terakhir Diperbarui: 30 Juli 2026
           </p>
         </div>
         {onBack && (

@@ -424,22 +424,22 @@ export function Reports() {
       {isPreviewingPDF && (
         <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-4 md:p-10 print:p-0 print:bg-white animate-fadeIn">
           {/* Controls bar */}
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 flex gap-4 bg-[#111827] text-white px-6 py-3 rounded-full shadow-2xl z-[100000] print:hidden items-center border border-slate-700/80">
+          <div className="fixed top-2 sm:top-4 left-1/2 transform -translate-x-1/2 flex flex-wrap justify-center max-w-[95vw] gap-2 sm:gap-4 bg-[#111827] text-white px-3.5 py-2 sm:px-6 sm:py-3 rounded-2xl sm:rounded-full shadow-2xl z-[100000] print:hidden items-center border border-slate-700/80 text-xs">
             <span className="font-bold text-xs flex items-center gap-1.5 uppercase tracking-wide">
               <span className="material-symbols-outlined text-red-500 animate-pulse text-[18px]">picture_as_pdf</span>
               {isId ? 'Tinjauan Cetak PDF' : 'PDF Report Preview'}
             </span>
-            <div className="h-4 w-[1px] bg-slate-700"></div>
+            <div className="hidden sm:block h-4 w-[1px] bg-slate-700"></div>
             <button 
               onClick={() => window.print()} 
-              className="bg-primary hover:bg-primary/90 text-white px-4 py-1.5 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer hover:scale-102 active:scale-98"
+              className="bg-primary hover:bg-primary/90 text-white px-3.5 py-1.5 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer hover:scale-102 active:scale-98"
             >
               <span className="material-symbols-outlined text-[16px]">print</span>
               {isId ? 'Cetak / Simpan PDF' : 'Print / Save PDF'}
             </button>
             <button 
               onClick={() => setIsPreviewingPDF(false)} 
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-1.5 rounded-full font-bold text-xs transition-all cursor-pointer"
+              className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-1.5 rounded-full font-bold text-xs transition-all cursor-pointer"
             >
               {isId ? 'Tutup' : 'Close'}
             </button>

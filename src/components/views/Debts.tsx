@@ -233,7 +233,7 @@ export function Debts() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1 bg-surface-container-low border border-outline-variant p-1 rounded-xl w-fit">
+      <div className="flex items-center gap-1 bg-surface-container-low border border-outline-variant p-1 rounded-xl w-full sm:w-fit overflow-x-auto max-w-full whitespace-nowrap">
         <button
           onClick={() => setActiveTab('all')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${

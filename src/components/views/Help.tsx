@@ -35,8 +35,8 @@ export function Help({ onNavigate }: HelpProps) {
         {
           heading: isId ? '2. Pemisahan Data Terisolasi' : '2. Isolated Data Architecture',
           text: isId 
-            ? 'Setiap transaksi, rekening bank, barang aset, amplop anggaran, dan tagihan memiliki label workspace sehingga laporan keuangan tidak saling tumpang tindih.'
-            : 'Every transaction, bank account, physical asset, envelope budget, and bill carries a workspace label to maintain complete separation.'
+            ? 'Setiap transaksi, rekening bank, barang aset, utang/piutang, amplop anggaran, dan tagihan memiliki label workspace sehingga laporan keuangan tidak saling tumpang tindih.'
+            : 'Every transaction, bank account, physical asset, debt, envelope budget, and bill carries a workspace label to maintain complete separation.'
         }
       ]
     },
@@ -51,65 +51,65 @@ export function Help({ onNavigate }: HelpProps) {
         {
           heading: isId ? '1. Rekening Bank & E-Wallet (Aset Likuid Kas)' : '1. Bank & E-Wallet Accounts (Liquid Cash)',
           text: isId 
-            ? 'Daftarkan rekening BCA, Mandiri, e-Wallet GoPay/OVO, atau kas tunai di Pengaturan / Menu Rekening. Setiap rekening menyimpan nomor rekening, nama pemilik, saldo awal, dan scope workspace.'
-            : 'Register bank accounts, e-wallets, or cash balances in Settings/Accounts. Store account numbers, holder names, current balances, and workspace scopes.'
+            ? 'Daftarkan rekening BCA, Mandiri, e-Wallet GoPay/OVO, atau kas tunai di Pengaturan / Menu Rekening. Setiap rekening menyimpan nomor rekening, nama pemilik, saldo awal, dan fitur rekonsiliasi kas.'
+            : 'Register bank accounts, e-wallets, or cash balances in Settings/Accounts. Store account numbers, holder names, current balances, and use cash reconciliation.'
         },
         {
           heading: isId ? '2. Pendataan Barang Properti & Depresiasi' : '2. Property Assets & Auto Depreciation',
           text: isId 
-            ? 'Di menu "Aset & Barang", daftarkan tanah, bangunan, kendaraan, atau perhiasan. Sistem menghitung estimasi depresiasi (penyusutan nilai) otomatis dari harga beli awal hingga nilai pasar saat ini.'
-            : 'In "Assets & Goods", register land, buildings, vehicles, or valuables. The app automatically calculates depreciation from purchase price to current market value.'
+            ? 'Di menu "Aset & Barang", daftarkan tanah, bangunan, kendaraan, atau perhiasan. Sistem menghitung estimasi depresiasi (penyusutan nilai) serta konversi satuan Borongan (Kalsel) untuk tanah/lahan.'
+            : 'In "Assets & Goods", register land, buildings, vehicles, or valuables. The app automatically calculates depreciation and traditional Borongan unit conversions for land.'
         }
       ]
     },
     {
       step: '03',
-      title: isId ? 'Amplop Anggaran (Envelope Budgeting)' : 'Envelope Budgeting Setup',
-      subtitle: isId ? 'Batas Maksimal Belanja Bulanan & Safe Spend' : 'Monthly Spending Limits & Daily Safe Spend',
-      icon: 'savings',
-      color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
-      navTarget: 'budgeting',
+      title: isId ? 'Manajemen Utang & Piutang (Debts & Receivables)' : 'Debts & Receivables Management',
+      subtitle: isId ? 'Pencatatan Kewajiban, Tagihan Piutang, & Pelunasan' : 'Tracking Liabilities, Receivables, & Installments',
+      icon: 'account_balance',
+      color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+      navTarget: 'debts',
       details: [
         {
-          heading: isId ? '1. Membuat Amplop Pos Anggaran' : '1. Creating Budget Envelopes',
+          heading: isId ? '1. Mencatat Utang & Piutang Baru' : '1. Logging Debts & Receivables',
           text: isId 
-            ? 'Masuk ke menu "Anggaran" -> klik "+ Tambah Amplop". Tentukan nama kategori (misal: Belanja Dapur) dan alokasi batas maksimal pengeluaran bulanan.'
-            : 'Navigate to "Budgeting" -> click "+ Add Envelope". Specify category name (e.g. Groceries) and maximum monthly allocation limit.'
+            ? 'Buka menu "Utang & Piutang" -> klik "+ Tambah Utang / Piutang". Pilih jenis (Utang yang harus Anda bayar atau Piutang yang harus Anda tagih), nominal, pemberi/penerima pinjaman, dan tanggal jatuh tempo.'
+            : 'Open "Debts & Receivables" -> click "+ Add Debt/Receivable". Select type (Debt owed by you or Receivable owed to you), total amount, counterparty, and due date.'
         },
         {
-          heading: isId ? '2. Pemantauan Real-Time & Safespend' : '2. Real-Time Tracking & Daily Safe Spend',
+          heading: isId ? '2. Pelunasan Bertahap & Mutasi Rekening' : '2. Installments & Automatic Account Balance Update',
           text: isId 
-            ? 'Sistem secara otomatis memotong kuota amplop setiap kali ada transaksi pengeluaran pada kategori tersebut dan menghitung batas belanja harian yang aman.'
-            : 'The app automatically deducts from the envelope quota on relevant expenses and calculates recommended daily safe spend limits.'
+            ? 'Klik "+ Catat Pelunasan" pada entitas utang/piutang. Membayar utang akan memotong saldo rekening pilihan, sedangkan menerima pelunasan piutang akan menambah saldo rekening secara otomatis.'
+            : 'Click "+ Log Payment" on any record. Paying a debt automatically deducts from your bank account, while receiving a receivable payment increases your account balance.'
         }
       ]
     },
     {
       step: '04',
-      title: isId ? 'Master Tagihan & Pengingat Rutin' : 'Bills & Recurring Obligations',
-      subtitle: isId ? 'Mencatat Listrik, Internet, Cicilan, & Eksekusi Bayar' : 'Tracking Utilities, Subscriptions, Loans & Payments',
-      icon: 'receipt_long',
-      color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-      navTarget: 'bills',
+      title: isId ? 'Amplop Anggaran & Tagihan Rutin' : 'Envelope Budgeting & Recurring Bills',
+      subtitle: isId ? 'Batas Belanja Bulanan, Safe Spend, & Pengingat PLN/BPJS' : 'Spending Limits, Daily Safe Spend, & Bill Reminders',
+      icon: 'savings',
+      color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+      navTarget: 'budgeting',
       details: [
         {
-          heading: isId ? '1. Mendaftarkan Tagihan Rutin' : '1. Registering Recurring Bills',
+          heading: isId ? '1. Membagi Kuota Amplop Anggaran' : '1. Allocating Envelope Budgets',
           text: isId 
-            ? 'Buka menu "Tagihan" -> klik "+ Tambah Tagihan". Catat nama layanan (PLN, Indihome, BPJS), nominal, tanggal jatuh tempo, dan opsi frekuensi.'
-            : 'Open "Bills" -> click "+ Add Bill". Record vendor name, amount, monthly due date, and frequency options.'
+            ? 'Di menu "Anggaran", buat amplop batas pengeluaran per kategori. Sistem menghitung batas belanja harian aman (Daily Safe Spend) agar anggaran tidak habis sebelum akhir bulan.'
+            : 'In "Budgeting", create envelope monthly limits per category. The app calculates Daily Safe Spend targets to prevent overspending.'
         },
         {
-          heading: isId ? '2. Pengingat & Eksekusi Bayar Langsung' : '2. Reminders & One-Click Payment',
+          heading: isId ? '2. Pengingat & Eksekusi Bayar Tagihan' : '2. Bill Reminders & One-Click Payments',
           text: isId 
-            ? 'Sistem menandai tagihan mendekati jatuh tempo dengan badge status. Klik "Bayar Sekarang" untuk memotong saldo rekening pilihan dan mencatat transaksi kas keluar otomatis.'
-            : 'Status badges highlight upcoming bills. Click "Pay Now" to deduct from your chosen bank account and automatically log the cash outflow.'
+            ? 'Di menu "Tagihan", daftarkan PLN, Indihome, BPJS, atau cicilan. Klik "Bayar Sekarang" untuk memotong saldo rekening dan mencatat transaksi kas keluar otomatis.'
+            : 'In "Bills", register utilities or subscriptions. Click "Pay Now" to deduct from your selected bank account and log the cash outflow automatically.'
         }
       ]
     },
     {
       step: '05',
-      title: isId ? 'Operasional Arus Kas & Pemindaian Struk AI' : 'Daily Cash Flow & Gemini AI Scanner',
-      subtitle: isId ? 'Input Manual, Scan Struk Belanja, & Transfer Rekening' : 'Manual Entry, AI Receipt Scanning, & Account Transfer',
+      title: isId ? 'Operasional Arus Kas & Scan Struk AI' : 'Daily Cash Flow & Gemini AI Receipt Scan',
+      subtitle: isId ? 'Input Manual, Pemindaian AI Gemini, & Transfer Rekening' : 'Manual Entry, Gemini AI Scanning, & Inter-Account Transfers',
       icon: 'center_focus_strong',
       color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
       navTarget: 'cash-flow',
@@ -117,21 +117,21 @@ export function Help({ onNavigate }: HelpProps) {
         {
           heading: isId ? '1. Pemindaian Struk AI Gemini 3.6 Flash' : '1. Gemini 3.6 Flash AI Scanning',
           text: isId 
-            ? 'Klik "+ Transaksi" -> pilih "Input Otomatis (AI)". Foto/unggah struk belanja dari supermarket atau restoran. AI Gemini akan membaca total nominal, tanggal, merchant, dan kategori secara presisi.'
-            : 'Click "+ Transaction" -> select "AI Automatic Input". Capture or upload a receipt image. Gemini AI automatically parses total amount, date, merchant, and category.'
+            ? 'Klik "+ Transaksi" -> pilih "Input Otomatis (AI)". Unggah/foto struk belanja fisik. AI Gemini di server akan mengekstrak total nominal, tanggal, nama merchant, dan kategori secara presisi.'
+            : 'Click "+ Transaction" -> select "AI Automatic Input". Upload a receipt photo. Gemini AI parses total amount, date, merchant description, and category instantly.'
         },
         {
-          heading: isId ? '2. Fitur Transfer Antar Rekening' : '2. Inter-Account Fund Transfers',
+          heading: isId ? '2. Transfer Antar Rekening' : '2. Inter-Account Transfers',
           text: isId 
-            ? 'Klik "+ Transfer" untuk memindahkan dana (misal dari Rekening BCA ke GoPay). Pemindahan dana ini memperbarui saldo kedua rekening secara akurat tanpa merusak laporan arus kas bersih.'
-            : 'Click "+ Transfer" to shift funds (e.g., Bank BCA to GoPay). Balance updates immediately across both accounts without impacting net income/expense stats.'
+            ? 'Klik "+ Transfer" untuk memindahkan dana (misal BCA ke GoPay). Mutasi saldo memperbarui kedua rekening tanpa merusak angka pendapatan atau pengeluaran bersih.'
+            : 'Click "+ Transfer" to shift funds (e.g. Bank BCA to GoPay). Balances update immediately without skewing net income or expense metrics.'
         }
       ]
     },
     {
       step: '06',
-      title: isId ? 'Laporan, Ekspor Backup, & Log Aktivitas' : 'Reports, Offline Backup, & Audit Logs',
-      subtitle: isId ? 'Ekspor CSV/JSON, Cetak Laporan, & Audit Trail' : 'Export CSV/JSON, Print Statements, & Action Logs',
+      title: isId ? 'Laporan, Log Aktivitas Audit, & Backup' : 'Reports, Audit Trail, & Offline Backups',
+      subtitle: isId ? 'Ekspor CSV/JSON, Cetak Laporan PDF, & Fitur Restore' : 'CSV/JSON Export, Printable PDF Statements, & Undo/Restore',
       icon: 'assessment',
       color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
       navTarget: 'reports',
@@ -139,14 +139,14 @@ export function Help({ onNavigate }: HelpProps) {
         {
           heading: isId ? '1. Ekspor Cadangan Data Offline (CSV & JSON)' : '1. Offline Backup Export (CSV & JSON)',
           text: isId 
-            ? 'Di menu "Laporan", Anda dapat mengekspor cadangan lengkap mencakup Rekening Kas Likuid, Aset Fisik, Arus Kas, dan Amplop Anggaran dalam format CSV atau JSON sesuai workspace filter.'
-            : 'In "Reports", export a complete offline backup encompassing Liquid Cash Accounts, Physical Assets, Cash Flow, and Budget Envelopes in CSV or JSON.'
+            ? 'Di menu "Laporan", unduh cadangan lengkap mencakup Rekening Kas, Aset, Utang, Arus Kas, dan Anggaran dalam format CSV spreadsheet atau JSON utuh.'
+            : 'In "Reports", export full offline backups including Cash Accounts, Assets, Debts, Cash Flow, and Envelopes in CSV or JSON format.'
         },
         {
-          heading: isId ? '2. Cetak Dokumen Laporan & Audit Trail' : '2. Print PDF Reports & Activity Audit Trail',
+          heading: isId ? '2. Cetak Dokumen & Audit Trail' : '2. PDF Statements & Activity Log Undo',
           text: isId 
-            ? 'Cetak Laporan Eksekutif dalam format PDF resmi atau periksa menu "Log Aktivitas" untuk melacak seluruh histori pembuatan, pembaruan, dan pemulihan data.'
-            : 'Print executive PDF statements or review "Activity Log" to audit all data creation, updates, and undo restorations.'
+            ? 'Cetak Laporan Keuangan resmi ke PDF atau periksa menu "Log Aktivitas" untuk memulihkan (Undo/Restore) data yang tidak sengaja terhapus.'
+            : 'Print clean PDF statements or review "Activity Log" to restore accidentally deleted data with a single click.'
         }
       ]
     }
@@ -157,11 +157,11 @@ export function Help({ onNavigate }: HelpProps) {
       menu: isId ? 'Dashboard Utama' : 'Executive Dashboard',
       icon: 'dashboard',
       description: isId 
-        ? 'Pusat ringkasan eksekutif yang menampilkan Total Saldo Kas Likuid, Nilai Aset Fisik, Total Net Worth, indikator Kesehatan Arus Kas, peringatan anggaran, dan akses transaksi cepat.'
-        : 'Executive dashboard showcasing Total Liquid Cash, Physical Asset Values, Total Net Worth, Cash Flow Health score, budget warnings, and quick shortcuts.',
+        ? 'Pusat ringkasan eksekutif yang menampilkan Total Saldo Kas Likuid, Nilai Aset Fisik, Total Kekayaan Bersih (Net Worth), Kewajiban Utang & Piutang, indikator Kesehatan Arus Kas, dan peringatan anggaran.'
+        : 'Executive dashboard showcasing Total Liquid Cash, Physical Asset Values, Net Worth, Net Debts & Receivables, Cash Flow Health score, and budget alerts.',
       howToRead: [
         isId ? '1. Kas Likuid Bank/E-Wallet: Gabungan saldo tunai aktif di seluruh rekening bank dan e-wallet.' : '1. Liquid Cash: Sum of active funds across all bank accounts and e-wallet balances.',
-        isId ? '2. Total Net Worth: Gabungan kas likuid ditambah total nilai pasar aset/barang fisik saat ini.' : '2. Total Net Worth: Combined liquid cash plus current market valuation of physical assets.',
+        isId ? '2. Total Net Worth: Gabungan kas likuid ditambah total nilai pasar aset fisik dikurangi total kewajiban utang.' : '2. Total Net Worth: Combined liquid cash plus current physical asset market value minus total debt obligations.',
         isId ? '3. Health Score & Alerts: Indikator efisiensi belanja bulanan serta peringatan tagihan mendekati jatuh tempo.' : '3. Health Score & Alerts: Monthly spending efficiency ratio and upcoming bill alerts.'
       ]
     },
@@ -190,16 +190,28 @@ export function Help({ onNavigate }: HelpProps) {
       ]
     },
     {
+      menu: isId ? 'Utang & Piutang (Debts & Receivables)' : 'Debts & Receivables',
+      icon: 'account_balance',
+      description: isId 
+        ? 'Modul pencatatan kewajiban utang dan tagihan piutang lengkap dengan tanggal jatuh tempo, status pelunasan, serta riwayat cicilan yang otomatis memperbarui saldo rekening.'
+        : 'Module for managing debt obligations and receivables with due dates, payment status, and installment tracking that automatically syncs bank balances.',
+      howToRead: [
+        isId ? '1. Pemisahan Tab Utang vs Piutang: Tab Utang berisi kewajiban pembayaran Anda, sedangkan Tab Piutang berisi uang yang harus Anda tagih dari pihak lain.' : '1. Debts vs Receivables Tabs: Debt tab lists your obligations, while Receivable tab tracks money owed to you.',
+        isId ? '2. Eksekusi "+ Catat Pelunasan": Setiap pembayaran atau penerimaan cicilan akan mencatat transaksi di Arus Kas dan menyesuaikan saldo rekening terpilih.' : '2. "+ Log Payment" Execution: Payments or repayments update Cash Flow records and automatically reflect in your chosen bank account.',
+        isId ? '3. Progress Bar Pelunasan: Menampilkan persentase jumlah sisa utang/piutang dibandingkan dengan total nominal awal.' : '3. Payment Progress Bar: Shows remaining balance percentage against initial principal amount.'
+      ]
+    },
+    {
       menu: isId ? 'Aset & Barang (Assets)' : 'Physical Assets & Goods',
       icon: 'home_work',
       description: isId 
-        ? 'Modul inventarisasi fisik barang, tanah, bangunan, kendaraan, dan barang berharga lengkap dengan harga beli, nilai pasar saat ini, revaluasi riwayat harga, konversi Borongan Kalsel, dan kalkulasi depresiasi.'
-        : 'Inventory module for land, property, vehicles, and valuables with purchase cost, current market value, historical revaluation logs, Borongan unit conversion, and automatic depreciation math.',
+        ? 'Modul inventarisasi fisik barang, tanah, bangunan, kendaraan, dan barang berharga lengkap dengan harga beli, nilai pasar saat ini, revaluasi riwayat harga, konversi Borongan Kalsel, kalkulasi depresiasi, dan koordinat GPS Google Maps.'
+        : 'Inventory module for land, property, vehicles, and valuables with purchase cost, current market value, historical revaluation logs, Borongan unit conversion, automatic depreciation math, and Google Maps GPS coordinates.',
       howToRead: [
         isId ? '1. Total Nilai Aset Fisik: Menjumlahkan nilai estimasi pasar seluruh barang fisik milik Anda.' : '1. Total Asset Value: Sum of current estimated market valuation of all physical property.',
         isId ? '2. Konversi Satuan Borongan (Kalsel): Untuk aset tanah/lahan, sistem otomatis mengonversi luas m²/Hektar ke satuan tradisional Borongan (1 Hektar = 35 Borongan, 1 Borongan ≈ 285,7 m²) beserta estimasi harga per m² dan per borongan.' : '2. Borongan Unit Conversion (Kalsel): For land assets, automatically converts m²/Hectare into traditional Borongan units (1 Hectare = 35 Borongan, 1 Borongan ≈ 285.7 m²) with price per m² & per borongan.',
         isId ? '3. Histori Revaluasi & Depresiasi: Catat kenaikan nilai tanah/properti secara berkala via tombol "+ Tambah Revaluasi" atau aktifkan penyusutan harga otomatis untuk aset seperti kendaraan atau elektronik.' : '3. Revaluation History & Depreciation: Log periodic land/property appreciation via "+ Add Revaluation" or enable auto depreciation for vehicles/electronics.',
-        isId ? '4. Lokasi & Koordinat GPS DMS: Simpan nama toko/lokasi lahan dan format koordinat GPS (Derajat/Menit/Detik atau Desimal) yang dapat diklik langsung untuk membuka Google Maps.' : '4. Location & GPS Coordinates: Store store/location names and GPS coordinates (DMS or Decimal) with direct Google Maps integration.'
+        isId ? '4. Lokasi & Koordinat GPS: Simpan nama toko/lokasi lahan dan koordinat GPS (DMS atau Desimal) yang dapat diklik langsung untuk membuka Google Maps.' : '4. Location & GPS Coordinates: Store location names and GPS coordinates (DMS or Decimal) with direct Google Maps integration.'
       ]
     },
     {
@@ -249,6 +261,18 @@ export function Help({ onNavigate }: HelpProps) {
         isId ? '2. Fitur Urungkan (Undo / Restore): Kembalikan data yang tidak sengaja terhapus dengan satu klik dari log aktivitas.' : '2. Undo / Restore Feature: Easily restore accidentally deleted records directly from the activity log.',
         isId ? '3. Keamanan Keuangan (PIN Lock): Aktifkan pengunci layar 6-digit di menu Pengaturan untuk menjaga privasi data.' : '3. Security PIN Lock: Enable 6-digit screen lock in Settings to guard sensitive financial data.'
       ]
+    },
+    {
+      menu: isId ? 'Pengaturan & Rekening (Settings)' : 'Settings & Accounts',
+      icon: 'settings',
+      description: isId 
+        ? 'Pusat pengelolaan master data rekening bank/e-wallet, rekonsiliasi kas, anggota keluarga, kategori kustom, serta kunci keamanan PIN Passcode.'
+        : 'Control center for bank account/e-wallet master data, cash reconciliation, family members, custom categories, and 6-digit PIN lock.',
+      howToRead: [
+        isId ? '1. Rekonsiliasi Saldo: Bandingkan saldo aplikasi dengan cetakan koran/fisik. Selisih akan disesuaikan otomatis dengan transaksi adjustment.' : '1. Balance Reconciliation: Compare app balance with bank statement. Discrepancies generate auto-adjustment transactions.',
+        isId ? '2. Pengunci PIN 6-Digit: Aktifkan proteksi PIN untuk mencegah orang lain membuka data keuangan saat HP ditinggalkan.' : '2. 6-Digit PIN Lock: Enable passcode protection to restrict physical access when device is unattended.',
+        isId ? '3. Kelola Anggota & Kategori: Tambah atau edit daftar anggota keluarga dan kategori pengeluaran/pemasukan kustom.' : '3. Members & Categories: Add/edit family workspace members and custom transaction categories.'
+      ]
     }
   ];
 
@@ -260,25 +284,31 @@ export function Help({ onNavigate }: HelpProps) {
         : 'When you capture or upload a receipt image, server-side Gemini 3.6 Flash AI analyzes the visual text. The AI extracts merchant name, total amount, transaction date, and intelligently assigns the matching spending category.'
     },
     {
-      q: isId ? 'Apa perbedaan Rekening Bank/E-Wallet (Kas Likuid) dan Aset & Barang (Aset Fisik)?' : 'What is the difference between Bank/E-Wallet (Liquid Cash) and Assets & Goods (Physical Assets)?',
+      q: isId ? 'Apa perbedaan Rekening Bank/E-Wallet (Kas Likuid), Aset Fisik, dan Utang/Piutang?' : 'What is the difference between Liquid Cash, Physical Assets, and Debts/Receivables?',
       a: isId 
-        ? 'Rekening Bank & E-Wallet adalah tempat penyimpanan uang tunai cair (seperti BCA, Mandiri, GoPay, OVO, Cash) yang digunakan langsung untuk transaksi harian. Sedangkan Aset & Barang adalah inventaris kekayaan fisik (seperti tanah, rumah, mobil, laptop, perhiasan) yang nilainya dapat mengalami depresiasi atau apresiasi pasar.'
-        : 'Bank Accounts & E-Wallets store liquid cash reserves (BCA, Mandiri, GoPay, OVO, Cash) used directly for daily transactions. Assets & Goods store physical inventory (land, homes, cars, laptops, jewelry) subject to market value changes or depreciation.'
+        ? 'Rekening Kas Likuid (BCA, Mandiri, Cash, GoPay) adalah uang tunai cair untuk belanja sehari-hari. Aset & Barang (tanah, mobil, emas) adalah inventaris kekayaan fisik yang nilainya diperhitungkan ke Net Worth. Utang adalah kewajiban yang harus dibayar, sedangkan Piutang adalah tagihan klaim uang Anda di orang lain.'
+        : 'Liquid Cash Accounts (BCA, Mandiri, Cash, GoPay) hold spendable funds. Physical Assets (land, vehicles, gold) contribute to Net Worth. Debts represent your financial liabilities, while Receivables represent money owed to you by others.'
+    },
+    {
+      q: isId ? 'Bagaimana pencatatan cicilan / pelunasan Utang & Piutang mempengaruhi saldo rekening?' : 'How does debt/receivable payment logging affect bank balances?',
+      a: isId 
+        ? 'Saat Anda mencatat pelunasan Utang, sistem otomatis memotong saldo rekening bank/e-wallet pilihan dan mencatat transaksi Kas Keluar. Sebaliknya, saat mencatat penerimaan cicilan Piutang, saldo rekening bank akan bertambah otomatis sebagai Kas Masuk.'
+        : 'When logging a debt payment, the app automatically deducts funds from your selected bank account and creates an expense record. Conversely, receiving receivable payments increases your account balance and logs an income transaction.'
     },
     {
       q: isId ? 'Bagaimana cara menggunakan filter Scope Workspace (Semua Workspace, Keluarga, Pribadi)?' : 'How does the Workspace Scope Filter work (All Workspaces, Family, Personal)?',
       a: isId 
-        ? 'Di bagian atas setiap halaman (Arus Kas, Anggaran, Tagihan, Target, Aset, Laporan), Anda dapat mengeklik tombol switch filter workspace. Opsi "Semua Workspace" menggabungkan seluruh catatan data dari Dompet Pribadi dan Dompet Keluarga tanpa perlu berganti-ganti workspace.'
-        : 'At the top of each view (Cash Flow, Budgeting, Bills, Goals, Assets, Reports), click the workspace scope switcher. Selecting "All Workspaces" aggregates data from both Personal and Family wallets into a unified view.'
+        ? 'Di bagian atas setiap halaman (Arus Kas, Anggaran, Utang, Tagihan, Target, Aset, Laporan), Anda dapat mengeklik tombol switch filter workspace. Opsi "Semua Workspace" menggabungkan seluruh catatan data dari Dompet Pribadi dan Dompet Keluarga tanpa perlu berganti-ganti workspace.'
+        : 'At the top of each view (Cash Flow, Budgeting, Debts, Bills, Goals, Assets, Reports), click the workspace scope switcher. Selecting "All Workspaces" aggregates data from both Personal and Family wallets into a unified view.'
     },
     {
       q: isId ? 'Bagaimana cara melakukan cadangan data offline (Offline Backup) & ekspor laporan?' : 'How to export offline data backups and financial statements?',
       a: isId 
-        ? 'Buka menu "Laporan", lalu scroll ke bagian "Ekspor Laporan & Cadangan Data". Pilih bulan, tahun, scope workspace, serta jenis data yang ingin disertakan (Rekening Kas Likuid, Aset Fisik, Arus Kas, Amplop Anggaran). Pilih format CSV (untuk Excel/Spreadsheet) atau JSON (cadangan aplikasi), lalu klik Unduh.'
-        : 'Navigate to "Reports" -> scroll to "Export Statement & Backup". Choose month, year, workspace scope, and dataset checkboxes (Liquid Cash Accounts, Physical Assets, Cash Flow, Budget Envelopes). Download in CSV spreadsheet or full JSON format.'
+        ? 'Buka menu "Laporan", lalu scroll ke bagian "Ekspor Laporan & Cadangan Data". Pilih bulan, tahun, scope workspace, serta jenis data yang ingin disertakan (Rekening Kas Likuid, Aset Fisik, Utang/Piutang, Arus Kas, Amplop Anggaran). Pilih format CSV (untuk Excel/Spreadsheet) atau JSON (cadangan aplikasi), lalu klik Unduh.'
+        : 'Navigate to "Reports" -> scroll to "Export Statement & Backup". Choose month, year, workspace scope, and dataset checkboxes (Liquid Cash Accounts, Physical Assets, Debts, Cash Flow, Budget Envelopes). Download in CSV spreadsheet or full JSON format.'
     },
     {
-      q: isId ? 'Bagaimana jika saya tidak sengaja menghapus data transaksi atau aset?' : 'What if I accidentally delete a transaction or asset record?',
+      q: isId ? 'Bagaimana jika saya tidak sengaja menghapus data transaksi, aset, atau utang?' : 'What if I accidentally delete a transaction, asset, or debt record?',
       a: isId 
         ? 'Buka menu "Log Aktivitas". Semua tindakan seperti penambahan, pembaruan, dan penghapusan tersimpan dengan rapi. Cari catatan tindakan yang dihapus, lalu klik tombol "Urungkan / Pulihkan" untuk mengembalikan data tersebut secara instan.'
         : 'Open the "Activity Log" view. Every creation, edit, and deletion is recorded. Locate the deleted action entry and click the "Undo / Restore" button to instantly recover the record.'
@@ -286,13 +316,13 @@ export function Help({ onNavigate }: HelpProps) {
     {
       q: isId ? 'Apakah data transaksi saya aman dan bisa dikunci dengan PIN?' : 'Is my financial data secure and protected with a PIN lock?',
       a: isId 
-        ? 'Ya. Data Anda disimpan secara terenkripsi di Firestore. Selain itu, Anda dapat mengaktifkan opsi "Keamanan PIN 6-Digit" di menu Pengaturan. Setiap kali aplikasi dibuka atau ditinggalkan, layar pengunci PIN akan muncul untuk menjaga privasi keuangan Anda.'
-        : 'Yes. Data is securely stored in encrypted Firestore. Furthermore, enable "6-Digit Security PIN" in Settings. The app will prompt for the PIN whenever opened to safeguard your financial privacy.'
+        ? 'Ya. Data Anda disimpan secara terenkripsi di Firestore dan dilindungi Aturan Keamanan Server (Firestore Rules). Selain itu, Anda dapat mengaktifkan opsi "Keamanan PIN 6-Digit" di menu Pengaturan untuk mengunci layar aplikasi.'
+        : 'Yes. Data is securely stored in encrypted Firestore guarded by server security rules. Furthermore, enable "6-Digit Security PIN" in Settings to lock the application screen.'
     },
     {
       q: isId ? 'Bagaimana perhitungan Satuan Borongan (Kalsel) dan Revaluasi Nilai Aset?' : 'How does traditional Borongan unit conversion and asset revaluation work?',
       a: isId 
-        ? 'Untuk aset kategori Tanah/Lahan, sistem mengodekan rumus standar Kalimantan Selatan di mana 1 Hektar (10.000 m²) setara dengan 35 Borongan (1 Borongan ≈ 285,7 m²). Harga beli dan nilai efektif saat ini dikalkulasi otomatis dalam rupiah per m² serta rupiah per borongan. Anda juga dapat menambah riwayat Revaluasi harga tanah/bangunan di modal detail aset untuk melacak kenaikan apresiasi nilai investasi.'
+        ? 'Untuk aset kategori Tanah/Lahan, sistem mengodekan rumus standar Kalimantan Selatan di mana 1 Hektar (10.000 m²) setara dengan 35 Borongan (1 Borongan ≈ 285,7 m²). Harga beli dan nilai efektif saat ini dikalkulasi otomatis dalam rupiah per m² serta rupiah per borongan. Anda juga dapat menambah riwayat Revaluasi harga tanah/bangunan di modal detail aset untuk melacak kenaikan nilai investasi.'
         : 'For land assets, the app converts area into traditional South Kalimantan Borongan units (1 Hectare = 35 Borongan, 1 Borongan ≈ 285.7 m²). Price per m² and per borongan are calculated automatically. You can also append revaluation records in asset details to track real estate appreciation over time.'
     },
     {
