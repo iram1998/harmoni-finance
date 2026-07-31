@@ -24,6 +24,7 @@ import { PrivacyPolicy } from './components/views/PrivacyPolicy';
 import { TermsOfService } from './components/views/TermsOfService';
 import { SecurityLockScreen } from './components/SecurityLockScreen';
 import { DemoLimitModal } from './components/DemoLimitModal';
+import { WelcomeGuideModal } from './components/WelcomeGuideModal';
 
 function AppContent() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -47,6 +48,7 @@ function AppContent() {
         {currentView === 'terms-of-service' && <TermsOfService onBack={() => setCurrentView('dashboard')} />}
       </Layout>
       <DemoLimitModal />
+      <WelcomeGuideModal onNavigateHelp={(view) => setCurrentView(view)} />
     </SecurityLockScreen>
   );
 }

@@ -136,7 +136,7 @@ export function TransactionDetailModal({
                   {isId ? 'Pindah Saldo' : 'Internal Transfer'}
                 </span>
               ) : (
-                <span className="bg-white text-on-surface text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full shadow-xs">
+                <span className="bg-white text-slate-900 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full shadow-xs">
                   {isIncome ? (isId ? 'Pemasukan' : 'Income') : (isId ? 'Pengeluaran' : 'Expense')}
                 </span>
               )}

@@ -131,7 +131,7 @@ export function Help({ onNavigate }: HelpProps) {
     {
       step: '06',
       title: isId ? 'Laporan, Log Aktivitas Audit, & Backup' : 'Reports, Audit Trail, & Offline Backups',
-      subtitle: isId ? 'Ekspor CSV/JSON, Cetak Laporan PDF, & Fitur Restore' : 'CSV/JSON Export, Printable PDF Statements, & Undo/Restore',
+      subtitle: isId ? 'Ekspor CSV/JSON, Cetak Laporan PDF, & Pembersihan Log' : 'CSV/JSON Export, Printable PDF Statements, & Log Management',
       icon: 'assessment',
       color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
       navTarget: 'reports',
@@ -143,10 +143,10 @@ export function Help({ onNavigate }: HelpProps) {
             : 'In "Reports", export full offline backups including Cash Accounts, Assets, Debts, Cash Flow, and Envelopes in CSV or JSON format.'
         },
         {
-          heading: isId ? '2. Cetak Dokumen & Audit Trail' : '2. PDF Statements & Activity Log Undo',
+          heading: isId ? '2. Cetak Dokumen & Audit Trail' : '2. PDF Statements & Activity Audit Trail',
           text: isId 
-            ? 'Cetak Laporan Keuangan resmi ke PDF atau periksa menu "Log Aktivitas" untuk memulihkan (Undo/Restore) data yang tidak sengaja terhapus.'
-            : 'Print clean PDF statements or review "Activity Log" to restore accidentally deleted data with a single click.'
+            ? 'Cetak Laporan Keuangan resmi ke PDF atau periksa menu "Log Aktivitas" untuk memantau jejak audit riwayat penambahan, perubahan, dan pembersihan log secara berkala.'
+            : 'Print clean PDF statements or review "Activity Log" to audit all data creation, updates, and configured auto-clean retention rules.'
         }
       ]
     }
@@ -258,7 +258,7 @@ export function Help({ onNavigate }: HelpProps) {
         : 'Complete audit log view tracking every user action (create, edit, delete, bill pay, transfer) alongside 6-digit PIN app lock.',
       howToRead: [
         isId ? '1. Audit Trail Lengkap: Setiap perubahan data dicatat lengkap dengan timestamp, tipe aksi, dan detail entitas.' : '1. Complete Audit Trail: Tracks every record change with timestamps, action types, and details.',
-        isId ? '2. Fitur Urungkan (Undo / Restore): Kembalikan data yang tidak sengaja terhapus dengan satu klik dari log aktivitas.' : '2. Undo / Restore Feature: Easily restore accidentally deleted records directly from the activity log.',
+        isId ? '2. Pembersihan Log & Auto Clean: Kelola aturan retensi log otomatis (30/60/90 hari) atau bersihkan riwayat log agar Firestore tetap efisien.' : '2. Log Management & Auto Clean: Configure automated log retention rules (30/60/90 days) or purge history to optimize Firestore storage.',
         isId ? '3. Keamanan Keuangan (PIN Lock): Aktifkan pengunci layar 6-digit di menu Pengaturan untuk menjaga privasi data.' : '3. Security PIN Lock: Enable 6-digit screen lock in Settings to guard sensitive financial data.'
       ]
     },
@@ -308,10 +308,10 @@ export function Help({ onNavigate }: HelpProps) {
         : 'Navigate to "Reports" -> scroll to "Export Statement & Backup". Choose month, year, workspace scope, and dataset checkboxes (Liquid Cash Accounts, Physical Assets, Debts, Cash Flow, Budget Envelopes). Download in CSV spreadsheet or full JSON format.'
     },
     {
-      q: isId ? 'Bagaimana jika saya tidak sengaja menghapus data transaksi, aset, atau utang?' : 'What if I accidentally delete a transaction, asset, or debt record?',
+      q: isId ? 'Apakah seluruh riwayat perubahan data tercatat di Log Aktivitas?' : 'Are all data changes recorded in the Activity Log?',
       a: isId 
-        ? 'Buka menu "Log Aktivitas". Semua tindakan seperti penambahan, pembaruan, dan penghapusan tersimpan dengan rapi. Cari catatan tindakan yang dihapus, lalu klik tombol "Urungkan / Pulihkan" untuk mengembalikan data tersebut secara instan.'
-        : 'Open the "Activity Log" view. Every creation, edit, and deletion is recorded. Locate the deleted action entry and click the "Undo / Restore" button to instantly recover the record.'
+        ? 'Ya. Menu Log Aktivitas mencatat seluruh jejak audit (Audit Trail) saat data dibuat, diubah, atau dihapus secara transparan beserta timestamp dan kategorinya. Anda juga dapat mengatur pembersihan log otomatis (Auto Clean) atau mengunduh cadangan JSON di menu Laporan untuk mengamankan data.'
+        : 'Yes. The Activity Log records a full audit trail whenever data is created, edited, or deleted, along with timestamps and entity details. You can also configure Auto Clean retention or export JSON backups in Reports to safeguard your data.'
     },
     {
       q: isId ? 'Apakah data transaksi saya aman dan bisa dikunci dengan PIN?' : 'Is my financial data secure and protected with a PIN lock?',
