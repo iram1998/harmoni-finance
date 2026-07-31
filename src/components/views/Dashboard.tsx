@@ -18,7 +18,8 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
   const [isFullTrendChartOpen, setIsFullTrendChartOpen] = useState(false);
   const [isFullCategoryChartOpen, setIsFullCategoryChartOpen] = useState(false);
-  const { workspace, transactions, envelopes, goals, bills, paymentAccounts, markBillPaid, openTransactionModal, openTransferModal, openEnvelopeModal, openGoalModal, openBillModal, assets, user } = useFinance();
+  const [dashboardPeriod, setDashboardPeriod] = useState<'this-month' | 'ytd' | 'all-time'>('this-month');
+  const { workspace, transactions, envelopes, goals, bills, paymentAccounts, markBillPaid, openTransactionModal, openTransferModal, openEnvelopeModal, openGoalModal, openBillModal, assets, debts, user } = useFinance();
   const { language, t } = useThemeLanguage();
 
   useEffect(() => {
@@ -27,23 +28,35 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
       setIsLoading(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [workspace]);
+  }, [workspace, dashboardPeriod]);
 
   const isTransferTx = (t: { category?: string }) => {
     const c = (t.category || '').toLowerCase();
     return c.includes('transfer') || c.includes('pindah') || c.includes('saldo');
   };
 
-  const wsTransactions = transactions.filter(t => workspace === 'all' ? true : (t.workspaceId || 'keluarga') === workspace);
-  const fixedIncome = wsTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'fixed' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
-  const variableIncome = wsTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'variable' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
-  const totalIncome = fixedIncome + variableIncome;
-  const totalExpense = wsTransactions.filter(t => t.type === 'expense' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
-  const balance = totalIncome - totalExpense;
-
   const today = new Date();
   const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
   const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+  const ytdStart = new Date(today.getFullYear(), 0, 1).getTime();
+
+  const wsTransactions = transactions.filter(t => workspace === 'all' ? true : (t.workspaceId || 'keluarga') === workspace);
+  
+  // Filter transactions for Income & Expense summary cards based on period
+  const periodTransactions = wsTransactions.filter(t => {
+    if (dashboardPeriod === 'all-time') return true;
+    const tTime = new Date(t.date).getTime();
+    if (dashboardPeriod === 'this-month') return tTime >= currentMonthStart && tTime <= currentMonthEnd;
+    if (dashboardPeriod === 'ytd') return tTime >= ytdStart && tTime <= currentMonthEnd;
+    return true;
+  });
+
+  const fixedIncome = periodTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'fixed' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
+  const variableIncome = periodTransactions.filter(t => t.type === 'income' && t.incomeCategory === 'variable' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
+  const totalIncome = fixedIncome + variableIncome;
+  const totalExpense = periodTransactions.filter(t => t.type === 'expense' && !isTransferTx(t)).reduce((acc, t) => acc + t.amount, 0);
+  const balance = totalIncome - totalExpense;
+
   const currentMonthTransactions = wsTransactions.filter(t => {
     const tTime = new Date(t.date).getTime();
     return tTime >= currentMonthStart && tTime <= currentMonthEnd;
@@ -59,9 +72,11 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
   
   const totalInvestasiDanAset = totalInvestmentAccounts + totalAssetsValue;
   
-  const totalDebt = bills.filter(b => (workspace === 'all' ? true : (b.workspaceId || 'keluarga') === workspace) && !b.isPaid).reduce((sum, b) => sum + b.amount, 0);
+  const wsDebts = (debts || []).filter(d => (workspace === 'all' ? true : (d.workspaceId || 'keluarga') === workspace) && d.status === 'active');
+  const totalPayables = wsDebts.filter(d => d.type === 'payable').reduce((sum, d) => sum + d.remainingAmount, 0);
+  const totalReceivables = wsDebts.filter(d => d.type === 'receivable').reduce((sum, d) => sum + d.remainingAmount, 0);
   
-  const netWorth = totalLiquidCash + totalInvestasiDanAset - totalDebt;
+  const netWorth = totalLiquidCash + totalInvestasiDanAset + totalReceivables - totalPayables;
   const userName = user?.displayName || user?.email?.split('@')[0] || 'Budi Santoso';
 
   // Calculate budget alerts across ALL envelopes in the workspace
@@ -147,7 +162,16 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={dashboardPeriod}
+              onChange={(e) => setDashboardPeriod(e.target.value as any)}
+              className="bg-surface border border-outline-variant px-3 py-2 rounded-xl font-bold text-on-surface focus:outline-none focus:border-primary cursor-pointer text-sm"
+            >
+              <option value="this-month">{language === 'id' ? 'Bulan Ini' : 'This Month'}</option>
+              <option value="ytd">{language === 'id' ? 'Tahun Berjalan' : 'Year to Date'}</option>
+              <option value="all-time">{language === 'id' ? 'Semua Waktu' : 'All Time'}</option>
+            </select>
             <Button variant="secondary" icon="swap_horiz" onClick={openTransferModal} className="hidden md:flex">
               {t('transferFunds')}
             </Button>
@@ -249,6 +273,31 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
           </div>
         )}
 
+        {/* Income & Expense Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <Card variant="default" className="p-6 flex flex-col justify-between overflow-hidden relative group">
+            <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl transition-transform group-hover:scale-150 duration-700"></div>
+            <div className="flex justify-between items-center mb-4 relative z-10">
+              <h3 className="font-label-lg text-on-surface-variant uppercase tracking-wider">{t('totalIncomeInflow') || 'Pemasukan'}</h3>
+              <span className="material-symbols-outlined text-emerald-600 bg-emerald-100 p-2 rounded-full" style={{ fontVariationSettings: "'FILL' 1" }}>arrow_upward</span>
+            </div>
+            <div className="font-display-md text-emerald-700 font-bold truncate relative z-10" title={formatCurrency(totalIncome)}>
+              {formatCurrency(totalIncome)}
+            </div>
+          </Card>
+          
+          <Card variant="default" className="p-6 flex flex-col justify-between overflow-hidden relative group">
+            <div className="absolute -right-6 -top-6 w-24 h-24 bg-rose-500/10 rounded-full blur-xl transition-transform group-hover:scale-150 duration-700"></div>
+            <div className="flex justify-between items-center mb-4 relative z-10">
+              <h3 className="font-label-lg text-on-surface-variant uppercase tracking-wider">{t('totalExpenseOutflow') || 'Pengeluaran'}</h3>
+              <span className="material-symbols-outlined text-rose-600 bg-rose-100 p-2 rounded-full" style={{ fontVariationSettings: "'FILL' 1" }}>arrow_downward</span>
+            </div>
+            <div className="font-display-md text-rose-700 font-bold truncate relative z-10" title={formatCurrency(totalExpense)}>
+              {formatCurrency(totalExpense)}
+            </div>
+          </Card>
+        </div>
+
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
@@ -264,31 +313,41 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                     {t('netWorth')}
                   </h3>
                   <span className="font-label-sm bg-white/15 px-2.5 py-0.5 rounded-full text-white/90 font-medium">
-                    {workspace === 'keluarga' ? t('familyWorkspace') : t('personalWorkspace')}
+                    {workspace === 'all' 
+                      ? (language === 'id' ? 'Semua Workspace' : 'All Workspaces') 
+                      : workspace === 'keluarga' 
+                        ? (t('familyWorkspace') || 'Keluarga') 
+                        : (t('personalWorkspace') || 'Pribadi')}
                   </span>
                 </div>
                 
-                <div className="font-display-md lg:font-display-lg text-white mb-8 truncate font-black tracking-tight" title={formatCurrency(netWorth)}>
+                <div className="font-display-md lg:font-display-lg text-white mb-6 truncate font-black tracking-tight" title={formatCurrency(netWorth)}>
                   {formatCurrency(netWorth)}
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 mt-auto border-t border-white/20 pt-4">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3.5 mt-auto border-t border-white/20 pt-4">
                 <div>
-                  <div className="font-label-sm text-white/80 uppercase mb-1 text-[10px] sm:text-xs truncate" title={t('cashBalance') || 'Total Saldo'}>{t('cashBalance') || 'Total Saldo'}</div>
-                  <div className="font-body-md sm:font-body-lg text-white truncate font-extrabold" title={formatCurrency(totalLiquidCash)}>{formatCurrency(totalLiquidCash)}</div>
+                  <div className="font-label-sm text-white/80 uppercase mb-0.5 text-[10px] sm:text-xs truncate" title={t('cashBalance') || 'Total Saldo'}>{t('cashBalance') || 'Total Saldo'}</div>
+                  <div className="text-xs sm:text-sm md:text-base font-extrabold text-white tracking-tight leading-snug" title={formatCurrency(totalLiquidCash)}>{formatCurrency(totalLiquidCash)}</div>
                 </div>
                 <div>
-                  <div className="font-label-sm text-white/80 uppercase mb-1 text-[10px] sm:text-xs truncate" title={language === 'id' ? 'Total Investasi & Aset' : 'Total Investments & Assets'}>
+                  <div className="font-label-sm text-white/80 uppercase mb-0.5 text-[10px] sm:text-xs truncate" title={language === 'id' ? 'Total Investasi & Aset' : 'Total Investments & Assets'}>
                     {language === 'id' ? 'Investasi & Aset' : 'Investments & Assets'}
                   </div>
-                  <div className="font-body-md sm:font-body-lg text-white truncate font-extrabold" title={formatCurrency(totalInvestasiDanAset)}>{formatCurrency(totalInvestasiDanAset)}</div>
+                  <div className="text-xs sm:text-sm md:text-base font-extrabold text-white tracking-tight leading-snug" title={formatCurrency(totalInvestasiDanAset)}>{formatCurrency(totalInvestasiDanAset)}</div>
                 </div>
                 <div>
-                  <div className="font-label-sm text-white/80 uppercase mb-1 text-[10px] sm:text-xs truncate" title={language === 'id' ? 'Total Utang' : 'Total Debt'}>
-                    {language === 'id' ? 'Total Utang' : 'Total Debt'}
+                  <div className="font-label-sm text-white/80 uppercase mb-0.5 text-[10px] sm:text-xs truncate" title={language === 'id' ? 'Total Piutang' : 'Total Receivables'}>
+                    {language === 'id' ? 'Piutang' : 'Receivables'}
                   </div>
-                  <div className="font-body-md sm:font-body-lg text-red-200 truncate font-extrabold" title={formatCurrency(totalDebt)}>{formatCurrency(totalDebt)}</div>
+                  <div className="text-xs sm:text-sm md:text-base font-extrabold text-teal-200 tracking-tight leading-snug" title={formatCurrency(totalReceivables)}>{formatCurrency(totalReceivables)}</div>
+                </div>
+                <div>
+                  <div className="font-label-sm text-white/80 uppercase mb-0.5 text-[10px] sm:text-xs truncate" title={language === 'id' ? 'Total Utang' : 'Total Debt'}>
+                    {language === 'id' ? 'Utang' : 'Debt'}
+                  </div>
+                  <div className="text-xs sm:text-sm md:text-base font-extrabold text-red-200 tracking-tight leading-snug" title={formatCurrency(totalPayables)}>{formatCurrency(totalPayables)}</div>
                 </div>
               </div>
             </div>

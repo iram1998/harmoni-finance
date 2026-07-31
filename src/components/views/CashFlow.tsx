@@ -27,6 +27,7 @@ export function CashFlow() {
   type SortDirection = 'asc' | 'desc';
 
   const [cfWorkspaceFilter, setCfWorkspaceFilter] = useState<'pribadi' | 'keluarga' | 'all'>('all');
+  const [cfPeriodFilter, setCfPeriodFilter] = useState<'this-month' | 'last-month' | 'this-year' | 'all-time'>('this-month');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [sortField, setSortField] = useState<SortField>('date');
@@ -54,12 +55,12 @@ export function CashFlow() {
   // Clear selected ids when workspace, type, search, sort, or page size changes
   useEffect(() => {
     setSelectedIds([]);
-  }, [cfWorkspaceFilter, typeFilter, searchTerm, sortField, sortDirection, pageSize, currentPage]);
+  }, [cfWorkspaceFilter, cfPeriodFilter, typeFilter, searchTerm, sortField, sortDirection, pageSize, currentPage]);
 
   // Reset page to 1 whenever filters, search, sort, or page size change
   useEffect(() => {
     setCurrentPage(1);
-  }, [cfWorkspaceFilter, searchTerm, typeFilter, sortField, sortDirection, pageSize]);
+  }, [cfWorkspaceFilter, cfPeriodFilter, searchTerm, typeFilter, sortField, sortDirection, pageSize]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -109,7 +110,15 @@ export function CashFlow() {
       setIsLoading(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [cfWorkspaceFilter]);
+  }, [cfWorkspaceFilter, cfPeriodFilter]);
+  
+  // Date boundaries
+  const today = new Date();
+  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+  const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+  const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1).getTime();
+  const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59, 999).getTime();
+  const thisYearStart = new Date(today.getFullYear(), 0, 1).getTime();
   
   // 1. Filtered list
   const filteredTransactions = transactions.filter(t => {
@@ -119,7 +128,16 @@ export function CashFlow() {
     const cat = (t.category || '').toLowerCase();
     const search = searchTerm.toLowerCase();
     const matchSearch = desc.includes(search) || cat.includes(search);
-    return matchWs && matchType && matchSearch;
+    
+    let matchPeriod = true;
+    if (cfPeriodFilter !== 'all-time') {
+      const tTime = new Date(t.date).getTime();
+      if (cfPeriodFilter === 'this-month') matchPeriod = tTime >= currentMonthStart && tTime <= currentMonthEnd;
+      else if (cfPeriodFilter === 'last-month') matchPeriod = tTime >= lastMonthStart && tTime <= lastMonthEnd;
+      else if (cfPeriodFilter === 'this-year') matchPeriod = tTime >= thisYearStart && tTime <= currentMonthEnd;
+    }
+    
+    return matchWs && matchType && matchSearch && matchPeriod;
   });
 
   // 2. Sorted list
@@ -351,6 +369,16 @@ export function CashFlow() {
                   className="w-full bg-surface border border-outline-variant pl-9 pr-3 py-1.5 rounded-lg text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
                 />
               </div>
+              <select
+                value={cfPeriodFilter}
+                onChange={(e) => setCfPeriodFilter(e.target.value as any)}
+                className="bg-surface border border-outline-variant px-3 py-1.5 rounded-lg text-xs font-bold text-on-surface focus:outline-none focus:border-primary cursor-pointer"
+              >
+                <option value="this-month">{language === 'id' ? 'Bulan Ini' : 'This Month'}</option>
+                <option value="last-month">{language === 'id' ? 'Bulan Lalu' : 'Last Month'}</option>
+                <option value="this-year">{language === 'id' ? 'Tahun Ini' : 'This Year'}</option>
+                <option value="all-time">{language === 'id' ? 'Semua Waktu' : 'All Time'}</option>
+              </select>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as any)}
@@ -681,6 +709,16 @@ export function CashFlow() {
               />
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <select
+                value={cfPeriodFilter}
+                onChange={(e) => setCfPeriodFilter(e.target.value as any)}
+                className="bg-surface border border-outline-variant px-2.5 py-1.5 rounded-xl text-xs font-bold text-on-surface focus:outline-none focus:border-primary shrink-0 cursor-pointer"
+              >
+                <option value="this-month">{language === 'id' ? 'Bulan Ini' : 'This Month'}</option>
+                <option value="last-month">{language === 'id' ? 'Bulan Lalu' : 'Last Month'}</option>
+                <option value="this-year">{language === 'id' ? 'Tahun Ini' : 'This Year'}</option>
+                <option value="all-time">{language === 'id' ? 'Semua Waktu' : 'All Time'}</option>
+              </select>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as any)}

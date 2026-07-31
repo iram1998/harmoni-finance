@@ -18,20 +18,47 @@ export function Budgeting() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [budgetWsFilter, setBudgetWsFilter] = useState<'pribadi' | 'keluarga' | 'all'>('all');
 
+  const today = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
+  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+
+  const handlePrevMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
+
+  const getMonthName = (monthIdx: number) => {
+    const monthsId = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return language === 'id' ? monthsId[monthIdx] : monthsEn[monthIdx];
+  };
+
   useEffect(() => {
     setIsLoading(true);
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [budgetWsFilter]);
+  }, [budgetWsFilter, selectedMonth, selectedYear]);
 
   const wsEnvelopes = envelopes.filter(e => budgetWsFilter === 'all' ? true : (e.workspaceId || 'keluarga') === budgetWsFilter);
   const wsTransactions = transactions.filter(t => budgetWsFilter === 'all' ? true : (t.workspaceId || 'keluarga') === budgetWsFilter);
   
-  const today = new Date();
-  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
-  const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+  const currentMonthStart = new Date(selectedYear, selectedMonth, 1).getTime();
+  const currentMonthEnd = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59, 999).getTime();
   const currentMonthTransactions = wsTransactions.filter(t => {
     const tTime = new Date(t.date).getTime();
     return tTime >= currentMonthStart && tTime <= currentMonthEnd;
@@ -50,8 +77,9 @@ export function Budgeting() {
   const attentionNeeded = [...envelopeSpending].sort((a, b) => b.ratio - a.ratio).slice(0, 2);
 
   // Date calculation for days left
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  const daysLeft = lastDay.getDate() - today.getDate();
+  const isCurrentMonth = selectedMonth === today.getMonth() && selectedYear === today.getFullYear();
+  const lastDay = new Date(selectedYear, selectedMonth + 1, 0);
+  const daysLeft = isCurrentMonth ? lastDay.getDate() - today.getDate() : 0;
 
   const confirmDeleteEnvelope = async () => {
     if (!deleteTarget) return;
@@ -90,6 +118,18 @@ export function Budgeting() {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 bg-surface border border-outline-variant rounded-xl px-2 py-1">
+              <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant hover:text-on-surface">
+                <span className="material-symbols-outlined text-lg">chevron_left</span>
+              </button>
+              <span className="font-label-md min-w-[100px] text-center font-bold text-on-surface">
+                {getMonthName(selectedMonth)} {selectedYear}
+              </span>
+              <button onClick={handleNextMonth} className="p-1 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant hover:text-on-surface">
+                <span className="material-symbols-outlined text-lg">chevron_right</span>
+              </button>
+            </div>
+            
             <div className="flex items-center gap-1 bg-surface-container-low border border-outline-variant p-1 rounded-xl">
               <button
                 type="button"
@@ -356,6 +396,18 @@ export function Budgeting() {
           </Button>
         </div>
         
+        <div className="flex items-center justify-between bg-surface border border-outline-variant rounded-xl px-2 py-1.5 w-full">
+          <button onClick={handlePrevMonth} className="p-2 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant hover:text-on-surface">
+            <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+          </button>
+          <span className="font-label-lg text-center font-bold text-on-surface">
+            {getMonthName(selectedMonth)} {selectedYear}
+          </span>
+          <button onClick={handleNextMonth} className="p-2 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant hover:text-on-surface">
+            <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+          </button>
+        </div>
+
         {/* Summary Bento Grid */}
         <div className="grid grid-cols-2 gap-4">
           {/* Allocated Card */}

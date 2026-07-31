@@ -7,7 +7,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAx
 import { X } from 'lucide-react';
 
 export function Reports() {
-  const { workspace, transactions, assets, envelopes, paymentAccounts } = useFinance();
+  const { workspace, transactions, assets, envelopes, paymentAccounts, debts } = useFinance();
   const { language, theme, t } = useThemeLanguage();
   const [isLoading, setIsLoading] = useState(true);
 
@@ -23,6 +23,7 @@ export function Reports() {
   const defaultMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
   const defaultYear = String(currentDate.getFullYear());
 
+  const [exportPeriod, setExportPeriod] = useState<'this-month' | 'last-month' | 'this-year' | 'all-time' | 'custom'>('this-month');
   const [exportMonth, setExportMonth] = useState(defaultMonth);
   const [exportYear, setExportYear] = useState(defaultYear);
   const [exportIncludeAssets, setExportIncludeAssets] = useState(true);
@@ -62,11 +63,35 @@ export function Reports() {
 
   const yearsList = ['2024', '2025', '2026', '2027'];
 
+  const getPeriodLabel = () => {
+    if (exportPeriod === 'this-month') return isId ? 'Bulan Ini' : 'This Month';
+    if (exportPeriod === 'last-month') return isId ? 'Bulan Lalu' : 'Last Month';
+    if (exportPeriod === 'this-year') return isId ? 'Tahun Ini' : 'This Year';
+    if (exportPeriod === 'all-time') return isId ? 'Semua Waktu' : 'All Time';
+    return `${monthsList.find(m => m.code === exportMonth)?.name || exportMonth} ${exportYear}`;
+  };
+
   // Data Filtering Utilities
-  const filterTransactionsForPeriod = (m: string, y: string) => {
+  const filterTransactionsForPeriod = (period: string, m: string, y: string) => {
+    const today = new Date();
+    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+    const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1).getTime();
+    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59, 999).getTime();
+    const thisYearStart = new Date(today.getFullYear(), 0, 1).getTime();
+
     return transactions.filter(t => {
       const matchWs = reportWorkspaceFilter === 'all' ? true : (t.workspaceId || 'keluarga') === reportWorkspaceFilter;
-      const matchPeriod = t.date.startsWith(`${y}-${m}`);
+      
+      let matchPeriod = true;
+      if (period !== 'all-time') {
+        const tTime = new Date(t.date).getTime();
+        if (period === 'this-month') matchPeriod = tTime >= currentMonthStart && tTime <= currentMonthEnd;
+        else if (period === 'last-month') matchPeriod = tTime >= lastMonthStart && tTime <= lastMonthEnd;
+        else if (period === 'this-year') matchPeriod = tTime >= thisYearStart && tTime <= currentMonthEnd;
+        else if (period === 'custom') matchPeriod = t.date.startsWith(`${y}-${m}`);
+      }
+      
       return matchWs && matchPeriod;
     });
   };
@@ -85,8 +110,15 @@ export function Reports() {
     });
   };
 
-  const getBudgetDataForPeriod = (m: string, y: string) => {
-    const periodTrs = filterTransactionsForPeriod(m, y);
+  const filterDebtsForPeriod = () => {
+    return debts.filter(d => {
+      const matchWs = reportWorkspaceFilter === 'all' ? true : (d.workspaceId || 'keluarga') === reportWorkspaceFilter;
+      return matchWs && d.status === 'active';
+    });
+  };
+
+  const getBudgetDataForPeriod = (period: string, m: string, y: string) => {
+    const periodTrs = filterTransactionsForPeriod(period, m, y);
     const categoryExpenses = periodTrs
       .filter(t => t.type === 'expense')
       .reduce((acc, t) => {
@@ -118,12 +150,12 @@ export function Reports() {
       return;
     }
 
-    const periodTrs = filterTransactionsForPeriod(exportMonth, exportYear);
+    const periodTrs = filterTransactionsForPeriod(exportPeriod, exportMonth, exportYear);
     const periodAssets = filterAssetsForPeriod();
     const periodPayAccs = filterPaymentAccountsForPeriod();
-    const periodBudget = getBudgetDataForPeriod(exportMonth, exportYear);
+    const periodBudget = getBudgetDataForPeriod(exportPeriod, exportMonth, exportYear);
 
-    const monthName = monthsList.find(m => m.code === exportMonth)?.name || exportMonth;
+    const monthName = getPeriodLabel();
 
     let csvContent = `==================================================\n`;
     csvContent += `HARMONI FINANSIAL - ${isId ? 'EKSPOR CADANGAN KEUANGAN OFFLINE' : 'OFFLINE FINANCIAL BACKUP EXPORT'}\n`;
@@ -197,7 +229,7 @@ export function Reports() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Harmoni_Laporan_${reportWorkspaceFilter}_${exportYear}_${exportMonth}.csv`);
+    link.setAttribute("download", `Harmoni_Laporan_${reportWorkspaceFilter}_${exportYear}_${exportPeriod}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -215,29 +247,37 @@ export function Reports() {
       return;
     }
 
-    const periodTrs = filterTransactionsForPeriod(exportMonth, exportYear);
+    const periodTrs = filterTransactionsForPeriod(exportPeriod, exportMonth, exportYear);
     const periodAssets = filterAssetsForPeriod();
     const periodPayAccs = filterPaymentAccountsForPeriod();
-    const periodBudget = getBudgetDataForPeriod(exportMonth, exportYear);
+    const periodDebts = filterDebtsForPeriod();
+    const periodBudget = getBudgetDataForPeriod(exportPeriod, exportMonth, exportYear);
 
     const totalLiquidCash = periodPayAccs.reduce((sum, acc) => sum + acc.balance, 0);
     const totalPhysicalAssets = periodAssets.reduce((sum, a) => sum + getAssetEffectiveValue(a), 0);
+    const totalPayables = periodDebts.filter(d => d.type === 'payable').reduce((sum, d) => sum + d.remainingAmount, 0);
+    const totalReceivables = periodDebts.filter(d => d.type === 'receivable').reduce((sum, d) => sum + d.remainingAmount, 0);
+    const totalNetWorth = totalLiquidCash + totalPhysicalAssets + totalReceivables - totalPayables;
 
     const backupData = {
       appName: "Harmoni Finansial",
       exportedAt: new Date().toISOString(),
       workspaceFilter: reportWorkspaceFilter,
-      period: `${exportYear}-${exportMonth}`,
-      backupVersion: "1.3.0",
+      period: exportPeriod === "custom" ? `${exportYear}-${exportMonth}` : exportPeriod,
+      backupVersion: "1.4.0",
       summary: {
         totalLiquidCash,
         totalPhysicalAssets,
+        totalPayables,
+        totalReceivables,
+        totalNetWorth,
         totalAssets: totalLiquidCash + totalPhysicalAssets,
         totalIncome: periodTrs.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
         totalExpense: periodTrs.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0),
       },
       paymentAccounts: exportIncludePaymentAccs ? periodPayAccs : [],
       assets: exportIncludeAssets ? periodAssets : [],
+      debts: exportIncludeAssets ? periodDebts : [],
       transactions: exportIncludeCashFlow ? periodTrs : [],
       budgets: exportIncludeBudget ? periodBudget : []
     };
@@ -246,7 +286,7 @@ export function Reports() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Harmoni_Backup_${reportWorkspaceFilter}_${exportYear}_${exportMonth}.json`);
+    link.setAttribute("download", `Harmoni_Backup_${reportWorkspaceFilter}_${exportYear}_${exportPeriod}.json`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -307,19 +347,22 @@ export function Reports() {
   const chartDisplayData = areaData;
 
   // Calculations for PDF Preview Paper
-  const periodTrs = filterTransactionsForPeriod(exportMonth, exportYear);
+  const periodTrs = filterTransactionsForPeriod(exportPeriod, exportMonth, exportYear);
   const periodAssets = filterAssetsForPeriod();
   const periodPayAccs = filterPaymentAccountsForPeriod();
-  const periodBudget = getBudgetDataForPeriod(exportMonth, exportYear);
+  const periodDebts = filterDebtsForPeriod();
+  const periodBudget = getBudgetDataForPeriod(exportPeriod, exportMonth, exportYear);
 
   const pdfTotalLiquidCash = periodPayAccs.reduce((sum, acc) => sum + acc.balance, 0);
   const pdfTotalPhysicalAssets = periodAssets.reduce((sum, a) => sum + getAssetEffectiveValue(a), 0);
-  const pdfTotalNetWorth = pdfTotalLiquidCash + pdfTotalPhysicalAssets;
+  const pdfTotalPayables = periodDebts.filter(d => d.type === 'payable').reduce((sum, d) => sum + d.remainingAmount, 0);
+  const pdfTotalReceivables = periodDebts.filter(d => d.type === 'receivable').reduce((sum, d) => sum + d.remainingAmount, 0);
+  const pdfTotalNetWorth = pdfTotalLiquidCash + pdfTotalPhysicalAssets + pdfTotalReceivables - pdfTotalPayables;
 
   const pdfTotalIncome = periodTrs.filter(t => t.type === 'income' && !isTransferTx(t)).reduce((sum, t) => sum + t.amount, 0);
   const pdfTotalExpense = periodTrs.filter(t => t.type === 'expense' && !isTransferTx(t)).reduce((sum, t) => sum + t.amount, 0);
   const pdfNetSavings = pdfTotalIncome - pdfTotalExpense;
-  const pdfMonthName = monthsList.find(m => m.code === exportMonth)?.name || exportMonth;
+  const pdfMonthName = getPeriodLabel();
 
   // Dynamic Financial Health Score calculation based on actual transactions
   const currentMonthNum = parseInt(exportMonth, 10);
@@ -452,6 +495,14 @@ export function Reports() {
                 <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
                   <span className="text-[9px] font-bold text-slate-500 block uppercase tracking-wide">{isId ? 'Aset Fisik' : 'Physical Assets'}</span>
                   <span className="text-xs font-extrabold text-slate-800 block mt-1">{formatCurrency(pdfTotalPhysicalAssets)}</span>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <span className="text-[9px] font-bold text-slate-500 block uppercase tracking-wide">{isId ? 'Total Piutang' : 'Total Receivables'}</span>
+                  <span className="text-xs font-extrabold text-teal-600 block mt-1">{formatCurrency(pdfTotalReceivables)}</span>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <span className="text-[9px] font-bold text-slate-500 block uppercase tracking-wide">{isId ? 'Total Utang' : 'Total Payables'}</span>
+                  <span className="text-xs font-extrabold text-red-600 block mt-1">{formatCurrency(pdfTotalPayables)}</span>
                 </div>
                 <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 bg-primary/5">
                   <span className="text-[9px] font-bold text-slate-600 block uppercase tracking-wide">{isId ? 'Total Kekayaan' : 'Total Net Worth'}</span>
@@ -725,36 +776,52 @@ export function Reports() {
               <h4 className="font-label-md text-on-surface font-extrabold uppercase tracking-wide">
                 {isId ? '1. Pilih Periode Laporan' : '1. Choose Report Period'}
               </h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold text-on-surface-variant">
-                    {isId ? 'Bulan' : 'Month'}
-                  </label>
-                  <select
-                    value={exportMonth}
-                    onChange={(e) => setExportMonth(e.target.value)}
-                    className="bg-surface border border-outline-variant rounded-xl px-3 py-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary focus:outline-none"
-                  >
-                    {monthsList.map(m => (
-                      <option key={m.code} value={m.code}>{m.name}</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="flex flex-col gap-3">
+                <select
+                  value={exportPeriod}
+                  onChange={(e) => setExportPeriod(e.target.value as any)}
+                  className="bg-surface border border-outline-variant rounded-xl px-3 py-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary focus:outline-none w-full"
+                >
+                  <option value="this-month">{isId ? 'Bulan Ini' : 'This Month'}</option>
+                  <option value="last-month">{isId ? 'Bulan Lalu' : 'Last Month'}</option>
+                  <option value="this-year">{isId ? 'Tahun Ini' : 'This Year'}</option>
+                  <option value="all-time">{isId ? 'Semua Waktu' : 'All Time'}</option>
+                  <option value="custom">{isId ? 'Bulan/Tahun Khusus' : 'Custom Month/Year'}</option>
+                </select>
+                
+                {exportPeriod === 'custom' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-bold text-on-surface-variant">
+                        {isId ? 'Bulan' : 'Month'}
+                      </label>
+                      <select
+                        value={exportMonth}
+                        onChange={(e) => setExportMonth(e.target.value)}
+                        className="bg-surface border border-outline-variant rounded-xl px-3 py-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary focus:outline-none"
+                      >
+                        {monthsList.map(m => (
+                          <option key={m.code} value={m.code}>{m.name}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold text-on-surface-variant">
-                    {isId ? 'Tahun' : 'Year'}
-                  </label>
-                  <select
-                    value={exportYear}
-                    onChange={(e) => setExportYear(e.target.value)}
-                    className="bg-surface border border-outline-variant rounded-xl px-3 py-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary focus:outline-none"
-                  >
-                    {yearsList.map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-bold text-on-surface-variant">
+                        {isId ? 'Tahun' : 'Year'}
+                      </label>
+                      <select
+                        value={exportYear}
+                        onChange={(e) => setExportYear(e.target.value)}
+                        className="bg-surface border border-outline-variant rounded-xl px-3 py-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary focus:outline-none"
+                      >
+                        {yearsList.map(y => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -839,10 +906,10 @@ export function Reports() {
         </div>
 
         {/* Executive Summary Metrics Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 print:hidden">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6 print:hidden">
           <div className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl shadow-2xs">
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
-              {isId ? 'Kas Likuid Bank / E-Wallet' : 'Liquid Cash Accounts'}
+              {isId ? 'Kas Likuid' : 'Liquid Cash'}
             </span>
             <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 block mt-1">
               {formatCurrency(pdfTotalLiquidCash)}
@@ -854,37 +921,61 @@ export function Reports() {
 
           <div className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl shadow-2xs">
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
-              {isId ? 'Nilai Aset Fisik' : 'Physical Assets Value'}
+              {isId ? 'Aset Fisik' : 'Physical Assets'}
             </span>
             <span className="text-lg font-extrabold text-on-surface block mt-1">
               {formatCurrency(pdfTotalPhysicalAssets)}
             </span>
             <span className="text-[10px] text-on-surface-variant/80 mt-1 block">
-              {filterAssetsForPeriod().length} {isId ? 'unit aset fisik' : 'physical items'}
+              {filterAssetsForPeriod().length} {isId ? 'unit' : 'items'}
             </span>
           </div>
 
           <div className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl shadow-2xs">
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
-              {isId ? 'Total Portofolio Aset' : 'Total Portfolio Worth'}
+              {isId ? 'Total Piutang' : 'Receivables'}
+            </span>
+            <span className="text-lg font-extrabold text-teal-600 dark:text-teal-400 block mt-1">
+              {formatCurrency(pdfTotalReceivables)}
+            </span>
+            <span className="text-[10px] text-on-surface-variant/80 mt-1 block">
+              {periodDebts.filter(d => d.type === 'receivable').length} {isId ? 'aktif' : 'active'}
+            </span>
+          </div>
+
+          <div className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl shadow-2xs">
+            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
+              {isId ? 'Total Utang' : 'Payables'}
+            </span>
+            <span className="text-lg font-extrabold text-rose-600 dark:text-rose-400 block mt-1">
+              {formatCurrency(pdfTotalPayables)}
+            </span>
+            <span className="text-[10px] text-on-surface-variant/80 mt-1 block">
+              {periodDebts.filter(d => d.type === 'payable').length} {isId ? 'aktif' : 'active'}
+            </span>
+          </div>
+
+          <div className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl shadow-2xs">
+            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
+              {isId ? 'Total Kekayaan' : 'Net Worth'}
             </span>
             <span className="text-lg font-extrabold text-primary block mt-1">
               {formatCurrency(pdfTotalNetWorth)}
             </span>
             <span className="text-[10px] text-on-surface-variant/80 mt-1 block">
-              {isId ? 'Gabungan kas & barang' : 'Combined cash & assets'}
+              {isId ? 'Gabungan semua' : 'All combined'}
             </span>
           </div>
 
           <div className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl shadow-2xs">
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
-              {isId ? 'Tabungan Bersih Periode' : 'Period Net Savings'}
+              {isId ? 'Tabungan Bersih' : 'Net Savings'}
             </span>
             <span className={`text-lg font-extrabold block mt-1 ${pdfNetSavings >= 0 ? 'text-primary' : 'text-rose-600'}`}>
               {formatCurrency(pdfNetSavings)}
             </span>
             <span className="text-[10px] text-on-surface-variant/80 mt-1 block">
-              {monthsList.find(m => m.code === exportMonth)?.name} {exportYear}
+              {pdfMonthName}
             </span>
           </div>
         </div>

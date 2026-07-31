@@ -1834,7 +1834,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addDebt = async (name: string, type: 'payable' | 'receivable', amount: number, dueDate?: string, wsId?: WorkspaceType) => {
     const targetWs = wsId || workspace;
+    const targetUid = user ? getTargetUserId(targetWs) : (user?.uid || 'guest');
     const newD: Omit<Debt, 'id'> = {
+      userId: targetUid,
       workspaceId: targetWs,
       name,
       type,
@@ -1845,7 +1847,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date().toISOString()
     };
     if (isDemo) {
-      const created: Debt = { id: `demo-debt-${Date.now()}`, ...newD, userId: user?.uid || 'guest' };
+      const created: Debt = { id: `demo-debt-${Date.now()}`, ...newD };
       const updated = [created, ...debts];
       setDebts(updated);
       sessionStorage.setItem(`demo_debts_${user?.uid || 'guest'}`, JSON.stringify(updated));
@@ -1853,7 +1855,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     if (!user) return;
-    const targetUid = getTargetUserId(targetWs);
     await addDoc(collection(db, 'debts'), { ...newD, userId: targetUid });
     await logActivity('CREATE', 'DEBT', `Tambah ${type === 'payable' ? 'Utang' : 'Piutang'}: ${name}`, `Nominal Rp ${amount.toLocaleString('id-ID')}`, targetWs);
   };
