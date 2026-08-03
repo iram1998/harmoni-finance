@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { DashboardSkeleton } from '../ui/Skeleton';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
-import { X } from 'lucide-react';
+import { X, Plus, ArrowLeftRight, Receipt, Sparkles } from 'lucide-react';
 
 interface DashboardProps {
   setCurrentView?: (view: string) => void;
@@ -18,6 +18,7 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
   const [isFullTrendChartOpen, setIsFullTrendChartOpen] = useState(false);
   const [isFullCategoryChartOpen, setIsFullCategoryChartOpen] = useState(false);
+  const [isFabOpen, setIsFabOpen] = useState(false);
   const [dashboardPeriod, setDashboardPeriod] = useState<'this-month' | 'ytd' | 'all-time'>('this-month');
   const { workspace, transactions, envelopes, goals, bills, paymentAccounts, markBillPaid, openTransactionModal, openTransferModal, openEnvelopeModal, openGoalModal, openBillModal, assets, debts, user } = useFinance();
   const { language, t } = useThemeLanguage();
@@ -880,6 +881,86 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
           </div>
         </div>
       )}
+
+      {/* Floating Action Button (FAB) Speed Dial - Bottom Right */}
+      {isFabOpen && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-35 animate-in fade-in duration-200" 
+          onClick={() => setIsFabOpen(false)} 
+        />
+      )}
+
+      <div className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 flex flex-col items-end gap-3">
+        {/* Speed Dial Options Menu */}
+        {isFabOpen && (
+          <div className="flex flex-col items-end gap-2.5 mb-1 animate-in slide-in-from-bottom-5 fade-in duration-200">
+            
+            {/* Action 1: Catat Transaksi (Pemasukan / Pengeluaran) */}
+            <div className="flex items-center gap-2.5 group">
+              <span className="px-3 py-1.5 bg-surface text-on-surface font-semibold text-xs rounded-xl shadow-lg border border-outline-variant/80 whitespace-nowrap animate-in fade-in duration-150">
+                {language === 'id' ? 'Catat Transaksi (Pemasukan / Pengeluaran)' : 'Add Transaction (Income / Expense)'}
+              </span>
+              <button
+                onClick={() => {
+                  setIsFabOpen(false);
+                  openTransactionModal();
+                }}
+                className="w-12 h-12 rounded-full bg-primary text-on-primary shadow-xl hover:bg-primary/90 hover:scale-110 active:scale-95 transition-all flex items-center justify-center cursor-pointer border border-white/20"
+                title={language === 'id' ? 'Tambah Transaksi' : 'Add Transaction'}
+              >
+                <Receipt className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Action 2: Transfer Antar Rekening */}
+            <div className="flex items-center gap-2.5 group">
+              <span className="px-3 py-1.5 bg-surface text-on-surface font-semibold text-xs rounded-xl shadow-lg border border-outline-variant/80 whitespace-nowrap animate-in fade-in duration-150">
+                {language === 'id' ? 'Transfer Antar Rekening' : 'Inter-Account Transfer'}
+              </span>
+              <button
+                onClick={() => {
+                  setIsFabOpen(false);
+                  openTransferModal();
+                }}
+                className="w-12 h-12 rounded-full bg-secondary-container text-on-secondary-container shadow-xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center cursor-pointer border border-outline-variant/60"
+                title={language === 'id' ? 'Transfer Saldo' : 'Transfer Funds'}
+              >
+                <ArrowLeftRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Action 3: Scan Struk AI Gemini */}
+            <div className="flex items-center gap-2.5 group">
+              <span className="px-3 py-1.5 bg-surface text-on-surface font-semibold text-xs rounded-xl shadow-lg border border-outline-variant/80 whitespace-nowrap animate-in fade-in duration-150">
+                {language === 'id' ? 'Scan Struk AI Gemini' : 'Gemini AI Receipt Scan'}
+              </span>
+              <button
+                onClick={() => {
+                  setIsFabOpen(false);
+                  openTransactionModal();
+                }}
+                className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center cursor-pointer border border-white/20"
+                title={language === 'id' ? 'Scan Struk AI' : 'Scan Receipt AI'}
+              >
+                <Sparkles className="w-5 h-5" />
+              </button>
+            </div>
+
+          </div>
+        )}
+
+        {/* Main Trigger FAB Button */}
+        <button
+          onClick={() => setIsFabOpen(!isFabOpen)}
+          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary text-on-primary shadow-2xl hover:shadow-primary/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center cursor-pointer border-2 border-white/30 ${
+            isFabOpen ? 'bg-error text-on-error ring-4 ring-error/20' : 'hover:ring-4 hover:ring-primary/20'
+          }`}
+          aria-label={language === 'id' ? 'Akses Cepat Transaksi' : 'Quick Transaction Access'}
+          title={language === 'id' ? 'Akses Cepat Transaksi' : 'Quick Transaction Access'}
+        >
+          <Plus className={`w-7 h-7 sm:w-8 sm:h-8 transition-transform duration-300 ${isFabOpen ? 'rotate-45' : 'rotate-0'}`} />
+        </button>
+      </div>
     </>
   );
 }
