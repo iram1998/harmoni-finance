@@ -1,43 +1,20 @@
-import express from "express";
-import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
-import dotenv from "dotenv";
 
-dotenv.config();
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "20mb",
+    },
+  },
+};
 
-const app = express();
-const PORT = 3000;
-
-// Increase payload limits to handle large receipt photos (base64)
-app.use(express.json({ limit: "20mb" }));
-app.use(express.urlencoded({ limit: "20mb", extended: true }));
-
-// Lazy initialization for Gemini client (server-side only)
-let aiClient: GoogleGenAI | null = null;
-
-function getGeminiAI() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey.trim() === "") {
-    throw new Error("Gemini API Key is not configured in environment variables or Settings > Secrets.");
+export default async function handler(req: any, res: any) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
-  if (!aiClient) {
-    aiClient = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        }
-      }
-    });
-  }
-  return aiClient;
-}
 
-// Endpoint for receipt scanning
-app.post("/api/scan-receipt", async (req, res) => {
   try {
-    const { image, mimeType } = req.body;
+    const { image, mimeType } = req.body || {};
 
     if (!image) {
       return res.status(400).json({ error: "No image data provided" });
@@ -45,12 +22,19 @@ app.post("/api/scan-receipt", async (req, res) => {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey.trim() === "") {
-      return res.status(400).json({ 
-        error: "Gemini API Key belum dikonfigurasi di Settings > Secrets. Silakan isi GEMINI_API_KEY pada panel Settings > Secrets." 
+      return res.status(400).json({
+        error: "Gemini API Key belum dikonfigurasi di Environment Variables Vercel (GEMINI_API_KEY)."
       });
     }
 
-    const ai = getGeminiAI();
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
 
     const imagePart = {
       inlineData: {
@@ -113,32 +97,9 @@ Pastikan jumlah nominal adalah angka bulat positif.`,
     }
 
     const parsedResult = JSON.parse(resultText.trim());
-    return res.json({ success: true, data: parsedResult });
+    return res.status(200).json({ success: true, data: parsedResult });
   } catch (err: any) {
     console.error("Receipt scanning error:", err);
     return res.status(500).json({ error: err.message || "Failed to scan receipt" });
   }
-});
-
-// Set up Vite as dev middleware or serve production static assets
-async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
 }
-
-startServer();
