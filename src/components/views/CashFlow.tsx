@@ -140,27 +140,84 @@ export function CashFlow() {
     return matchWs && matchType && matchSearch && matchPeriod;
   });
 
+  // Helper to extract timestamp for entry/input time sorting
+  const getCreatedTimestamp = (t: Transaction): number => {
+    if (t.createdAt) {
+      const time = new Date(t.createdAt).getTime();
+      if (!isNaN(time) && time > 0) return time;
+    }
+    if (t.id && typeof t.id === 'string' && t.id.includes('-')) {
+      const parts = t.id.split('-');
+      for (const part of parts) {
+        if (/^\d{12,14}$/.test(part)) {
+          const num = parseInt(part, 10);
+          if (!isNaN(num) && num > 0) return num;
+        }
+      }
+    }
+    return 0;
+  };
+
   // 2. Sorted list
   const sortedTransactions = [...filteredTransactions].sort((a, b) => {
     let result = 0;
     if (sortField === 'date') {
-      const timeA = new Date(a.date).getTime() || 0;
-      const timeB = new Date(b.date).getTime() || 0;
-      result = timeA - timeB;
+      const dayA = a.date ? a.date.slice(0, 10) : '';
+      const dayB = b.date ? b.date.slice(0, 10) : '';
+      result = dayA.localeCompare(dayB);
+      if (result === 0) {
+        result = getCreatedTimestamp(a) - getCreatedTimestamp(b);
+      }
     } else if (sortField === 'description') {
       const descA = a.description || a.title || '';
       const descB = b.description || b.title || '';
       result = descA.localeCompare(descB, language === 'id' ? 'id' : 'en', { sensitivity: 'base' });
+      if (result === 0) {
+        const dayA = a.date ? a.date.slice(0, 10) : '';
+        const dayB = b.date ? b.date.slice(0, 10) : '';
+        result = dayA.localeCompare(dayB);
+        if (result === 0) {
+          result = getCreatedTimestamp(a) - getCreatedTimestamp(b);
+        }
+      }
     } else if (sortField === 'category') {
       const catA = a.category || '';
       const catB = b.category || '';
       result = catA.localeCompare(catB, language === 'id' ? 'id' : 'en', { sensitivity: 'base' });
+      if (result === 0) {
+        const dayA = a.date ? a.date.slice(0, 10) : '';
+        const dayB = b.date ? b.date.slice(0, 10) : '';
+        result = dayA.localeCompare(dayB);
+        if (result === 0) {
+          result = getCreatedTimestamp(a) - getCreatedTimestamp(b);
+        }
+      }
     } else if (sortField === 'workspace') {
       const wsA = a.workspaceId || 'keluarga';
       const wsB = b.workspaceId || 'keluarga';
       result = wsA.localeCompare(wsB, language === 'id' ? 'id' : 'en', { sensitivity: 'base' });
+      if (result === 0) {
+        const dayA = a.date ? a.date.slice(0, 10) : '';
+        const dayB = b.date ? b.date.slice(0, 10) : '';
+        result = dayA.localeCompare(dayB);
+        if (result === 0) {
+          result = getCreatedTimestamp(a) - getCreatedTimestamp(b);
+        }
+      }
     } else if (sortField === 'amount') {
       result = a.amount - b.amount;
+      if (result === 0) {
+        const dayA = a.date ? a.date.slice(0, 10) : '';
+        const dayB = b.date ? b.date.slice(0, 10) : '';
+        result = dayA.localeCompare(dayB);
+        if (result === 0) {
+          result = getCreatedTimestamp(a) - getCreatedTimestamp(b);
+        }
+      }
+    }
+
+    if (result === 0) {
+      result = (a.id || '').localeCompare(b.id || '');
     }
 
     return sortDirection === 'asc' ? result : -result;

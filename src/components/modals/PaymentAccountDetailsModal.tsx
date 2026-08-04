@@ -25,8 +25,33 @@ export function PaymentAccountDetailsModal({ isOpen, onClose, account }: Payment
   // Filter transactions related to this account
   const accountTransactions = transactions.filter(t => t.paymentAccountId === account.id);
   
-  // Sort by newest
-  const sortedTransactions = [...accountTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // Sort by newest date, then newest input/entry time
+  const getCreatedTimestamp = (t: any): number => {
+    if (t.createdAt) {
+      const time = new Date(t.createdAt).getTime();
+      if (!isNaN(time) && time > 0) return time;
+    }
+    if (t.id && typeof t.id === 'string' && t.id.includes('-')) {
+      const parts = t.id.split('-');
+      for (const part of parts) {
+        if (/^\d{12,14}$/.test(part)) {
+          const num = parseInt(part, 10);
+          if (!isNaN(num) && num > 0) return num;
+        }
+      }
+    }
+    return 0;
+  };
+
+  const sortedTransactions = [...accountTransactions].sort((a, b) => {
+    const dayA = a.date ? a.date.slice(0, 10) : '';
+    const dayB = b.date ? b.date.slice(0, 10) : '';
+    let result = dayB.localeCompare(dayA);
+    if (result === 0) {
+      result = getCreatedTimestamp(b) - getCreatedTimestamp(a);
+    }
+    return result;
+  });
 
   // Pagination
   const totalPages = Math.ceil(sortedTransactions.length / itemsPerPage) || 1;

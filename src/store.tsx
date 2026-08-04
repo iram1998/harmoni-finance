@@ -292,7 +292,7 @@ const DEFAULT_DEBTS = [
   { workspaceId: 'pribadi' as const, name: 'Piutang ke Budi (Pinjam Uang Usaha)', type: 'receivable' as const, amount: 2500000, remainingAmount: 1500000, dueDate: new Date(Date.now() + 86400000 * 14).toISOString(), status: 'active' as const }
 ];
 
-const seedDemoTransactions = () => DEFAULT_TRANSACTIONS.map((t, idx) => ({ id: `demo-tx-${idx}`, ...t } as Transaction));
+const seedDemoTransactions = () => DEFAULT_TRANSACTIONS.map((t, idx) => ({ id: `demo-tx-${idx}`, ...t, createdAt: new Date(Date.now() - idx * 60000).toISOString() } as Transaction));
 const seedDemoEnvelopes = () => DEFAULT_ENVELOPES.map((e, idx) => ({ id: `demo-env-${idx}`, ...e } as Envelope));
 const seedDemoGoals = () => DEFAULT_GOALS.map((g, idx) => ({ id: `demo-goal-${idx}`, ...g } as Goal));
 const seedDemoBills = () => DEFAULT_BILLS.map((b, idx) => ({ id: `demo-bill-${idx}`, ...b } as Bill));
@@ -539,8 +539,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         // Seed default transactions for new user
-        DEFAULT_TRANSACTIONS.forEach(t => {
-          addDoc(collection(db, 'transactions'), { ...t, userId });
+        DEFAULT_TRANSACTIONS.forEach((t, idx) => {
+          addDoc(collection(db, 'transactions'), { ...t, userId, createdAt: new Date(Date.now() - idx * 60000).toISOString() });
         });
       } else {
         const list: Transaction[] = snapshot.docs
