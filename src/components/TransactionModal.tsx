@@ -38,7 +38,7 @@ const INCOME_CATEGORIES = [
 ];
 
 export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
-  const { workspace, addTransaction, customCategories, familyMembers, transactionDefaultCategory, goals, paymentAccounts, envelopes } = useFinance();
+  const { workspace, addTransaction, customCategories, familyMembers, transactionDefaultCategory, goals, paymentAccounts, envelopes, assets } = useFinance();
   const { language, t } = useThemeLanguage();
   const { showToast } = useToast();
   const [targetWorkspace, setTargetWorkspace] = useState<WorkspaceType>(workspace === 'all' ? 'keluarga' : workspace);
@@ -51,6 +51,8 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
   const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>('');
   const [linkedGoalId, setLinkedGoalId] = useState<string>('');
   const [paymentAccountId, setPaymentAccountId] = useState<string>('');
+  const [linkedAssetId, setLinkedAssetId] = useState<string>('');
+  const [isCapitalization, setIsCapitalization] = useState<boolean>(true);
   const [expenseCategoryMode, setExpenseCategoryMode] = useState<'envelope' | 'custom'>('envelope');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -134,6 +136,8 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
       setScannerError('');
       setScannedSummary(null);
       setLinkedGoalId('');
+      setLinkedAssetId('');
+      setIsCapitalization(true);
     }
   }, [isOpen]);
 
@@ -301,7 +305,8 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
         ...(paymentAccountId ? { paymentAccountId } : {}),
         ...(type === 'income' ? { incomeCategory } : {}),
         ...(selectedFamilyMember ? { familyMember: selectedFamilyMember } : {}),
-        ...(linkedGoalId ? { goalId: linkedGoalId } : {})
+        ...(linkedGoalId ? { goalId: linkedGoalId } : {}),
+        ...(type === 'expense' && linkedAssetId ? { assetId: linkedAssetId, isCapitalization } : {})
       });
       
       showToast(
@@ -755,6 +760,59 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
                   </option>
                 ))}
             </Select>
+          )}
+
+          {/* Hubungkan ke Aset / Modal Usaha (Capex) */}
+          {type === 'expense' && assets && assets.length > 0 && (
+            <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant flex flex-col gap-2.5">
+              <Select
+                label={isId ? 'Hubungkan ke Aset / Modal Usaha (Capex)' : 'Link to Asset / Business Capital (Capex)'}
+                value={linkedAssetId}
+                onChange={e => {
+                  const val = e.target.value;
+                  setLinkedAssetId(val);
+                  if (val) {
+                    setIsCapitalization(true);
+                    if (!category || category === 'Lainnya') {
+                      setCategory('Investasi Usaha');
+                    }
+                  }
+                }}
+                icon="store"
+              >
+                <option value="">{isId ? '-- Tidak Dihubungkan ke Aset --' : '-- Not Linked to Asset --'}</option>
+                {assets.map(a => {
+                  const parent = a.parentAssetId ? assets.find(p => p.id === a.parentAssetId) : null;
+                  return (
+                    <option key={a.id} value={a.id}>
+                      {parent ? `↳ ${a.name} [Sub-Aset: ${parent.name}]` : `🏢 ${a.name}`} ({a.category})
+                    </option>
+                  );
+                })}
+              </Select>
+
+              {linkedAssetId && (
+                <div className="flex items-start gap-2 bg-primary-container/30 p-2.5 rounded-lg border border-primary/20 text-xs">
+                  <input
+                    type="checkbox"
+                    id="isCapitalizationCheck"
+                    checked={isCapitalization}
+                    onChange={e => setIsCapitalization(e.target.checked)}
+                    className="mt-0.5 rounded text-primary focus:ring-primary h-4 w-4"
+                  />
+                  <label htmlFor="isCapitalizationCheck" className="text-on-surface cursor-pointer select-none">
+                    <span className="font-semibold block text-primary">
+                      {isId ? 'Kapitalisasi Pengeluaran Ini' : 'Capitalize Expense'}
+                    </span>
+                    <span className="text-on-surface-variant text-[11px] leading-tight block mt-0.5">
+                      {isId 
+                        ? 'Nominal transaksi ini akan otomatis menambah nilai perolehan/estimasi aset tersebut (misal: beli papan, paku, upah tukang).' 
+                        : 'Expense amount will automatically add to the asset total valuation.'}
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
           )}
 
           {familyMembers && familyMembers.length > 0 && (

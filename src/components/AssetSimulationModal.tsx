@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Asset } from '../types';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
 import { formatCurrency, getAssetEffectiveValue } from '../utils';
+import { useFinance } from '../store';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import {
@@ -107,6 +108,7 @@ export const AssetSimulationModal: React.FC<AssetSimulationModalProps> = ({
   onApplyUpdatedValue
 }) => {
   const { language } = useThemeLanguage();
+  const { transactions } = useFinance();
   const isId = language === 'id';
 
   // Selection state
@@ -129,7 +131,7 @@ export const AssetSimulationModal: React.FC<AssetSimulationModalProps> = ({
     if (assetId !== 'custom') {
       const asset = assets.find((a) => a.id === assetId);
       if (asset) {
-        const effValue = getAssetEffectiveValue(asset);
+        const effValue = getAssetEffectiveValue(asset, assets, transactions);
         setInitialValue(effValue > 0 ? effValue : asset.purchasePrice || 10000000);
 
         // Auto match preset category
@@ -286,9 +288,9 @@ export const AssetSimulationModal: React.FC<AssetSimulationModalProps> = ({
                 className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-outline-variant bg-surface text-on-surface font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               >
                 <option value="custom">💡 {isId ? '-- Simulasi Kustom / Bebas --' : '-- Custom / Manual Input --'}</option>
-                {assets.map((asset) => (
+                {assets.filter(a => !a.parentAssetId).map((asset) => (
                   <option key={asset.id} value={asset.id}>
-                    {asset.name} ({asset.category}) - {formatCurrency(getAssetEffectiveValue(asset))}
+                    {asset.name} ({asset.category}) - {formatCurrency(getAssetEffectiveValue(asset, assets, transactions))}
                   </option>
                 ))}
               </select>

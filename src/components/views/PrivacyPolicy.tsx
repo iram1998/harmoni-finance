@@ -20,7 +20,7 @@ export function PrivacyPolicy({ onBack }: { onBack?: () => void }) {
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Untuk memberikan layanan pencatatan dan perencanaan keuangan keluarga maupun pribadi secara akurat, Harmoni Finansial mengumpulkan data yang Anda masukkan secara mandiri meliputi:
+            Untuk memberikan layanan pencatatan dan perencanaan keuangan keluarga maupun pribadi secara akurat, Noora Harmoni Finance (NOHARFIN) mengumpulkan data yang Anda masukkan secara mandiri meliputi:
           </p>
           <ul className="list-disc list-inside space-y-2 font-body-md text-on-surface-variant pl-2">
             <li><strong className="text-on-surface">Informasi Akun & Pengguna:</strong> Nama lengkap, email, foto profil, preferensi bahasa, dan opsi penguncian PIN/Passcode keamanan.</li>
@@ -140,7 +140,7 @@ export function PrivacyPolicy({ onBack }: { onBack?: () => void }) {
         <div>
           <div className="flex items-center gap-2 text-primary mb-2">
             <span className="material-symbols-outlined text-2xl">shield_person</span>
-            <span className="font-label-lg uppercase tracking-wider">Harmoni Finansial</span>
+            <span className="font-label-lg uppercase tracking-wider">Noora Harmoni Finance</span>
           </div>
           <h1 className="font-headline-lg font-bold text-on-surface">Kebijakan Privasi Interaktif</h1>
           <p className="font-body-md text-on-surface-variant mt-1">
@@ -165,7 +165,7 @@ export function PrivacyPolicy({ onBack }: { onBack?: () => void }) {
               Komitmen Kami Terhadap Privasi Anda
             </h2>
             <p className="font-body-md text-white/90 leading-relaxed">
-              Di Harmoni Finansial, kami menghargai dan melindungi privasi data keuangan Anda. Klik pada setiap poin di bawah ini untuk melihat detail lengkapnya.
+              Di Noora Harmoni Finance, kami menghargai dan melindungi privasi data keuangan Anda. Klik pada setiap poin di bawah ini untuk melihat detail lengkapnya.
             </p>
           </div>
         </div>

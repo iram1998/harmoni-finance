@@ -20,7 +20,7 @@ export function TransactionDetailModal({
   onDelete,
 }: TransactionDetailModalProps) {
   const { language } = useThemeLanguage();
-  const { paymentAccounts, goals, familyMembers, deleteTransaction } = useFinance();
+  const { paymentAccounts, goals, familyMembers, deleteTransaction, assets } = useFinance();
   const { showToast } = useToast();
   const isId = language === 'id';
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -41,6 +41,10 @@ export function TransactionDetailModal({
 
   // Find linked family member
   const member = familyMembers?.find(m => m.id === transaction.familyMember || m.name === transaction.familyMember);
+
+  // Find linked asset or sub-asset
+  const linkedAsset = assets?.find(a => a.id === transaction.assetId);
+  const parentAssetOfLinked = linkedAsset?.parentAssetId ? assets?.find(a => a.id === linkedAsset.parentAssetId) : null;
 
   const getCategoryIcon = (cat: string, type: string) => {
     const c = (cat || '').toLowerCase();
@@ -195,6 +199,51 @@ export function TransactionDetailModal({
                     : 'This transaction records an internal balance transfer between accounts or workspaces. Balances adjust directly without affecting net income/expenses.'}
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Linked Asset & Capitalization Info Callout */}
+          {linkedAsset && (
+            <div className="bg-amber-500/10 p-3.5 rounded-xl border border-amber-500/30 space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px]">domain</span>
+                  {isId ? 'Terhubung ke Aset / Sub-Aset' : 'Linked Asset / Sub-Asset'}
+                </span>
+                <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                  transaction.isCapitalization 
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800' 
+                    : 'bg-surface-container text-on-surface-variant border-outline-variant'
+                }`}>
+                  {transaction.isCapitalization 
+                    ? (isId ? '✓ Terkapitalisasi (Capex)' : '✓ Capitalized (Capex)') 
+                    : (isId ? 'Biaya Operasional (Opex)' : 'Operational Expense')}
+                </span>
+              </div>
+
+              <div className="text-xs bg-surface/80 p-2.5 rounded-lg border border-amber-500/20">
+                <span className="font-bold text-on-surface text-sm block">{linkedAsset.name}</span>
+                <span className="text-on-surface-variant text-[11px] block mt-0.5">
+                  {isId ? 'Kategori Aset:' : 'Category:'} <span className="font-medium">{linkedAsset.category}</span>
+                </span>
+                {parentAssetOfLinked && (
+                  <span className="text-primary font-bold text-[11px] block mt-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">subdirectory_arrow_right</span>
+                    {isId ? `Sub-Aset di bawah: ${parentAssetOfLinked.name}` : `Sub-Asset under: ${parentAssetOfLinked.name}`}
+                  </span>
+                )}
+              </div>
+
+              <p className="text-[11px] text-on-surface-variant italic leading-relaxed pt-1">
+                {transaction.isCapitalization
+                  ? (isId 
+                      ? 'Biaya dari transaksi ini otomatis meningkatkan Nilai Perolehan Aset/Sub-Aset sehingga kalkulasi total aset dan penyusutan bertambah secara otomatis.' 
+                      : 'This expense automatically increases the Asset acquisition cost, updating asset value and depreciation calculation.')
+                  : (isId 
+                      ? 'Transaksi ini dicatat sebagai beban operasional biasa tanpa menambah nilai perolehan aset.' 
+                      : 'Recorded as routine operational expense without changing the asset purchase value.')
+                }
+              </p>
             </div>
           )}
           

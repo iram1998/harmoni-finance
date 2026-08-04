@@ -68,8 +68,8 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
   const totalLiquidCash = wsPaymentAccounts.filter(acc => acc.type !== 'investment').reduce((sum, acc) => sum + acc.balance, 0);
   const totalInvestmentAccounts = wsPaymentAccounts.filter(acc => acc.type === 'investment').reduce((sum, acc) => sum + acc.balance, 0);
   
-  const wsAssets = (assets || []).filter(a => (workspace === 'all' ? true : (a.workspaceId || 'keluarga') === workspace) && a.status === 'owned');
-  const totalAssetsValue = wsAssets.reduce((sum, a) => sum + getAssetEffectiveValue(a), 0);
+  const wsAssets = (assets || []).filter(a => (workspace === 'all' ? true : (a.workspaceId || 'keluarga') === workspace) && a.status === 'owned' && !a.parentAssetId);
+  const totalAssetsValue = wsAssets.reduce((sum, a) => sum + getAssetEffectiveValue(a, assets, transactions), 0);
   
   const totalInvestasiDanAset = totalInvestmentAccounts + totalAssetsValue;
   

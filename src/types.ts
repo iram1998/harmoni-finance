@@ -15,6 +15,8 @@ export interface Transaction {
   createdAt?: string;
   goalId?: string;
   paymentAccountId?: string;
+  assetId?: string;
+  isCapitalization?: boolean;
 }
 
 export interface Envelope {
@@ -88,6 +90,7 @@ export interface Asset {
   longitude?: number;
   locationName?: string;
   areaSize?: number;
+  parentAssetId?: string;
   createdAt?: string;
   valuationHistory?: AssetValuationHistory[];
 }

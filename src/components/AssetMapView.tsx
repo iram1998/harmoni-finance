@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { Asset } from '../types';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
 import { formatCurrency, getAssetEffectiveValue } from '../utils';
+import { useFinance } from '../store';
 import { Button } from './ui/Button';
 
 interface AssetMapViewProps {
@@ -13,6 +14,7 @@ interface AssetMapViewProps {
 
 export function AssetMapView({ assets, onSelectAsset }: AssetMapViewProps) {
   const { language } = useThemeLanguage();
+  const { transactions } = useFinance();
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
@@ -88,7 +90,7 @@ export function AssetMapView({ assets, onSelectAsset }: AssetMapViewProps) {
         ? `<img src="${asset.imageUrl}" alt="${asset.name}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 8px 8px 0 0; margin-bottom: 8px;" />`
         : '';
 
-      const valueText = formatCurrency(getAssetEffectiveValue(asset));
+      const valueText = formatCurrency(getAssetEffectiveValue(asset, assets, transactions));
       const areaText = asset.areaSize
         ? asset.category.includes('Usaha') || asset.category.includes('Bisnis')
           ? `<div style="font-size: 11px; color: #475569; margin-top: 2px;">🤝 Kepemilikan: <b>${asset.areaSize}%</b></div>`
@@ -207,7 +209,7 @@ export function AssetMapView({ assets, onSelectAsset }: AssetMapViewProps) {
                       </span>
                     </div>
                     <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-extrabold mt-0.5">
-                      {formatCurrency(getAssetEffectiveValue(asset))}
+                      {formatCurrency(getAssetEffectiveValue(asset, assets, transactions))}
                     </p>
                     {asset.locationName && (
                       <p className="text-[10px] text-on-surface-variant truncate mt-0.5 flex items-center gap-0.5">

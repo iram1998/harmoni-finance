@@ -4,6 +4,8 @@ import { useThemeLanguage } from '../context/ThemeLanguageContext';
 import { formatCurrency, getAssetEffectiveValue, calculateAssetDepreciation, decimalToDMS, formatDateDDMMYYYY } from '../utils';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import { Select } from './ui/Select';
+import { useToast } from '../context/ToastContext';
 import { useFinance } from '../store';
 
 interface AssetDetailModalProps {
@@ -22,7 +24,8 @@ export function AssetDetailModal({
   onDelete,
 }: AssetDetailModalProps) {
   const { language } = useThemeLanguage();
-  const { addAssetValuation, deleteAssetValuation } = useFinance();
+  const { addAssetValuation, deleteAssetValuation, assets, transactions, addAsset } = useFinance();
+  const { showToast } = useToast();
   const isId = language === 'id';
 
   const [isAddingValuation, setIsAddingValuation] = useState(false);
@@ -31,9 +34,59 @@ export function AssetDetailModal({
   const [newValNote, setNewValNote] = useState('');
   const [isSubmittingVal, setIsSubmittingVal] = useState(false);
 
+  // Sub-asset inline form states
+  const [isAddingSubAsset, setIsAddingSubAsset] = useState(false);
+  const [subAssetName, setSubAssetName] = useState('');
+  const [subAssetCategory, setSubAssetCategory] = useState('Peralatan & Mebel Usaha');
+  const [subAssetPrice, setSubAssetPrice] = useState('0');
+  const [subAssetDate, setSubAssetDate] = useState(new Date().toISOString().slice(0, 10));
+  const [subAssetNotes, setSubAssetNotes] = useState('');
+  const [isSubmittingSubAsset, setIsSubmittingSubAsset] = useState(false);
+
   if (!isOpen || !asset) return null;
 
-  const effectiveValue = getAssetEffectiveValue(asset);
+  const handleSaveSubAsset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subAssetName.trim()) return;
+    setIsSubmittingSubAsset(true);
+    try {
+      const priceNum = parseFloat(subAssetPrice) || 0;
+      await addAsset(
+        subAssetName.trim(),
+        subAssetCategory,
+        priceNum,
+        priceNum,
+        subAssetDate,
+        subAssetNotes,
+        asset.workspaceId || 'keluarga',
+        'none',
+        5,
+        0,
+        false,
+        { parentAssetId: asset.id }
+      );
+      showToast(
+        isId ? `Sub-aset "${subAssetName}" berhasil ditambahkan ke "${asset.name}"!` : `Sub-asset "${subAssetName}" added to "${asset.name}"!`,
+        'success',
+        isId ? 'Sub-Aset Ditambahkan' : 'Sub-Asset Added'
+      );
+      setIsAddingSubAsset(false);
+      setSubAssetName('');
+      setSubAssetPrice('0');
+      setSubAssetNotes('');
+    } catch (err: any) {
+      showToast(err.message || 'Gagal menambahkan sub-aset.', 'error');
+    } finally {
+      setIsSubmittingSubAsset(false);
+    }
+  };
+
+  const parentAsset = asset.parentAssetId ? assets.find(a => a.id === asset.parentAssetId) : null;
+  const subAssets = assets.filter(a => a.parentAssetId === asset.id);
+  const linkedTransactions = transactions.filter(t => t.assetId === asset.id || subAssets.some(sa => sa.id === t.assetId));
+  const totalCapex = linkedTransactions.reduce((acc, t) => acc + t.amount, 0);
+
+  const effectiveValue = getAssetEffectiveValue(asset, assets, transactions);
   const purchasePrice = asset.purchasePrice || 0;
   const gainLoss = effectiveValue - purchasePrice;
   const roiPercent = purchasePrice > 0 ? (gainLoss / purchasePrice) * 100 : 0;
@@ -163,6 +216,19 @@ export function AssetDetailModal({
 
         {/* Modal Body */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 text-on-surface text-xs sm:text-sm">
+          {/* Parent Asset Banner if exists */}
+          {parentAsset && (
+            <div className="bg-primary/10 border border-primary/30 p-3 rounded-xl flex items-center justify-between text-xs">
+              <div>
+                <span className="text-primary font-bold block">{isId ? '🏢 Induk Aset' : 'Parent Asset'}</span>
+                <span className="text-on-surface font-black text-sm">{parentAsset.name}</span>
+              </div>
+              <span className="text-[11px] bg-primary text-on-primary px-2.5 py-1 rounded-lg font-bold">
+                {parentAsset.category}
+              </span>
+            </div>
+          )}
+
           {/* Key Value Cards */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant">
@@ -485,6 +551,188 @@ export function AssetDetailModal({
               </div>
             </div>
           )}
+
+          {/* SUB-ASET / KOMPONEN TERHUBUNG */}
+          <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h4 className="font-bold text-on-surface text-xs sm:text-sm flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-primary text-[18px]">account_tree</span>
+                  {isId ? 'Daftar Sub-Aset / Komponen' : 'Sub-Assets / Components'}
+                </h4>
+                <p className="text-[11px] text-on-surface-variant mt-0.5">
+                  {isId ? 'Barang / peralatan / meja / booth yang dinaungi oleh unit usaha ini' : 'Items registered under this asset unit'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                  {subAssets.length} {isId ? 'Sub-Aset' : 'Items'}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsAddingSubAsset(!isAddingSubAsset)}
+                  className="text-xs gap-1"
+                >
+                  <span className="material-symbols-outlined text-[16px]">{isAddingSubAsset ? 'close' : 'add'}</span>
+                  {isAddingSubAsset ? (isId ? 'Batal' : 'Cancel') : (isId ? '+ Input Sub-Aset' : '+ Add Sub-Asset')}
+                </Button>
+              </div>
+            </div>
+
+            {/* Form Input Sub-Aset Langsung */}
+            {isAddingSubAsset && (
+              <form onSubmit={handleSaveSubAsset} className="bg-surface p-3.5 rounded-xl border border-primary/40 space-y-3">
+                <div className="flex items-center justify-between border-b border-outline-variant/50 pb-2">
+                  <span className="text-xs font-bold text-primary flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                    {isId ? `Tambah Sub-Aset ke "${asset.name}"` : `Add Sub-Asset to "${asset.name}"`}
+                  </span>
+                </div>
+                <Input
+                  label={isId ? 'Nama Sub-Aset (contoh: Meja & Kursi Makan)' : 'Sub-Asset Name'}
+                  value={subAssetName}
+                  onChange={e => setSubAssetName(e.target.value)}
+                  placeholder="Misal: Meja & Kursi, Mesin Penggoreng, Booth Jualan"
+                  required
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Select
+                    label={isId ? 'Kategori Sub-Aset' : 'Sub-Asset Category'}
+                    value={subAssetCategory}
+                    onChange={e => setSubAssetCategory(e.target.value)}
+                  >
+                    <option value="Peralatan & Mebel Usaha">Peralatan & Mebel Usaha</option>
+                    <option value="Mesin & Inventaris Usaha">Mesin & Inventaris Usaha</option>
+                    <option value="Konstruksi & Renovasi">Konstruksi & Renovasi</option>
+                    <option value="Elektronik & Gadget">Elektronik & Gadget</option>
+                    <option value="Kendaraan">Kendaraan Usaha</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </Select>
+                  <Input
+                    label={isId ? 'Harga Beli / Nilai Perolehan (Rp)' : 'Initial Price (Rp)'}
+                    type="number"
+                    value={subAssetPrice}
+                    onChange={e => setSubAssetPrice(e.target.value)}
+                    placeholder="0"
+                    helperText={isId ? 'Dapat diisi 0 jika nilainya akan terisi dari transaksi pengeluaran (kayu, paku, tukang).' : 'Can be 0 if value accumulates from expenses'}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label={isId ? 'Tanggal Perolehan' : 'Purchase Date'}
+                    type="date"
+                    value={subAssetDate}
+                    onChange={e => setSubAssetDate(e.target.value)}
+                  />
+                  <Input
+                    label={isId ? 'Catatan (Opsional)' : 'Notes (Optional)'}
+                    value={subAssetNotes}
+                    onChange={e => setSubAssetNotes(e.target.value)}
+                    placeholder="Catatan tambahan lokasi / spesifikasi"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsAddingSubAsset(false)}
+                  >
+                    {isId ? 'Batal' : 'Cancel'}
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isSubmittingSubAsset || !subAssetName.trim()}
+                  >
+                    {isSubmittingSubAsset ? (isId ? 'Menyimpan...' : 'Saving...') : (isId ? 'Simpan Sub-Aset' : 'Save Sub-Asset')}
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {subAssets.length > 0 ? (
+              <div className="space-y-2">
+                {subAssets.map(sa => (
+                  <div key={sa.id} className="p-3 bg-surface rounded-lg border border-outline-variant/60 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="font-bold text-on-surface block text-xs truncate">↳ {sa.name}</span>
+                      <span className="text-[10px] text-on-surface-variant">
+                        {sa.category} • Beli: {formatDateDDMMYYYY(sa.purchaseDate)}
+                      </span>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="font-black text-emerald-600 dark:text-emerald-400 block text-xs">
+                        {formatCurrency(getAssetEffectiveValue(sa, assets, transactions))}
+                      </span>
+                      <span className="text-[10px] text-on-surface-variant block">
+                        Beli: {formatCurrency(sa.purchasePrice)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              !isAddingSubAsset && (
+                <p className="text-xs text-on-surface-variant italic bg-surface p-2.5 rounded-lg border border-outline-variant/40">
+                  {isId ? 'Belum ada sub-aset. Klik "+ Input Sub-Aset" di atas untuk menambahkan meja, mesin, atau peralatan langsung di sini.' : 'No sub-assets linked. Click "+ Add Sub-Asset" above to add items directly.'}
+                </p>
+              )
+            )}
+          </div>
+
+          {/* TRANSAKSI PENGELUARAN / MODAL TERKAIT (CAPEX) */}
+          <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h4 className="font-bold text-on-surface text-xs sm:text-sm flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-primary text-[18px]">receipt_long</span>
+                  {isId ? 'Rincian Transaksi Modal / Pengeluaran Terkait (Capex)' : 'Capital Expenditure Transactions'}
+                </h4>
+                <p className="text-[11px] text-on-surface-variant mt-0.5">
+                  {isId ? 'Histori pengeluaran beli papan, paku, upah tukang, modal usaha, dll.' : 'Materials, labor, and capital investment expenses'}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-on-surface-variant block font-medium">Total Terkapitalisasi</span>
+                <span className="text-xs font-black text-primary bg-primary/10 px-2.5 py-1 rounded-lg inline-block">
+                  {formatCurrency(totalCapex)}
+                </span>
+              </div>
+            </div>
+
+            {linkedTransactions.length > 0 ? (
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {linkedTransactions.map(tx => (
+                  <div key={tx.id} className="p-3 bg-surface rounded-lg border border-outline-variant/60 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-on-surface text-xs truncate">{tx.description || tx.category}</span>
+                        {tx.isCapitalization && (
+                          <span className="text-[9px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded border border-emerald-500/20">
+                            {isId ? 'Dikapitalisasi ke Aset' : 'Capitalized'}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-on-surface-variant mt-0.5">
+                        {formatDateDDMMYYYY(tx.date)} • Kategori: <span className="font-semibold">{tx.category}</span>
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="font-black text-red-500 text-xs block">
+                        - {formatCurrency(tx.amount)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-on-surface-variant italic bg-surface p-2.5 rounded-lg border border-outline-variant/40">
+                {isId ? 'Belum ada transaksi pengeluaran yang dihubungkan ke aset ini.' : 'No linked expense transactions yet.'}
+              </p>
+            )}
+          </div>
 
           {/* Notes */}
           {asset.notes && (

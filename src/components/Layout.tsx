@@ -99,8 +99,19 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
 
   const systemNotifications = [
     {
+      id: 'asset-update',
+      title: isId ? 'Fitur Baru: Sub-Aset & Capex' : 'New Feature: Sub-Assets & Capex',
+      description: isId 
+        ? 'Sekarang Anda bisa menambahkan Sub-Aset (komponen) ke dalam Aset utama, dan mencatat transaksi Capex untuk menambah nilai perolehan aset secara otomatis.' 
+        : 'You can now add Sub-Assets to a main Asset, and log Capex transactions to automatically increase the acquisition value.',
+      type: 'system' as const,
+      date: isId ? 'Pembaruan' : 'Update',
+      read: false,
+      actionView: 'assets' as const
+    },
+    {
       id: 'welcome-message',
-      title: isId ? 'Selamat Datang di Harmoni' : 'Welcome to Harmoni',
+      title: isId ? 'Selamat Datang di NOHARFIN' : 'Welcome to NOHARFIN',
       description: isId 
         ? 'Kelola anggaran, tagihan, aset, dan kembangkan kebiasaan finansial sehat bersama keluarga.' 
         : 'Manage your budget, bills, assets, and grow healthy financial habits with your family.',
@@ -121,7 +132,7 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
           {isSidebarOpen && (
             <div className="flex items-center gap-3 overflow-hidden">
               <span className="material-symbols-outlined text-blue-400 text-3xl" style={{fontVariationSettings: "'FILL' 1"}}>account_balance_wallet</span>
-              <h1 className="font-headline-md font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 tracking-tight whitespace-nowrap">Harmoni</h1>
+              <h1 className="font-headline-md font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 tracking-tight whitespace-nowrap">NOHARFIN</h1>
             </div>
           )}
           {!isSidebarOpen && (
@@ -326,7 +337,7 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
           <div className="flex justify-between items-center w-full">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>account_balance_wallet</span>
-              <h1 className="font-headline-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary">Harmoni</h1>
+              <h1 className="font-headline-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary">NOHARFIN</h1>
             </div>
             
             <div className="flex items-center gap-2">
@@ -424,7 +435,7 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
           
           {/* Footer */}
           <footer className="max-w-[1440px] mx-auto w-full mt-12 pt-6 border-t border-outline-variant/50 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4 print:hidden">
-            <p className="font-body-sm text-on-surface-variant">© 2026 Harmoni Finansial. All rights reserved.</p>
+            <p className="font-body-sm text-on-surface-variant">© 2026 Noora Harmoni Finance. All rights reserved.</p>
             <div className="flex gap-4">
               <button onClick={() => setCurrentView('privacy-policy')} className="font-label-sm text-on-surface-variant hover:text-primary transition-colors">{t('privacyPolicy')}</button>
               <button onClick={() => setCurrentView('terms-of-service')} className="font-label-sm text-on-surface-variant hover:text-primary transition-colors">{t('termsOfService')}</button>

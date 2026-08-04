@@ -79,6 +79,7 @@ interface FinanceState {
       longitude?: number;
       locationName?: string;
       areaSize?: number;
+      parentAssetId?: string;
     }
   ) => Promise<void>;
   updateAsset: (
@@ -101,6 +102,7 @@ interface FinanceState {
       longitude?: number;
       locationName?: string;
       areaSize?: number;
+      parentAssetId?: string;
     }
   ) => Promise<void>;
   deleteAsset: (id: string) => Promise<void>;
@@ -742,6 +744,18 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Handle linked asset capitalization update
+      if (t.assetId && t.isCapitalization) {
+        const targetAsset = assets.find(a => a.id === t.assetId);
+        if (targetAsset) {
+          const newPrice = targetAsset.purchasePrice + t.amount;
+          const newVal = targetAsset.currentValue + t.amount;
+          const updatedAssets = assets.map(a => a.id === t.assetId ? { ...a, purchasePrice: newPrice, currentValue: newVal } : a);
+          setAssets(updatedAssets);
+          sessionStorage.setItem(`demo_assets_${user?.uid || 'guest'}`, JSON.stringify(updatedAssets));
+        }
+      }
+
       addDemoActivity(
         'CREATE', 
         'TRANSACTION', 
@@ -778,6 +792,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         const adjustment = t.type === 'income' ? t.amount : -t.amount;
         await updateDoc(doc(db, 'payment_accounts', t.paymentAccountId), {
           balance: acc.balance + adjustment
+        });
+      }
+    }
+
+    // Handle linked asset capitalization update in DB
+    if (t.assetId && t.isCapitalization) {
+      const targetAsset = assets.find(a => a.id === t.assetId);
+      if (targetAsset) {
+        await updateDoc(doc(db, 'assets', t.assetId), {
+          purchasePrice: targetAsset.purchasePrice + t.amount,
+          currentValue: targetAsset.currentValue + t.amount
         });
       }
     }
@@ -822,6 +847,18 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
+        // Adjust linked asset capitalization
+        if (target.assetId && target.isCapitalization) {
+          const targetAsset = assets.find(a => a.id === target.assetId);
+          if (targetAsset) {
+            const newPrice = Math.max(0, targetAsset.purchasePrice - target.amount);
+            const newVal = Math.max(0, targetAsset.currentValue - target.amount);
+            const updatedAssets = assets.map(a => a.id === target.assetId ? { ...a, purchasePrice: newPrice, currentValue: newVal } : a);
+            setAssets(updatedAssets);
+            sessionStorage.setItem(`demo_assets_${user?.uid || 'guest'}`, JSON.stringify(updatedAssets));
+          }
+        }
+
         addDemoActivity(
           'DELETE', 
           'TRANSACTION', 
@@ -855,6 +892,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           const adjustment = target.type === 'income' ? -target.amount : target.amount;
           await updateDoc(doc(db, 'payment_accounts', target.paymentAccountId), {
             balance: acc.balance + adjustment
+          });
+        }
+      }
+
+      // Adjust linked asset capitalization in DB
+      if (target.assetId && target.isCapitalization) {
+        const targetAsset = assets.find(a => a.id === target.assetId);
+        if (targetAsset) {
+          await updateDoc(doc(db, 'assets', target.assetId), {
+            purchasePrice: Math.max(0, targetAsset.purchasePrice - target.amount),
+            currentValue: Math.max(0, targetAsset.currentValue - target.amount)
           });
         }
       }
@@ -1407,6 +1455,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       longitude?: number;
       locationName?: string;
       areaSize?: number;
+      parentAssetId?: string;
     }
   ) => {
     if (isDemo) {
@@ -1440,6 +1489,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         longitude: extraFields?.longitude ?? null,
         locationName: extraFields?.locationName || '',
         areaSize: extraFields?.areaSize ?? null,
+        parentAssetId: extraFields?.parentAssetId || undefined,
         createdAt: new Date().toISOString(),
         valuationHistory: initialValuationHistory
       };
@@ -1470,6 +1520,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       longitude: extraFields?.longitude ?? null,
       locationName: extraFields?.locationName || '',
       areaSize: extraFields?.areaSize ?? null,
+      parentAssetId: extraFields?.parentAssetId || null,
       createdAt: new Date().toISOString(),
       valuationHistory: [
         {
@@ -1504,6 +1555,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       longitude?: number;
       locationName?: string;
       areaSize?: number;
+      parentAssetId?: string;
     }
   ) => {
     if (isDemo) {
@@ -1516,6 +1568,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           if (extraFields.longitude !== undefined) extraPayload.longitude = extraFields.longitude;
           if (extraFields.locationName !== undefined) extraPayload.locationName = extraFields.locationName;
           if (extraFields.areaSize !== undefined) extraPayload.areaSize = extraFields.areaSize;
+          if (extraFields.parentAssetId !== undefined) extraPayload.parentAssetId = extraFields.parentAssetId;
         }
         return {
           ...a,
@@ -1561,6 +1614,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (extraFields.longitude !== undefined) updateData.longitude = extraFields.longitude;
       if (extraFields.locationName !== undefined) updateData.locationName = extraFields.locationName;
       if (extraFields.areaSize !== undefined) updateData.areaSize = extraFields.areaSize;
+      if (extraFields.parentAssetId !== undefined) updateData.parentAssetId = extraFields.parentAssetId;
     }
 
     await updateDoc(doc(db, 'assets', id), updateData);

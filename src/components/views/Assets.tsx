@@ -32,6 +32,7 @@ export function Assets() {
     addPaymentAccount,
     updatePaymentAccount,
     deletePaymentAccount,
+    transactions,
     user 
   } = useFinance();
   const { language, t } = useThemeLanguage();
@@ -187,6 +188,7 @@ export function Assets() {
   // Form states for Add/Edit
   const [formName, setFormName] = useState('');
   const [formCategory, setFormCategory] = useState('Properti / Lahan');
+  const [formParentAssetId, setFormParentAssetId] = useState<string>('');
   const [formPurchasePrice, setFormPurchasePrice] = useState('');
   const [formCurrentValue, setFormCurrentValue] = useState('');
   const [formPurchaseDate, setFormPurchaseDate] = useState('');
@@ -214,6 +216,9 @@ export function Assets() {
     'Rekening Bank / E-Wallet',
     'Unit Usaha / Bisnis',
     'Properti / Lahan',
+    'Peralatan & Mebel Usaha',
+    'Mesin & Inventaris Usaha',
+    'Konstruksi & Renovasi',
     'Kendaraan',
     'Emas / Logam Mulia',
     'Elektronik & Gadget',
@@ -579,20 +584,34 @@ export function Assets() {
     }
   };
 
-  // Filter assets based on mode
+  // Filter assets based on mode (Only show top-level main assets by default to keep clean structure)
   const filteredAssets = assets.filter(asset => {
-    // 1. Workspace filter
+    // 1. Exclude sub-assets from main standalone card list
+    if (asset.parentAssetId) {
+      if (!searchTerm) return false;
+      // If search is active, show sub-asset directly only if parent does not match
+      const parent = assets.find(p => p.id === asset.parentAssetId);
+      const parentMatches = parent && parent.name.toLowerCase().includes(searchTerm.toLowerCase());
+      if (parentMatches) return false;
+      if (!asset.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    }
+
+    // 2. Workspace filter
     if (filterMode === 'pribadi' && asset.workspaceId !== 'pribadi') {
       return false;
     }
     if (filterMode === 'keluarga' && asset.workspaceId !== 'keluarga') {
       return false;
     }
-    // 2. Search term filter
-    if (searchTerm && !asset.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
+    // 3. Search term filter (matches main asset name OR any of its sub-asset names)
+    if (searchTerm) {
+      const matchSelf = asset.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchSub = assets.some(sa => sa.parentAssetId === asset.id && sa.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      if (!matchSelf && !matchSub) {
+        return false;
+      }
     }
-    // 3. Category filter
+    // 4. Category filter
     if (selectedCategory !== 'all' && asset.category !== selectedCategory) {
       return false;
     }
@@ -625,14 +644,14 @@ export function Assets() {
   // Calculate statistics
   const ownedAssets = filteredAssets.filter(a => a.status === 'owned');
   const totalPurchasePrice = ownedAssets.reduce((sum, a) => sum + (a.purchasePrice || 0), 0);
-  const totalCurrentValue = ownedAssets.reduce((sum, a) => sum + (getAssetEffectiveValue(a) || 0), 0);
+  const totalCurrentValue = ownedAssets.reduce((sum, a) => sum + (getAssetEffectiveValue(a, assets, transactions) || 0), 0);
   const netROI = totalCurrentValue - totalPurchasePrice;
   const roiPercentage = totalPurchasePrice > 0 ? (netROI / totalPurchasePrice) * 100 : 0;
 
   // Group assets by category for Recharts Pie Chart
   const categoryData = ownedAssets.reduce((acc: { [key: string]: number }, asset) => {
     const cat = translateCategory(asset.category);
-    acc[cat] = (acc[cat] || 0) + getAssetEffectiveValue(asset);
+    acc[cat] = (acc[cat] || 0) + getAssetEffectiveValue(asset, assets, transactions);
     return acc;
   }, {});
 
@@ -664,7 +683,7 @@ export function Assets() {
   const nameCounts: Record<string, number> = {};
   const barChartData = ownedAssets.map(asset => {
     const buyPrice = asset.purchasePrice || 0;
-    const currVal = getAssetEffectiveValue(asset) || 0;
+    const currVal = getAssetEffectiveValue(asset, assets, transactions) || 0;
     const diff = currVal - buyPrice;
     const diffPercent = buyPrice > 0 ? ((diff / buyPrice) * 100).toFixed(1) : '0';
 
@@ -751,6 +770,7 @@ export function Assets() {
   const handleOpenAddModal = () => {
     setFormName('');
     setFormCategory('Properti / Lahan');
+    setFormParentAssetId('');
     setFormPurchasePrice('');
     setFormCurrentValue('');
     setFormPurchaseDate(new Date().toISOString().split('T')[0]);
@@ -774,6 +794,7 @@ export function Assets() {
     setEditingAsset(asset);
     setFormName(asset.name);
     setFormCategory(asset.category);
+    setFormParentAssetId(asset.parentAssetId || '');
     setFormPurchasePrice(asset.purchasePrice.toString());
     setFormCurrentValue(asset.currentValue.toString());
     setFormPurchaseDate(asset.purchaseDate);
@@ -832,6 +853,7 @@ export function Assets() {
           latitude: latNum,
           longitude: lngNum,
           areaSize: areaNum,
+          parentAssetId: formParentAssetId || undefined,
         }
       );
       showToast(
@@ -892,6 +914,7 @@ export function Assets() {
           latitude: latNum,
           longitude: lngNum,
           areaSize: areaNum,
+          parentAssetId: formParentAssetId || undefined,
         }
       );
       showToast(
@@ -1505,7 +1528,7 @@ export function Assets() {
             </thead>
             <tbody className="divide-y divide-outline-variant/40 text-on-surface">
               {currentAssets.map((asset) => {
-                const effVal = getAssetEffectiveValue(asset);
+                const effVal = getAssetEffectiveValue(asset, assets, transactions);
                 return (
                   <tr
                     key={asset.id}
@@ -1577,7 +1600,7 @@ export function Assets() {
         /* Grid View Cards with Photos and Location Pin Badges */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {currentAssets.map(asset => {
-            const effectiveValue = getAssetEffectiveValue(asset);
+            const effectiveValue = getAssetEffectiveValue(asset, assets, transactions);
             const isDepreciating = asset.depreciationMethod && asset.depreciationMethod !== 'none';
             const depDetails = isDepreciating 
               ? calculateAssetDepreciation(
@@ -1657,6 +1680,19 @@ export function Assets() {
                     <h4 className="font-title-md text-on-surface font-extrabold text-base line-clamp-1 group-hover:text-primary transition-colors">
                       {asset.name}
                     </h4>
+
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {asset.parentAssetId && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                          ↳ {assets.find(p => p.id === asset.parentAssetId)?.name}
+                        </span>
+                      )}
+                      {assets.some(sub => sub.parentAssetId === asset.id) && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                          🏢 {assets.filter(sub => sub.parentAssetId === asset.id).length} Sub-Aset
+                        </span>
+                      )}
+                    </div>
 
                     {asset.locationName && !asset.imageUrl && (
                       <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-1 truncate">
@@ -1856,6 +1892,19 @@ export function Assets() {
                   <option value="pribadi">{t('personalWorkspace')}</option>
                 </Select>
               </div>
+
+              <Select
+                label={language === 'id' ? 'Induk Aset / Unit Usaha (Opsional)' : 'Parent Asset / Business Unit (Optional)'}
+                value={formParentAssetId}
+                onChange={(e) => setFormParentAssetId(e.target.value)}
+              >
+                <option value="">{language === 'id' ? '-- Utama / Bukan Sub-Aset --' : '-- Main Asset (No Parent) --'}</option>
+                {assets.map(a => (
+                  <option key={a.id} value={a.id}>
+                    🏢 {a.name} ({a.category})
+                  </option>
+                ))}
+              </Select>
 
               {/* Photo Upload / Preset Selector Block */}
               <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant space-y-2.5">
@@ -2073,6 +2122,21 @@ export function Assets() {
                 </Select>
               </div>
 
+              <Select
+                label={language === 'id' ? 'Induk Aset / Unit Usaha (Opsional)' : 'Parent Asset / Business Unit (Optional)'}
+                value={formParentAssetId}
+                onChange={(e) => setFormParentAssetId(e.target.value)}
+              >
+                <option value="">{language === 'id' ? '-- Utama / Bukan Sub-Aset --' : '-- Main Asset (No Parent) --'}</option>
+                {assets
+                  .filter(a => editingAsset ? a.id !== editingAsset.id : true)
+                  .map(a => (
+                    <option key={a.id} value={a.id}>
+                      🏢 {a.name} ({a.category})
+                    </option>
+                  ))}
+              </Select>
+
               {/* Photo Upload / Preset Selector Block */}
               <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant space-y-2.5">
                 <label className="text-xs font-bold text-on-surface flex items-center justify-between">
@@ -2165,6 +2229,57 @@ export function Assets() {
                   <option value="sold">{language === 'id' ? 'Sudah Terjual' : 'Sold'}</option>
                   <option value="liquidated">{language === 'id' ? 'Dicairkan' : 'Liquidated'}</option>
                 </Select>
+              </div>
+
+              {/* Depreciation Settings */}
+              <div className="border border-outline-variant/60 rounded-xl p-3.5 bg-surface-container-low">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-label-md font-bold text-on-surface flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-amber-500 text-[18px]">analytics</span>
+                    {language === 'id' ? 'Penyusutan Nilai Otomatis' : 'Automatic Depreciation'}
+                  </span>
+                  <select
+                    value={formDepreciationMethod}
+                    onChange={(e) => {
+                      const method = e.target.value as 'none' | 'straight_line' | 'declining_balance';
+                      setFormDepreciationMethod(method);
+                      if (method !== 'none') {
+                        setFormUseAutoDepreciation(true);
+                      } else {
+                        setFormUseAutoDepreciation(false);
+                      }
+                    }}
+                    className="text-xs bg-surface border border-outline-variant rounded-md px-2 py-1 text-on-surface font-semibold focus:outline-hidden focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="none">{language === 'id' ? 'Nonaktif' : 'Disabled'}</option>
+                    <option value="straight_line">{language === 'id' ? 'Garis Lurus' : 'Straight Line'}</option>
+                    <option value="declining_balance">{language === 'id' ? 'Saldo Menurun' : 'Declining Balance'}</option>
+                  </select>
+                </div>
+
+                {formDepreciationMethod !== 'none' && (
+                  <div className="space-y-3.5 mt-3 pt-3 border-t border-outline-variant/40">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        label={language === 'id' ? 'Masa Manfaat (Tahun) *' : 'Useful Life (Years) *'}
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={formDepreciationUsefulLife}
+                        onChange={(e) => setFormDepreciationUsefulLife(e.target.value)}
+                        required
+                      />
+                      <Input
+                        label={language === 'id' ? 'Nilai Sisa / Residual (Rp) *' : 'Salvage Value (IDR) *'}
+                        type="number"
+                        min="0"
+                        value={formDepreciationSalvageValue}
+                        onChange={(e) => setFormDepreciationSalvageValue(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <Input

@@ -13,7 +13,7 @@ export function CashFlow() {
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
-  const { workspace, transactions, deleteTransaction, deleteTransactions, openTransactionModal, openTransactionDetailModal } = useFinance();
+  const { workspace, transactions, assets, deleteTransaction, deleteTransactions, openTransactionModal, openTransactionDetailModal } = useFinance();
   const { t, language } = useThemeLanguage();
   const { showToast } = useToast();
 
@@ -584,7 +584,19 @@ export function CashFlow() {
                             </div>
                           );
                         })()}
-                        <span className="group-hover:text-primary transition-colors font-semibold">{t.title || t.description}</span>
+                        <div className="flex flex-col">
+                          <span className="group-hover:text-primary transition-colors font-semibold">{t.title || t.description}</span>
+                          {t.assetId && (() => {
+                            const linked = (assets || []).find(a => a.id === t.assetId);
+                            if (!linked) return null;
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md mt-0.5 w-fit">
+                                <span className="material-symbols-outlined text-[12px]">domain</span>
+                                {linked.name} {t.isCapitalization ? '• Capex' : ''}
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap">
                         <span className="px-2.5 py-1 bg-surface-container rounded-lg text-xs font-medium text-on-surface border border-outline-variant">
@@ -851,9 +863,19 @@ export function CashFlow() {
                         );
                       })()}
                       <div>
-                        <div className="font-body-md font-semibold text-on-surface truncate max-w-[120px]">{t.title || t.description}</div>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="font-body-md font-semibold text-on-surface truncate max-w-[150px]">{t.title || t.description}</div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           <span className="px-2 py-0.5 rounded bg-surface-container text-[11px] font-medium text-on-surface-variant">{t.category}</span>
+                          {t.assetId && (() => {
+                            const linked = (assets || []).find(a => a.id === t.assetId);
+                            if (!linked) return null;
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                                <span className="material-symbols-outlined text-[10px]">domain</span>
+                                {linked.name}
+                              </span>
+                            );
+                          })()}
                           <span className="text-[11px] text-on-surface-variant whitespace-nowrap">{formatDateDDMMYYYY(t.date)}</span>
                         </div>
                       </div>

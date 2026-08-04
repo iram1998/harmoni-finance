@@ -1,5 +1,5 @@
 {
-  "name": "Harmoni Finansial",
+  "name": "Noora Harmoni Finance",
   "description": "Aplikasi pencatatan arus kas kolaboratif dengan pemisahan dompet pribadi dan keluarga.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

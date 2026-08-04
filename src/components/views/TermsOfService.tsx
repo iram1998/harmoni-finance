@@ -20,7 +20,7 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Dengan membuat akun, melakukan autentikasi, atau mengakses layanan Harmoni Finansial, Anda menyatakan secara sadar telah membaca, memahami, dan menyetujui seluruh ketentuan dalam dokumen Syarat & Ketentuan ini beserta Kebijakan Privasi kami. Jika Anda tidak menyetujui bagian mana pun dari ketentuan ini, Anda dipersilakan menghentikan penggunaan platform.
+            Dengan membuat akun, melakukan autentikasi, atau mengakses layanan Noora Harmoni Finance, Anda menyatakan secara sadar telah membaca, memahami, dan menyetujui seluruh ketentuan dalam dokumen Syarat & Ketentuan ini beserta Kebijakan Privasi kami. Jika Anda tidak menyetujui bagian mana pun dari ketentuan ini, Anda dipersilakan menghentikan penggunaan platform.
           </p>
         </div>
       )
@@ -33,7 +33,7 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Harmoni Finansial menyediakan platform peranti lunak perencanaan dan pengelolaan keuangan mandiri yang mencakup:
+            Noora Harmoni Finance menyediakan platform peranti lunak perencanaan dan pengelolaan keuangan mandiri yang mencakup:
           </p>
           <ul className="list-disc list-inside space-y-2 font-body-md text-on-surface-variant pl-2">
             <li>Modul Arus Kas (Cash Flow) & Rekening Pembayaran untuk pencatatan transaksi Pemasukan, Pengeluaran, dan Transfer.</li>
@@ -71,7 +71,7 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Harmoni Finansial adalah platform pencatatan peranti lunak independen. Layanan ini <strong className="text-on-surface">TIDAK memberikan nasihat keuangan, investasi, perpajakan, atau hukum berlisensi</strong>. Seluruh perhitungan, grafik, dan estimasi penyusutan bersifat informatif dan bantu pencatatan belaka. Silakan berkonsultasi dengan penasihat keuangan terdaftar untuk keputusan finansial penting.
+            Noora Harmoni Finance adalah platform pencatatan peranti lunak independen. Layanan ini <strong className="text-on-surface">TIDAK memberikan nasihat keuangan, investasi, perpajakan, atau hukum berlisensi</strong>. Seluruh perhitungan, grafik, dan estimasi penyusutan bersifat informatif dan bantu pencatatan belaka. Silakan berkonsultasi dengan penasihat keuangan terdaftar untuk keputusan finansial penting.
           </p>
         </div>
       )
@@ -84,7 +84,7 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
       content: (
         <div className="space-y-3 pt-2">
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            Seluruh elemen dalam platform ini, termasuk sistem antarmuka UI/UX, desain komponen, logo Harmoni Finansial, kode sumber, dan konten teks merupakan hak kekayaan intelektual milik Harmoni Finansial. Dilarang menggandakan, mendistribusikan, merekayasa balik (reverse engineer), atau memodifikasi bagian mana pun tanpa izin tertulis dari kami.
+            Seluruh elemen dalam platform ini, termasuk sistem antarmuka UI/UX, desain komponen, logo Noora Harmoni Finance, kode sumber, dan konten teks merupakan hak kekayaan intelektual milik Noora Harmoni Finance. Dilarang menggandakan, mendistribusikan, merekayasa balik (reverse engineer), atau memodifikasi bagian mana pun tanpa izin tertulis dari kami.
           </p>
         </div>
       )
@@ -139,7 +139,7 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
         <div>
           <div className="flex items-center gap-2 text-primary mb-2">
             <span className="material-symbols-outlined text-2xl">gavel</span>
-            <span className="font-label-lg uppercase tracking-wider">Harmoni Finansial</span>
+            <span className="font-label-lg uppercase tracking-wider">Noora Harmoni Finance</span>
           </div>
           <h1 className="font-headline-lg font-bold text-on-surface">Syarat & Ketentuan Interaktif</h1>
           <p className="font-body-md text-on-surface-variant mt-1">
@@ -161,10 +161,10 @@ export function TermsOfService({ onBack }: { onBack?: () => void }) {
           </div>
           <div>
             <h2 className="font-title-md font-semibold text-white mb-1">
-              Ketentuan Penggunaan Platform Harmoni
+              Ketentuan Penggunaan Platform NOHARFIN
             </h2>
             <p className="font-body-md text-white/90 leading-relaxed">
-              Selamat datang di Harmoni Finansial. Klik pada setiap pasal di bawah ini untuk membuka dan membaca detail aturan layanan secara interaktif.
+              Selamat datang di Noora Harmoni Finance. Klik pada setiap pasal di bawah ini untuk membuka dan membaca detail aturan layanan secara interaktif.
             </p>
           </div>
         </div>

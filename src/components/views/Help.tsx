@@ -205,13 +205,14 @@ export function Help({ onNavigate }: HelpProps) {
       menu: isId ? 'Aset & Barang (Assets)' : 'Physical Assets & Goods',
       icon: 'home_work',
       description: isId 
-        ? 'Modul inventarisasi fisik barang, tanah, bangunan, kendaraan, dan barang berharga lengkap dengan harga beli, nilai pasar saat ini, revaluasi riwayat harga, konversi Borongan Kalsel, kalkulasi depresiasi, dan koordinat GPS Google Maps.'
-        : 'Inventory module for land, property, vehicles, and valuables with purchase cost, current market value, historical revaluation logs, Borongan unit conversion, automatic depreciation math, and Google Maps GPS coordinates.',
+        ? 'Modul inventarisasi fisik barang, tanah, bangunan, kendaraan, dan barang berharga lengkap dengan sub-aset terstruktur, harga beli, nilai pasar saat ini, revaluasi, konversi Borongan Kalsel, kalkulasi depresiasi, dan koordinat GPS Google Maps.'
+        : 'Inventory module for land, property, vehicles, and valuables with structured sub-assets, purchase cost, current market value, historical revaluation logs, Borongan unit conversion, auto depreciation math, and GPS coordinates.',
       howToRead: [
-        isId ? '1. Total Nilai Aset Fisik: Menjumlahkan nilai estimasi pasar seluruh barang fisik milik Anda.' : '1. Total Asset Value: Sum of current estimated market valuation of all physical property.',
-        isId ? '2. Konversi Satuan Borongan (Kalsel): Untuk aset tanah/lahan, sistem otomatis mengonversi luas m²/Hektar ke satuan tradisional Borongan (1 Hektar = 35 Borongan, 1 Borongan ≈ 285,7 m²) beserta estimasi harga per m² dan per borongan.' : '2. Borongan Unit Conversion (Kalsel): For land assets, automatically converts m²/Hectare into traditional Borongan units (1 Hectare = 35 Borongan, 1 Borongan ≈ 285.7 m²) with price per m² & per borongan.',
-        isId ? '3. Histori Revaluasi & Depresiasi: Catat kenaikan nilai tanah/properti secara berkala via tombol "+ Tambah Revaluasi" atau aktifkan penyusutan harga otomatis untuk aset seperti kendaraan atau elektronik.' : '3. Revaluation History & Depreciation: Log periodic land/property appreciation via "+ Add Revaluation" or enable auto depreciation for vehicles/electronics.',
-        isId ? '4. Lokasi & Koordinat GPS: Simpan nama toko/lokasi lahan dan koordinat GPS (DMS atau Desimal) yang dapat diklik langsung untuk membuka Google Maps.' : '4. Location & GPS Coordinates: Store location names and GPS coordinates (DMS or Decimal) with direct Google Maps integration.'
+        isId ? '1. Struktur Aset & Sub-Aset: Aset utama (misal: Rumah) dapat memiliki Sub-Aset (misal: AC, Pagar) yang tergabung di dalamnya agar daftar aset tetap rapi dan terorganisir.' : '1. Asset & Sub-Asset Structure: Main assets (e.g. House) can contain Sub-Assets (e.g. AC, Fence) to keep your main asset list clean and organized.',
+        isId ? '2. Pengeluaran Modal (Capex): Biaya pemeliharaan yang ditandai "Terkapitalisasi (Capex)" di arus kas otomatis akan menambah nilai perolehan Aset/Sub-Aset yang terhubung.' : '2. Capital Expenditure (Capex): Expenses marked as "Capitalized" in cash flow will automatically increase the acquisition cost of the linked Asset/Sub-Asset.',
+        isId ? '3. Konversi Satuan Borongan (Kalsel): Untuk aset tanah/lahan, sistem otomatis mengonversi luas m²/Hektar ke satuan tradisional Borongan (1 Hektar = 35 Borongan, 1 Borongan ≈ 285,7 m²).' : '3. Borongan Unit Conversion (Kalsel): For land assets, automatically converts m²/Hectare into traditional Borongan units (1 Hectare = 35 Borongan, 1 Borongan ≈ 285.7 m²).',
+        isId ? '4. Histori Revaluasi & Depresiasi: Catat kenaikan nilai properti secara berkala via tombol "+ Tambah Revaluasi" atau aktifkan penyusutan harga otomatis untuk aset kendaraan/elektronik.' : '4. Revaluation History & Depreciation: Log periodic property appreciation via "+ Add Revaluation" or enable auto depreciation for vehicles/electronics.',
+        isId ? '5. Lokasi & Koordinat GPS: Simpan nama toko/lokasi lahan dan koordinat GPS (DMS atau Desimal) yang dapat diklik langsung untuk membuka Google Maps.' : '5. Location & GPS Coordinates: Store location names and GPS coordinates (DMS or Decimal) with direct Google Maps integration.'
       ]
     },
     {
@@ -330,6 +331,12 @@ export function Help({ onNavigate }: HelpProps) {
       a: isId 
         ? 'Di menu Pengaturan / Rekening, klik tombol "Rekonsiliasi" pada rekening yang ingin disesuaikan. Masukkan saldo fisik riil saat ini (hasil opname kas atau cetak koran). Jika terdapat selisih, sistem akan otomatis membuat transaksi penyesuaian kas (Adjustment) sehingga saldo aplikasi dan saldo nyata selalu sinkron 100%.'
         : 'In Settings / Accounts, click the "Reconcile" button on any account. Enter the actual real balance (from bank statement or cash audit). If a gap exists, the app generates a balancing adjustment transaction to ensure 100% balance alignment.'
+    },
+    {
+      q: isId ? 'Kapan sebuah transaksi dikategorikan sebagai Capex (Kapitalisasi) vs Opex (Operasional)?' : 'When is a transaction categorized as Capex vs Opex?',
+      a: isId 
+        ? 'Transaksi dikategorikan sebagai Capex (Capital Expenditure) ketika biaya tersebut menambah nilai perolehan (Purchase Price) suatu Aset Fisik atau Sub-Aset, sehingga meningkatkan total kekayaan aset dan memperbarui dasar kalkulasi depresiasinya (misal: merenovasi rumah, upgrade mesin). Sedangkan Opex (Operational Expenditure) adalah pengeluaran rutin yang sekadar menjaga fungsi aset tanpa menambah nilai jual (misal: servis rutin, isi bensin, bayar listrik). Anda dapat memilih opsi "Terkapitalisasi" saat mencatat transaksi pengeluaran yang terhubung ke Aset.'
+        : 'A transaction is categorized as Capex (Capital Expenditure) when the cost increases the acquisition value of a Physical Asset or Sub-Asset, directly boosting your total asset wealth and updating depreciation baselines (e.g., home renovation). Opex (Operational Expenditure) refers to routine expenses to maintain asset function without increasing its book value (e.g., routine servicing). You can check the "Capitalized" option when logging an expense linked to an Asset.'
     }
   ];
 
@@ -350,7 +357,7 @@ export function Help({ onNavigate }: HelpProps) {
               {isId ? 'Panduan Pengguna Sistem & Pusat Bantuan' : 'System User Guide & Help Center'}
             </div>
             <h1 className="font-headline-lg md:font-display-md font-black tracking-tight mb-3">
-              {isId ? 'Petunjuk Lengkap Harmoni Finansial' : 'Harmoni Finansial Complete User Manual'}
+              {isId ? 'Petunjuk Lengkap NOHARFIN' : 'NOHARFIN Complete User Manual'}
             </h1>
             <p className="font-body-md text-white/90 leading-relaxed">
               {isId 
@@ -583,8 +590,8 @@ export function Help({ onNavigate }: HelpProps) {
                 </h3>
                 <p className="text-xs text-on-surface-variant leading-relaxed max-w-3xl">
                   {isId 
-                    ? 'Aplikasi Harmoni Finansial dilengkapi dengan model kecerdasan buatan Gemini 3.6 Flash di sisi server. Fitur ini membaca gambar struk belanja fisik dari supermarket, kafe, apotek, maupun pom bensin secara otomatis.'
-                    : 'Harmoni Finansial integrates Gemini 3.6 Flash AI server-side to automatically scan physical receipt images from supermarkets, cafes, pharmacies, and gas stations.'}
+                    ? 'Aplikasi NOHARFIN dilengkapi dengan model kecerdasan buatan Gemini 3.6 Flash di sisi server. Fitur ini membaca gambar struk belanja fisik dari supermarket, kafe, apotek, maupun pom bensin secara otomatis.'
+                    : 'NOHARFIN integrates Gemini 3.6 Flash AI server-side to automatically scan physical receipt images from supermarkets, cafes, pharmacies, and gas stations.'}
                 </p>
               </div>
             </div>
@@ -634,8 +641,8 @@ export function Help({ onNavigate }: HelpProps) {
             </h3>
             <p className="text-xs text-on-surface-variant leading-relaxed">
               {isId 
-                ? 'Laporan keuangan Harmoni Finansial disusun agar mudah dipahami oleh seluruh anggota keluarga tanpa latar belakang akuntansi.'
-                : 'Harmoni Finansial reports are designed for effortless comprehension by any family member without an accounting background.'}
+                ? 'Laporan keuangan NOHARFIN disusun agar mudah dipahami oleh seluruh anggota keluarga tanpa latar belakang akuntansi.'
+                : 'NOHARFIN reports are designed for effortless comprehension by any family member without an accounting background.'}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">

@@ -1,4 +1,4 @@
-import { Asset } from './types';
+import { Asset, Transaction } from './types';
 
 export function formatCurrency(amount: number) {
   return new Intl.NumberFormat('id-ID', {
@@ -122,18 +122,33 @@ export function calculateAssetDepreciation(
   };
 }
 
-export function getAssetEffectiveValue(asset: Asset): number {
-  if (asset.useAutoDepreciation && asset.depreciationMethod && asset.depreciationMethod !== 'none') {
+export function getAssetEffectiveValue(asset: Asset, allAssets?: Asset[], allTransactions?: Transaction[]): number {
+  const capitalizedFromTx = allTransactions
+    ? allTransactions.filter(t => t.assetId === asset.id && t.isCapitalization && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
+    : 0;
+
+  const effectiveCost = Math.max(asset.purchasePrice || 0, asset.currentValue || 0, capitalizedFromTx);
+
+  let baseVal = Math.max(asset.currentValue || 0, effectiveCost);
+
+  if (asset.useAutoDepreciation && asset.depreciationMethod && asset.depreciationMethod !== 'none' && effectiveCost > 0) {
     const dep = calculateAssetDepreciation(
-      asset.purchasePrice,
+      effectiveCost,
       asset.purchaseDate,
       asset.depreciationMethod,
       asset.depreciationUsefulLife || 5,
       asset.depreciationSalvageValue || 0
     );
-    return dep.currentValue;
+    baseVal = dep.currentValue;
   }
-  return asset.currentValue;
+
+  if (allAssets && allAssets.length > 0) {
+    const subAssets = allAssets.filter(a => a.parentAssetId === asset.id);
+    const subVal = subAssets.reduce((sum, sa) => sum + getAssetEffectiveValue(sa, allAssets, allTransactions), 0);
+    return baseVal + subVal;
+  }
+
+  return baseVal;
 }
 
 /**

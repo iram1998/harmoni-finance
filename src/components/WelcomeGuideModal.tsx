@@ -72,7 +72,7 @@ export function WelcomeGuideModal({ onNavigateHelp }: WelcomeGuideModalProps) {
           </div>
 
           <h2 className="font-headline-sm sm:font-headline-md font-bold text-on-surface">
-            {isId ? 'Selamat Datang di Harmoni Finansial!' : 'Welcome to Harmoni Finansial!'}
+            {isId ? 'Selamat Datang di NOHARFIN!' : 'Welcome to NOHARFIN!'}
           </h2>
           <p className="font-body-sm text-on-surface-variant mt-1 leading-relaxed">
             {isId 

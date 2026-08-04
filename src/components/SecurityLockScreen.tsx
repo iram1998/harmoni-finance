@@ -209,7 +209,7 @@ export function SecurityLockScreen({ children }: SecurityLockScreenProps) {
         <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-3 shadow-lg shadow-primary/30">
           <span className="material-symbols-outlined text-white text-3xl" style={{fontVariationSettings: "'FILL' 1"}}>lock_open</span>
         </div>
-        <h2 className="font-headline-md font-extrabold tracking-tight">Harmoni Finansial</h2>
+        <h2 className="font-headline-md font-extrabold tracking-tight">NOHARFIN</h2>
         <p className="font-body-sm text-on-surface-variant max-w-xs mt-1.5">
           {language === 'id' 
             ? 'Proteksi Akses Keuangan Keluarga Teraktifkan' 

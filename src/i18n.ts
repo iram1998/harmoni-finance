@@ -200,7 +200,7 @@ export const translations = {
     profileTitle: 'Profil Pengguna',
     profileSubtitle: 'Kelola informasi pribadi dan preferensi akun Anda',
     helpTitle: 'Pusat Bantuan & Edukasi',
-    helpSubtitle: 'Panduan penggunaan sistem pencatatan keuangan Harmoni',
+    helpSubtitle: 'Panduan penggunaan sistem pencatatan keuangan NOHARFIN',
     faq: 'Pertanyaan Umum (FAQ)',
 
     // Modals
@@ -417,7 +417,7 @@ export const translations = {
     profileTitle: 'User Profile',
     profileSubtitle: 'Manage your personal information and account preferences',
     helpTitle: 'Help & Learning Center',
-    helpSubtitle: 'Guide to using Harmoni financial tracking system',
+    helpSubtitle: 'Guide to using NOHARFIN financial tracking system',
     faq: 'Frequently Asked Questions (FAQ)',
 
     // Modals
