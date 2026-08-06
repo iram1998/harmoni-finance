@@ -117,6 +117,7 @@ export const AssetSimulationModal: React.FC<AssetSimulationModalProps> = ({
   // Parameters
   const [initialValue, setInitialValue] = useState<number>(100000000); // Rp 100 Juta
   const [annualGrowthRate, setAnnualGrowthRate] = useState<number>(10); // 10% per year
+  const [varianceRate, setVarianceRate] = useState<number>(3); // 3% variance
   const [monthlyContribution, setMonthlyContribution] = useState<number>(1000000); // Rp 1 Juta / bulan
   const [durationYears, setDurationYears] = useState<number>(10); // 10 years
   const [inflationRate, setInflationRate] = useState<number>(3.5); // 3.5% inflation
@@ -148,6 +149,7 @@ export const AssetSimulationModal: React.FC<AssetSimulationModalProps> = ({
   const handlePresetSelect = (preset: typeof ASSET_GROWTH_PRESETS[0]) => {
     setSelectedPresetCategory(preset.category);
     setAnnualGrowthRate(preset.annualRate);
+    setVarianceRate(preset.variance || 3);
   };
 
   // Reset parameters to defaults
@@ -155,6 +157,7 @@ export const AssetSimulationModal: React.FC<AssetSimulationModalProps> = ({
     setSelectedAssetId('custom');
     setInitialValue(100000000);
     setAnnualGrowthRate(10);
+    setVarianceRate(3);
     setMonthlyContribution(1000000);
     setDurationYears(10);
     setInflationRate(3.5);
@@ -166,7 +169,7 @@ export const AssetSimulationModal: React.FC<AssetSimulationModalProps> = ({
   // Forecast Engine Calculation
   const simulationData = useMemo(() => {
     const data = [];
-    const variance = 2.5;
+    const variance = varianceRate;
 
     let currentRealistic = initialValue;
     let currentOptimistic = initialValue;

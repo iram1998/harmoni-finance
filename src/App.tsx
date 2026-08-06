@@ -20,6 +20,7 @@ import { Settings } from './components/views/Settings';
 import { Profile } from './components/views/Profile';
 import { Assets } from './components/views/Assets';
 import { Debts } from './components/views/Debts';
+import { FinancialTools } from './components/views/FinancialTools';
 import { PrivacyPolicy } from './components/views/PrivacyPolicy';
 import { TermsOfService } from './components/views/TermsOfService';
 import { SecurityLockScreen } from './components/SecurityLockScreen';
@@ -40,6 +41,7 @@ function AppContent() {
         {currentView === 'bills' && <Bills />}
         {currentView === 'goals' && <Goals />}
         {currentView === 'reports' && <Reports />}
+        {currentView === 'financial-tools' && <FinancialTools setCurrentView={setCurrentView} />}
         {currentView === 'activity-logs' && <ActivityLogView />}
         {currentView === 'help' && <Help onNavigate={setCurrentView} />}
         {currentView === 'settings' && <Settings />}

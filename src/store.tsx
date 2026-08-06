@@ -744,18 +744,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Handle linked asset capitalization update
-      if (t.assetId && t.isCapitalization) {
-        const targetAsset = assets.find(a => a.id === t.assetId);
-        if (targetAsset) {
-          const newPrice = targetAsset.purchasePrice + t.amount;
-          const newVal = targetAsset.currentValue + t.amount;
-          const updatedAssets = assets.map(a => a.id === t.assetId ? { ...a, purchasePrice: newPrice, currentValue: newVal } : a);
-          setAssets(updatedAssets);
-          sessionStorage.setItem(`demo_assets_${user?.uid || 'guest'}`, JSON.stringify(updatedAssets));
-        }
-      }
-
       addDemoActivity(
         'CREATE', 
         'TRANSACTION', 
@@ -792,17 +780,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         const adjustment = t.type === 'income' ? t.amount : -t.amount;
         await updateDoc(doc(db, 'payment_accounts', t.paymentAccountId), {
           balance: acc.balance + adjustment
-        });
-      }
-    }
-
-    // Handle linked asset capitalization update in DB
-    if (t.assetId && t.isCapitalization) {
-      const targetAsset = assets.find(a => a.id === t.assetId);
-      if (targetAsset) {
-        await updateDoc(doc(db, 'assets', t.assetId), {
-          purchasePrice: targetAsset.purchasePrice + t.amount,
-          currentValue: targetAsset.currentValue + t.amount
         });
       }
     }
@@ -847,18 +824,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Adjust linked asset capitalization
-        if (target.assetId && target.isCapitalization) {
-          const targetAsset = assets.find(a => a.id === target.assetId);
-          if (targetAsset) {
-            const newPrice = Math.max(0, targetAsset.purchasePrice - target.amount);
-            const newVal = Math.max(0, targetAsset.currentValue - target.amount);
-            const updatedAssets = assets.map(a => a.id === target.assetId ? { ...a, purchasePrice: newPrice, currentValue: newVal } : a);
-            setAssets(updatedAssets);
-            sessionStorage.setItem(`demo_assets_${user?.uid || 'guest'}`, JSON.stringify(updatedAssets));
-          }
-        }
-
         addDemoActivity(
           'DELETE', 
           'TRANSACTION', 
@@ -892,17 +857,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           const adjustment = target.type === 'income' ? -target.amount : target.amount;
           await updateDoc(doc(db, 'payment_accounts', target.paymentAccountId), {
             balance: acc.balance + adjustment
-          });
-        }
-      }
-
-      // Adjust linked asset capitalization in DB
-      if (target.assetId && target.isCapitalization) {
-        const targetAsset = assets.find(a => a.id === target.assetId);
-        if (targetAsset) {
-          await updateDoc(doc(db, 'assets', target.assetId), {
-            purchasePrice: Math.max(0, targetAsset.purchasePrice - target.amount),
-            currentValue: Math.max(0, targetAsset.currentValue - target.amount)
           });
         }
       }
@@ -1074,6 +1028,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteEnvelope = async (id: string) => {
+    const mainTarget = envelopes.find(e => e.id === id);
+    if (mainTarget) {
+      const isUsed = transactions.some(t => t.category === mainTarget.category);
+      if (isUsed) {
+        throw new Error(`Amplop tidak dapat dihapus karena kategori "${mainTarget.category}" sedang digunakan dalam transaksi.`);
+      }
+    }
+
     if (isDemo) {
       const target = envelopes.find(e => e.id === id);
       const updated = envelopes.filter(e => e.id !== id);
@@ -1131,6 +1093,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteGoal = async (id: string) => {
+    const isUsed = transactions.some(t => t.goalId === id);
+    if (isUsed) {
+      throw new Error("Target finansial ini tidak dapat dihapus karena sedang digunakan dalam transaksi.");
+    }
+
     if (isDemo) {
       const target = goals.find(g => g.id === id);
       const updated = goals.filter(g => g.id !== id);
@@ -1359,6 +1326,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteCategory = async (id: string) => {
+    const mainTarget = customCategories.find(c => c.id === id);
+    if (mainTarget) {
+      const isUsed = transactions.some(t => t.category === mainTarget.name);
+      if (isUsed) {
+        throw new Error(`Kategori "${mainTarget.name}" tidak dapat dihapus karena sedang digunakan dalam transaksi.`);
+      }
+    }
+
     if (isDemo) {
       const target = customCategories.find(c => c.id === id);
       const updated = customCategories.filter(c => c.id !== id);
@@ -1419,6 +1394,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteFamilyMember = async (id: string) => {
+    const isUsed = transactions.some(t => t.familyMember === id);
+    if (isUsed) {
+      throw new Error("Anggota keluarga ini tidak dapat dihapus karena sedang digunakan dalam transaksi.");
+    }
+
     if (isDemo) {
       const target = familyMembers.find(f => f.id === id);
       const updated = familyMembers.filter(f => f.id !== id);
@@ -1622,6 +1602,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteAsset = async (id: string) => {
+    const isUsed = transactions.some(t => t.assetId === id) || assets.some(a => a.parentAssetId === id);
+    if (isUsed) {
+      throw new Error("Aset ini tidak dapat dihapus karena sedang digunakan dalam transaksi atau memiliki sub-aset.");
+    }
+
     if (isDemo) {
       const target = assets.find(a => a.id === id);
       const updated = assets.filter(a => a.id !== id);
@@ -1835,6 +1820,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deletePaymentAccount = async (id: string) => {
+    const isUsed = transactions.some(t => t.paymentAccountId === id || t.category === 'Transfer' && (t.description?.includes(id))); // Assuming we might track transfer by name/id, but paymentAccountId is the primary relation.
+    if (isUsed) {
+      throw new Error("Rekening ini tidak dapat dihapus karena sedang digunakan dalam transaksi.");
+    }
+
     if (isDemo) {
       const target = paymentAccounts.find(a => a.id === id);
       const updated = paymentAccounts.filter(a => a.id !== id);

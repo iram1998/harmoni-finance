@@ -14,6 +14,7 @@ interface AssetDetailModalProps {
   onClose: () => void;
   onEdit: (asset: Asset) => void;
   onDelete: (asset: Asset) => void;
+  onViewSubAsset?: (asset: Asset) => void;
 }
 
 export function AssetDetailModal({
@@ -22,6 +23,7 @@ export function AssetDetailModal({
   onClose,
   onEdit,
   onDelete,
+  onViewSubAsset
 }: AssetDetailModalProps) {
   const { language } = useThemeLanguage();
   const { addAssetValuation, deleteAssetValuation, assets, transactions, addAsset } = useFinance();
@@ -42,6 +44,10 @@ export function AssetDetailModal({
   const [subAssetDate, setSubAssetDate] = useState(new Date().toISOString().slice(0, 10));
   const [subAssetNotes, setSubAssetNotes] = useState('');
   const [isSubmittingSubAsset, setIsSubmittingSubAsset] = useState(false);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
 
   if (!isOpen || !asset) return null;
 
@@ -83,8 +89,18 @@ export function AssetDetailModal({
 
   const parentAsset = asset.parentAssetId ? assets.find(a => a.id === asset.parentAssetId) : null;
   const subAssets = assets.filter(a => a.parentAssetId === asset.id);
-  const linkedTransactions = transactions.filter(t => t.assetId === asset.id || subAssets.some(sa => sa.id === t.assetId));
-  const totalCapex = linkedTransactions.reduce((acc, t) => acc + t.amount, 0);
+  const linkedTransactions = transactions
+    .filter(t => t.assetId === asset.id || subAssets.some(sa => sa.id === t.assetId))
+    .sort((a, b) => {
+      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
+  const totalCapex = linkedTransactions.filter(t => t.isCapitalization && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const totalOpex = linkedTransactions.filter(t => !t.isCapitalization && t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const totalIncome = linkedTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
 
   const effectiveValue = getAssetEffectiveValue(asset, assets, transactions);
   const purchasePrice = asset.purchasePrice || 0;
@@ -164,7 +180,7 @@ export function AssetDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-      <div className="bg-surface border border-outline-variant rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className={`bg-surface border border-outline-variant rounded-2xl shadow-2xl w-full overflow-hidden flex flex-col transition-all duration-300 ${isFullscreen ? 'max-w-[95vw] h-[95vh]' : 'max-w-xl max-h-[90vh]'}`}>
         {/* Header with Photo Banner */}
         <div className="relative bg-surface-container-high border-b border-outline-variant">
           {asset.imageUrl ? (
@@ -185,14 +201,34 @@ export function AssetDetailModal({
           )}
 
           {/* Top Badges & Close Button */}
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 p-2 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors z-20 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
+          <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-2 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors cursor-pointer"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                {isFullscreen ? 'close_fullscreen' : 'fullscreen'}
+              </span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          </div>
 
           <div className="absolute top-3 left-3 flex gap-2 z-20">
+            {parentAsset && onViewSubAsset && (
+              <button
+                onClick={() => onViewSubAsset(parentAsset)}
+                className="bg-black/50 text-white text-[11px] font-bold px-2.5 py-1 rounded-full uppercase shadow-xs flex items-center gap-1 hover:bg-black/80 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[14px]">arrow_back</span>
+                {isId ? 'Induk' : 'Parent'}
+              </button>
+            )}
             <span className="bg-primary/90 text-on-primary text-[11px] font-bold px-2.5 py-1 rounded-full uppercase shadow-xs">
               {asset.workspaceId}
             </span>
@@ -254,10 +290,10 @@ export function AssetDetailModal({
 
             <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant">
               <span className="text-[11px] text-on-surface-variant font-medium block">
-                {isId ? 'Harga Beli Awal' : 'Purchase Price'}
+                {isId ? 'Total Modal Aktual (Beli+Capex+Opex)' : 'Total Actual Expenditure'}
               </span>
               <span className="text-base sm:text-lg font-extrabold text-on-surface block mt-1">
-                {formatCurrency(purchasePrice)}
+                {formatCurrency(purchasePrice + totalCapex + totalOpex)}
               </span>
               {showPricePerM2 && (
                 <div className="space-y-0.5 mt-1">
@@ -575,7 +611,7 @@ export function AssetDetailModal({
                   className="text-xs gap-1"
                 >
                   <span className="material-symbols-outlined text-[16px]">{isAddingSubAsset ? 'close' : 'add'}</span>
-                  {isAddingSubAsset ? (isId ? 'Batal' : 'Cancel') : (isId ? '+ Input Sub-Aset' : '+ Add Sub-Asset')}
+                  {isAddingSubAsset ? (isId ? 'Batal' : 'Cancel') : (isId ? 'Input Sub-Aset' : 'Add Sub-Asset')}
                 </Button>
               </div>
             </div>
@@ -655,12 +691,19 @@ export function AssetDetailModal({
             {subAssets.length > 0 ? (
               <div className="space-y-2">
                 {subAssets.map(sa => (
-                  <div key={sa.id} className="p-3 bg-surface rounded-lg border border-outline-variant/60 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <span className="font-bold text-on-surface block text-xs truncate">↳ {sa.name}</span>
-                      <span className="text-[10px] text-on-surface-variant">
-                        {sa.category} • Beli: {formatDateDDMMYYYY(sa.purchaseDate)}
-                      </span>
+                  <div 
+                    key={sa.id} 
+                    className={`p-3 bg-surface rounded-lg border border-outline-variant/60 flex items-center justify-between gap-2 ${onViewSubAsset ? 'cursor-pointer hover:bg-surface-container-low transition-colors' : ''}`}
+                    onClick={() => onViewSubAsset && onViewSubAsset(sa)}
+                  >
+                    <div className="min-w-0 flex items-start gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-on-surface-variant mt-0.5">subdirectory_arrow_right</span>
+                      <div>
+                        <span className="font-bold text-on-surface block text-xs truncate group-hover:text-primary transition-colors">{sa.name}</span>
+                        <span className="text-[10px] text-on-surface-variant">
+                          {sa.category} • Beli: {formatDateDDMMYYYY(sa.purchaseDate)}
+                        </span>
+                      </div>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <span className="font-black text-emerald-600 dark:text-emerald-400 block text-xs">
@@ -676,7 +719,7 @@ export function AssetDetailModal({
             ) : (
               !isAddingSubAsset && (
                 <p className="text-xs text-on-surface-variant italic bg-surface p-2.5 rounded-lg border border-outline-variant/40">
-                  {isId ? 'Belum ada sub-aset. Klik "+ Input Sub-Aset" di atas untuk menambahkan meja, mesin, atau peralatan langsung di sini.' : 'No sub-assets linked. Click "+ Add Sub-Asset" above to add items directly.'}
+                  {isId ? 'Belum ada sub-aset. Klik "Input Sub-Aset" di atas untuk menambahkan meja, mesin, atau peralatan langsung di sini.' : 'No sub-assets linked. Click "Add Sub-Asset" above to add items directly.'}
                 </p>
               )
             )}
@@ -688,27 +731,48 @@ export function AssetDetailModal({
               <div>
                 <h4 className="font-bold text-on-surface text-xs sm:text-sm flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-primary text-[18px]">receipt_long</span>
-                  {isId ? 'Rincian Transaksi Modal / Pengeluaran Terkait (Capex)' : 'Capital Expenditure Transactions'}
+                  {isId ? 'Transaksi Operasional & Modal Terkait' : 'Linked Operational & Capital Transactions'}
                 </h4>
                 <p className="text-[11px] text-on-surface-variant mt-0.5">
-                  {isId ? 'Histori pengeluaran beli papan, paku, upah tukang, modal usaha, dll.' : 'Materials, labor, and capital investment expenses'}
+                  {isId ? 'Histori pengeluaran (OPEX/CAPEX) dan pemasukan terkait aset.' : 'History of OPEX, CAPEX, and income for this asset.'}
                 </p>
               </div>
-              <div className="text-right">
-                <span className="text-[10px] text-on-surface-variant block font-medium">Total Terkapitalisasi</span>
-                <span className="text-xs font-black text-primary bg-primary/10 px-2.5 py-1 rounded-lg inline-block">
-                  {formatCurrency(totalCapex)}
-                </span>
+              <div className="flex gap-3 text-right">
+                <div>
+                  <span className="text-[10px] text-on-surface-variant block font-medium">CAPEX</span>
+                  <span className="text-xs font-black text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-lg inline-block">
+                    {formatCurrency(totalCapex)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-on-surface-variant block font-medium">OPEX</span>
+                  <span className="text-xs font-black text-error bg-error/10 px-2.5 py-1 rounded-lg inline-block">
+                    {formatCurrency(totalOpex)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-on-surface-variant block font-medium">Pemasukan</span>
+                  <span className="text-xs font-black text-primary bg-primary/10 px-2.5 py-1 rounded-lg inline-block">
+                    {formatCurrency(totalIncome)}
+                  </span>
+                </div>
               </div>
             </div>
 
             {linkedTransactions.length > 0 ? (
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {linkedTransactions.map(tx => (
+              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                {linkedTransactions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map(tx => {
+                  const txAsset = tx.assetId === asset.id ? null : subAssets.find(sa => sa.id === tx.assetId);
+                  return (
                   <div key={tx.id} className="p-3 bg-surface rounded-lg border border-outline-variant/60 flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-on-surface text-xs truncate">{tx.description || tx.category}</span>
+                        {txAsset && (
+                          <span className="text-[9px] bg-secondary/10 text-secondary font-bold px-1.5 py-0.5 rounded border border-secondary/20">
+                            {txAsset.name}
+                          </span>
+                        )}
                         {tx.isCapitalization && (
                           <span className="text-[9px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded border border-emerald-500/20">
                             {isId ? 'Dikapitalisasi ke Aset' : 'Capitalized'}
@@ -720,12 +784,35 @@ export function AssetDetailModal({
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <span className="font-black text-red-500 text-xs block">
-                        - {formatCurrency(tx.amount)}
+                      <span className={`font-black text-xs block ${tx.type === 'income' ? 'text-primary' : 'text-error'}`}>
+                        {tx.type === 'income' ? '+' : '-'} {formatCurrency(tx.amount)}
                       </span>
                     </div>
                   </div>
-                ))}
+                )})}
+                {linkedTransactions.length > ITEMS_PER_PAGE && (
+                  <div className="flex justify-between items-center pt-2">
+                    <Button 
+                      variant="outline" 
+                      className="text-[10px] py-1 px-2" 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      {isId ? 'Sebelumnnya' : 'Previous'}
+                    </Button>
+                    <span className="text-[10px] text-on-surface-variant font-medium">
+                      {isId ? 'Halaman' : 'Page'} {currentPage} / {Math.ceil(linkedTransactions.length / ITEMS_PER_PAGE)}
+                    </span>
+                    <Button 
+                      variant="outline" 
+                      className="text-[10px] py-1 px-2" 
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(linkedTransactions.length / ITEMS_PER_PAGE), p + 1))}
+                      disabled={currentPage === Math.ceil(linkedTransactions.length / ITEMS_PER_PAGE)}
+                    >
+                      {isId ? 'Selanjutnya' : 'Next'}
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-xs text-on-surface-variant italic bg-surface p-2.5 rounded-lg border border-outline-variant/40">

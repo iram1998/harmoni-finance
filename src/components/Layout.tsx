@@ -181,6 +181,7 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
           <NavItem icon="home_work" label={t('assetsAndGoods')} active={currentView === 'assets'} onClick={() => handleViewNavigation('assets')} isOpen={isSidebarOpen} />
           <NavItem icon="account_balance" label={t('debtsAndReceivables')} active={currentView === 'debts'} onClick={() => handleViewNavigation('debts')} isOpen={isSidebarOpen} />
           <NavItem icon="assessment" label={t('reports')} active={currentView === 'reports'} onClick={() => handleViewNavigation('reports')} isOpen={isSidebarOpen} />
+          <NavItem icon="calculate" label={t('financialTools')} active={currentView === 'financial-tools'} onClick={() => setCurrentView('financial-tools')} isOpen={isSidebarOpen} />
 
           {/* Kelompok 4: Aplikasi */}
           {isSidebarOpen ? (
@@ -534,6 +535,12 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
                 label={t('reports')} 
                 active={currentView === 'reports'} 
                 onClick={() => { handleViewNavigation('reports'); setIsMobileMenuOpen(false); }} 
+              />
+              <MenuGridItem 
+                icon="calculate" 
+                label={t('financialTools')} 
+                active={currentView === 'financial-tools'} 
+                onClick={() => { setCurrentView('financial-tools'); setIsMobileMenuOpen(false); }} 
               />
               <MenuGridItem 
                 icon="history_edu" 

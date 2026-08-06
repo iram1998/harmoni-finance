@@ -274,8 +274,8 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
           </div>
         )}
 
-        {/* Income & Expense Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Income, Expense & Net Cash Flow Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card variant="default" className="p-6 flex flex-col justify-between overflow-hidden relative group">
             <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl transition-transform group-hover:scale-150 duration-700"></div>
             <div className="flex justify-between items-center mb-4 relative z-10">
@@ -295,6 +295,24 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
             </div>
             <div className="font-display-md text-rose-700 font-bold truncate relative z-10" title={formatCurrency(totalExpense)}>
               {formatCurrency(totalExpense)}
+            </div>
+          </Card>
+
+          <Card variant="default" className={`p-6 flex flex-col justify-between overflow-hidden relative group ${balance >= 0 ? 'bg-primary/5 border-primary/20' : 'bg-error/5 border-error/20'}`}>
+            <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-xl transition-transform group-hover:scale-150 duration-700 ${balance >= 0 ? 'bg-primary/10' : 'bg-error/10'}`}></div>
+            <div className="flex justify-between items-center mb-4 relative z-10">
+              <h3 className="font-label-lg text-on-surface-variant uppercase tracking-wider">{language === 'id' ? 'Arus Kas Bersih' : 'Net Cash Flow'}</h3>
+              <span className={`material-symbols-outlined p-2 rounded-full ${balance >= 0 ? 'text-primary bg-primary/10' : 'text-error bg-error/10'}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                {balance >= 0 ? 'account_balance_wallet' : 'money_off'}
+              </span>
+            </div>
+            <div className="flex flex-col relative z-10">
+              <div className={`font-display-md font-bold truncate ${balance >= 0 ? 'text-primary' : 'text-error'}`} title={formatCurrency(balance)}>
+                {balance >= 0 ? '+' : ''}{formatCurrency(balance)}
+              </div>
+              <span className={`text-[11px] font-bold mt-1 uppercase tracking-widest ${balance >= 0 ? 'text-primary' : 'text-error'}`}>
+                {balance >= 0 ? (language === 'id' ? 'Surplus (Positif)' : 'Surplus') : (language === 'id' ? 'Defisit (Negatif)' : 'Deficit')}
+              </span>
             </div>
           </Card>
         </div>
@@ -645,6 +663,68 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Transactions Widget */}
+        <div className="col-span-12">
+          <Card variant="default" className="p-6 flex flex-col shadow-sm">
+            <CardHeader className="p-0 mb-4 flex justify-between items-center border-b border-outline-variant pb-4">
+              <div>
+                <CardTitle className="text-lg font-bold text-on-surface">{language === 'id' ? 'Transaksi Terakhir' : 'Recent Transactions'}</CardTitle>
+                <p className="font-body-sm text-on-surface-variant mt-0.5">{language === 'id' ? '5 aktivitas arus kas terakhir Anda.' : 'Your 5 latest cash flow activities.'}</p>
+              </div>
+              {setCurrentView && (
+                <button 
+                  onClick={() => setCurrentView('cash_flow')}
+                  className="text-xs text-primary font-bold hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-all cursor-pointer active:scale-95"
+                >
+                  {language === 'id' ? 'Lihat Semua' : 'View All'}
+                </button>
+              )}
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="flex flex-col divide-y divide-outline-variant/40">
+                {wsTransactions.length > 0 ? (
+                  wsTransactions
+                    .slice()
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .slice(0, 5)
+                    .map(tx => {
+                      const isTransfer = (tx.category || '').toLowerCase().includes('transfer') || (tx.category || '').toLowerCase().includes('pindah') || (tx.category || '').toLowerCase().includes('saldo');
+                      const iconBg = isTransfer ? 'bg-blue-100 text-blue-700' : tx.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700';
+                      const icon = isTransfer ? 'sync_alt' : tx.type === 'income' ? 'payments' : 'shopping_cart';
+                      const sign = isTransfer ? '' : tx.type === 'income' ? '+' : '-';
+                      const color = isTransfer ? 'text-on-surface' : tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600';
+                      
+                      return (
+                        <div key={tx.id} className="flex items-center justify-between py-3 hover:bg-surface-container-lowest transition-colors px-2 rounded-lg cursor-default">
+                          <div className="flex items-center gap-4 min-w-0">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${iconBg}`}>
+                              <span className="material-symbols-outlined text-[20px]">{icon}</span>
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-label-md text-on-surface font-bold truncate">
+                                {tx.merchantName || tx.category}
+                              </span>
+                              <span className="font-body-sm text-on-surface-variant truncate text-[11px] mt-0.5">
+                                {new Date(tx.date).toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })} • {tx.category}
+                              </span>
+                            </div>
+                          </div>
+                          <div className={`font-label-lg font-bold shrink-0 ml-2 ${color}`}>
+                            {sign}{formatCurrency(tx.amount)}
+                          </div>
+                        </div>
+                      );
+                    })
+                ) : (
+                  <div className="py-8 text-center text-on-surface-variant font-body-sm bg-surface-container-lowest rounded-xl border border-dashed border-outline-variant">
+                    {language === 'id' ? 'Belum ada transaksi tercatat.' : 'No recent transactions logged.'}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -174,6 +174,7 @@ export function Assets() {
   const [filterMode, setFilterMode] = useState<'pribadi' | 'keluarga' | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [assetTab, setAssetTab] = useState<'main' | 'sub' | 'all'>('main');
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -586,15 +587,10 @@ export function Assets() {
 
   // Filter assets based on mode (Only show top-level main assets by default to keep clean structure)
   const filteredAssets = assets.filter(asset => {
-    // 1. Exclude sub-assets from main standalone card list
-    if (asset.parentAssetId) {
-      if (!searchTerm) return false;
-      // If search is active, show sub-asset directly only if parent does not match
-      const parent = assets.find(p => p.id === asset.parentAssetId);
-      const parentMatches = parent && parent.name.toLowerCase().includes(searchTerm.toLowerCase());
-      if (parentMatches) return false;
-      if (!asset.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    }
+    // 1. Tab filter
+    if (assetTab === 'main' && asset.parentAssetId) return false;
+    if (assetTab === 'sub' && !asset.parentAssetId) return false;
+    // if 'all', show everything
 
     // 2. Workspace filter
     if (filterMode === 'pribadi' && asset.workspaceId !== 'pribadi') {
@@ -607,7 +603,10 @@ export function Assets() {
     if (searchTerm) {
       const matchSelf = asset.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchSub = assets.some(sa => sa.parentAssetId === asset.id && sa.name.toLowerCase().includes(searchTerm.toLowerCase()));
-      if (!matchSelf && !matchSub) {
+      const parent = asset.parentAssetId ? assets.find(p => p.id === asset.parentAssetId) : null;
+      const matchParent = parent && parent.name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (!matchSelf && !matchSub && !matchParent) {
         return false;
       }
     }
@@ -1428,6 +1427,43 @@ export function Assets() {
         </Card>
         </div>
       )}
+
+      {/* Asset Type Tabs */}
+      <div className="flex gap-2 p-1 bg-surface-container-high rounded-xl border border-outline-variant/60 w-fit mb-4">
+        <button
+          onClick={() => setAssetTab('main')}
+          className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all cursor-pointer ${
+            assetTab === 'main'
+              ? 'bg-primary text-on-primary shadow-xs'
+              : 'text-on-surface-variant hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">home_work</span>
+          {language === 'id' ? 'Aset Utama' : 'Main Assets'}
+        </button>
+        <button
+          onClick={() => setAssetTab('sub')}
+          className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all cursor-pointer ${
+            assetTab === 'sub'
+              ? 'bg-primary text-on-primary shadow-xs'
+              : 'text-on-surface-variant hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">subdirectory_arrow_right</span>
+          {language === 'id' ? 'Sub-Aset' : 'Sub-Assets'}
+        </button>
+        <button
+          onClick={() => setAssetTab('all')}
+          className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all cursor-pointer ${
+            assetTab === 'all'
+              ? 'bg-primary text-on-primary shadow-xs'
+              : 'text-on-surface-variant hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">format_list_bulleted</span>
+          {language === 'id' ? 'Semua Aset' : 'All Assets'}
+        </button>
+      </div>
 
       {/* View Mode Toggle, Search, and Category Filter Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface p-4 rounded-xl border border-outline-variant">
@@ -2325,6 +2361,7 @@ export function Assets() {
         onClose={() => setSelectedDetailAsset(null)}
         onEdit={(a) => handleOpenEditModal(a)}
         onDelete={(a) => promptDeleteAsset(a)}
+        onViewSubAsset={(sa) => setSelectedDetailAsset(sa)}
       />
 
       {/* Map Picker Modal */}

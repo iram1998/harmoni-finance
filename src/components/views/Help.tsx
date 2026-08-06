@@ -11,10 +11,10 @@ export function Help({ onNavigate }: HelpProps) {
 
   const [activeTab, setActiveTab] = useState<'step_by_step' | 'per_menu' | 'ai_scanner' | 'reports_guide' | 'faq'>('step_by_step');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
 
-  const toggleFaq = (index: number) => {
-    setExpandedFaq(expandedFaq === index ? null : index);
+  const toggleFaq = (id: string) => {
+    setExpandedFaq(expandedFaq === id ? null : id);
   };
 
   const stepsList = [
@@ -149,6 +149,28 @@ export function Help({ onNavigate }: HelpProps) {
             : 'Print clean PDF statements or review "Activity Log" to audit all data creation, updates, and configured auto-clean retention rules.'
         }
       ]
+    },
+    {
+      step: '07',
+      title: isId ? 'Simulasi & Kalkulator Keuangan Interaktif' : 'Interactive Financial Lab & Calculators',
+      subtitle: isId ? 'Dana Darurat, Zakat, KPR (DTI), FIRE Pensiun, & Inflasi Pendidikan' : 'Emergency Fund, Zakat, Debt Ratio (DTI), FIRE Retirement, & Education Inflation',
+      icon: 'calculate',
+      color: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+      navTarget: 'financial-tools',
+      details: [
+        {
+          heading: isId ? '1. Simulasi Keputusan Finansial' : '1. Financial Decision Simulations',
+          text: isId 
+            ? 'Buka menu "Kalkulator & Lab Keuangan" untuk mensimulasikan kecukupan Dana Darurat, kewajiban Zakat Mal & Profesi (berdasarkan nisab 85g emas), batas aman cicilan KPR (DTI < 30%), akumulasi Dana Pensiun FIRE (Aturan 4%), dan proyeksi Inflasi Pendidikan anak.'
+            : 'Open "Calculators & Financial Lab" to simulate Emergency Fund sufficiency, Wealth & Income Zakat obligations (85g gold nisab benchmark), KPR debt capacity (DTI < 30%), FIRE retirement targets (4% rule), and future child education inflation.'
+        },
+        {
+          heading: isId ? '2. Integrasi Data Otomatis & Pembuatan Target' : '2. Automatic Data Integration & Goal Creation',
+          text: isId 
+            ? 'Modul kalkulator secara cerdas membaca saldo kas likuid dan nilai emas/investasi dari aplikasi secara real-time, serta menyediakan tombol langsung untuk membuat Target Tabungan Baru saat terjadi kekurangan dana.'
+            : 'Calculators automatically pull live app balances and asset valuations, offering one-click buttons to spawn new Savings Goals when gaps are identified.'
+        }
+      ]
     }
   ];
 
@@ -157,12 +179,12 @@ export function Help({ onNavigate }: HelpProps) {
       menu: isId ? 'Dashboard Utama' : 'Executive Dashboard',
       icon: 'dashboard',
       description: isId 
-        ? 'Pusat ringkasan eksekutif yang menampilkan Total Saldo Kas Likuid, Nilai Aset Fisik, Total Kekayaan Bersih (Net Worth), Kewajiban Utang & Piutang, indikator Kesehatan Arus Kas, dan peringatan anggaran.'
-        : 'Executive dashboard showcasing Total Liquid Cash, Physical Asset Values, Net Worth, Net Debts & Receivables, Cash Flow Health score, and budget alerts.',
+        ? 'Pusat ringkasan eksekutif yang menampilkan Total Saldo Kas Likuid, Nilai Aset Fisik, Total Kekayaan Bersih (Net Worth), Kewajiban Utang & Piutang, Arus Kas Bersih (Surplus/Defisit), dan peringatan anggaran.'
+        : 'Executive dashboard showcasing Total Liquid Cash, Physical Asset Values, Net Worth, Net Debts & Receivables, Net Cash Flow (Surplus/Deficit), and budget alerts.',
       howToRead: [
         isId ? '1. Kas Likuid Bank/E-Wallet: Gabungan saldo tunai aktif di seluruh rekening bank dan e-wallet.' : '1. Liquid Cash: Sum of active funds across all bank accounts and e-wallet balances.',
         isId ? '2. Total Net Worth: Gabungan kas likuid ditambah total nilai pasar aset fisik dikurangi total kewajiban utang.' : '2. Total Net Worth: Combined liquid cash plus current physical asset market value minus total debt obligations.',
-        isId ? '3. Health Score & Alerts: Indikator efisiensi belanja bulanan serta peringatan tagihan mendekati jatuh tempo.' : '3. Health Score & Alerts: Monthly spending efficiency ratio and upcoming bill alerts.'
+        isId ? '3. Arus Kas Bersih (Surplus/Defisit): Selisih nyata antara pemasukan dan pengeluaran bulan ini (hijau = surplus, merah = defisit).' : '3. Net Cash Flow: The actual difference between this month\'s income and expenses (green = surplus, red = deficit).'
       ]
     },
     {
@@ -208,11 +230,25 @@ export function Help({ onNavigate }: HelpProps) {
         ? 'Modul inventarisasi fisik barang, tanah, bangunan, kendaraan, dan barang berharga lengkap dengan sub-aset terstruktur, harga beli, nilai pasar saat ini, revaluasi, konversi Borongan Kalsel, kalkulasi depresiasi, dan koordinat GPS Google Maps.'
         : 'Inventory module for land, property, vehicles, and valuables with structured sub-assets, purchase cost, current market value, historical revaluation logs, Borongan unit conversion, auto depreciation math, and GPS coordinates.',
       howToRead: [
-        isId ? '1. Struktur Aset & Sub-Aset: Aset utama (misal: Rumah) dapat memiliki Sub-Aset (misal: AC, Pagar) yang tergabung di dalamnya agar daftar aset tetap rapi dan terorganisir.' : '1. Asset & Sub-Asset Structure: Main assets (e.g. House) can contain Sub-Assets (e.g. AC, Fence) to keep your main asset list clean and organized.',
-        isId ? '2. Pengeluaran Modal (Capex): Biaya pemeliharaan yang ditandai "Terkapitalisasi (Capex)" di arus kas otomatis akan menambah nilai perolehan Aset/Sub-Aset yang terhubung.' : '2. Capital Expenditure (Capex): Expenses marked as "Capitalized" in cash flow will automatically increase the acquisition cost of the linked Asset/Sub-Asset.',
-        isId ? '3. Konversi Satuan Borongan (Kalsel): Untuk aset tanah/lahan, sistem otomatis mengonversi luas m²/Hektar ke satuan tradisional Borongan (1 Hektar = 35 Borongan, 1 Borongan ≈ 285,7 m²).' : '3. Borongan Unit Conversion (Kalsel): For land assets, automatically converts m²/Hectare into traditional Borongan units (1 Hectare = 35 Borongan, 1 Borongan ≈ 285.7 m²).',
-        isId ? '4. Histori Revaluasi & Depresiasi: Catat kenaikan nilai properti secara berkala via tombol "+ Tambah Revaluasi" atau aktifkan penyusutan harga otomatis untuk aset kendaraan/elektronik.' : '4. Revaluation History & Depreciation: Log periodic property appreciation via "+ Add Revaluation" or enable auto depreciation for vehicles/electronics.',
-        isId ? '5. Lokasi & Koordinat GPS: Simpan nama toko/lokasi lahan dan koordinat GPS (DMS atau Desimal) yang dapat diklik langsung untuk membuka Google Maps.' : '5. Location & GPS Coordinates: Store location names and GPS coordinates (DMS or Decimal) with direct Google Maps integration.'
+        isId ? '1. Struktur Aset & Sub-Aset: Aset utama (misal: Rumah) dapat memiliki Sub-Aset (misal: AC, Pagar) yang tergabung di dalamnya. Anda dapat bernavigasi ke Sub-Aset langsung dari rincian Aset Utama dan kembali melalui tombol "Induk".' : '1. Asset & Sub-Asset Structure: Main assets (e.g. House) can contain Sub-Assets (e.g. AC, Fence). Navigate to Sub-Assets from the parent and back via the "Parent" button.',
+        isId ? '2. Pengeluaran Modal (Capex) vs Opex: Biaya pemeliharaan yang ditandai "Terkapitalisasi (Capex)" di arus kas otomatis menambah nilai perolehan dasar, sedangkan OPEX dihitung terpisah sebagai biaya operasional/perawatan. Pemasukan dari aset (misal: uang sewa) juga terekam.' : '2. Capital vs Operational Expenditure: "Capitalized" (Capex) expenses increase the base acquisition value, while OPEX is tracked separately as operational/maintenance cost. Asset income (e.g., rent) is also tracked.',
+        isId ? '3. Revaluasi & Depresiasi Sub-Aset: Jika suatu Sub-Aset di set menyusut (misal: Meja 5 tahun jadi 0), penyusutan ini akan dihitung secara individual. Nilai Total Aset Utama otomatis menggabungkan nilai dirinya dan seluruh nilai sub-aset beserta sisa umur penyusutannya.' : '3. Revaluation & Sub-Asset Depreciation: If a Sub-Asset depreciates (e.g., Table 5 years to 0), it is calculated individually. The total Main Asset value dynamically combines its own value plus all sub-asset values considering their specific depreciation.',
+        isId ? '4. Tampilan Penuh Layar (Fullscreen): Rincian aset memiliki opsi Fullscreen di sudut kanan atas untuk melihat data riwayat nilai dan puluhan baris transaksi secara lebih lega dengan dukungan sistem paginasi halaman.' : '4. Fullscreen Mode: The asset details view has a Fullscreen option in the top right to view extensive valuation histories and dozens of transactions comfortably with pagination.',
+        isId ? '5. Konversi Satuan Borongan & Lokasi (Kalsel): Untuk aset tanah/lahan, sistem mengonversi luas Hektar/m² ke satuan Borongan. Koordinat GPS (DMS/Desimal) dapat diklik langsung ke Google Maps.' : '5. Borongan Unit & Locations (Kalsel): Automatically converts m²/Hectare to Borongan units for land. GPS coordinates click directly to Google Maps.'
+      ]
+    },
+    {
+      menu: isId ? 'Simulasi & Prediksi Nilai Aset' : 'Asset Value Forecasting',
+      icon: 'query_stats',
+      description: isId 
+        ? 'Fitur kalkulasi cerdas untuk memproyeksikan nilai aset di masa depan berdasarkan berbagai skenario (realistis, optimis, pesimis) dengan penyesuaian inflasi.'
+        : 'Smart calculation feature to project future asset values based on various scenarios (realistic, optimistic, conservative) with inflation adjustments.',
+      howToRead: [
+        isId ? '1. Memilih Target Simulasi: Buka halaman Aset, klik ikon Kalkulator (✨) pada suatu aset. Sistem otomatis menarik Nilai Efektif Aset saat ini dan mencocokkan Preset Pertumbuhan (misal: Emas otomatis +8.5%).' : '1. Choosing Target: Open Assets, click the Calculator (✨) icon on an asset. The system auto-fetches its Current Effective Value and sets a Growth Preset (e.g., Gold auto-sets to +8.5%).',
+        isId ? '2. Mengatur Angka Asumsi: Atur persentase Pertumbuhan per tahun dan Top Up Bulanan (jika Anda rutin menambah dana/cicilan untuk aset tersebut).' : '2. Setting Assumptions: Adjust the annual Growth percentage and Monthly Top Up (if you regularly add funds/installments for the asset).',
+        isId ? '3. Penyesuaian Inflasi (Daya Beli Riil): Aktifkan "Disesuaikan Inflasi" agar sistem mengkonversi hasil proyeksi masa depan menjadi daya beli riil di masa sekarang (menghitung nilai waktu dari uang).' : '3. Inflation Adjustment: Enable "Adjust for Inflation" so the system converts future projections into real purchasing power in today\'s money.',
+        isId ? '4. Visualisasi Multi-Skenario: Grafik menampilkan 3 jalur proyeksi: Garis normal (Realistis), batas atas (Optimis), dan batas bawah (Konservatif). Anda juga bisa melihat "Jadwal Pertumbuhan" tiap tahunnya.' : '4. Multi-Scenario Visualization: The chart shows 3 projection paths: Normal (Realistic), upper bound (Optimistic), and lower bound (Conservative). Check the "Growth Schedule" table for yearly details.',
+        isId ? '5. Terapkan Hasil: Jika angka simulasi sesuai dengan estimasi nilai pasar saat ini, klik tombol "Terapkan Hasil ke Nilai Aset" untuk langsung memperbarui valuasi aset Anda di sistem utama.' : '5. Apply Results: If the simulation matches the current estimated market value, click "Apply Result to Asset Value" to instantly update the asset\'s valuation in the main system.'
       ]
     },
     {
@@ -252,6 +288,20 @@ export function Help({ onNavigate }: HelpProps) {
       ]
     },
     {
+      menu: isId ? 'Kalkulator & Lab Keuangan (Financial Tools)' : 'Calculators & Financial Lab',
+      icon: 'calculate',
+      description: isId 
+        ? 'Pusat modul simulasi interaktif meliputi Uji Kecukupan Dana Darurat, Kalkulator Zakat Mal & Profesi (Nisab 85g Emas), Analisis Rasio Utang KPR (DTI), Perencana Dana Pensiun FIRE (Aturan 4%), dan Simulator Inflasi Pendidikan Anak.'
+        : 'Interactive financial decision lab with Emergency Fund Assessment, Wealth & Income Zakat Calculator, Debt-to-Income (DTI) & Mortgage Simulator, FIRE Retirement Planner (4% Rule), and Child Education Inflation Simulator.',
+      howToRead: [
+        isId ? '1. Uji Dana Darurat: Menghitung kecukupan bantalan kas berdasarkan profil keluarga dan stabilitas pekerjaan, dengan indikator persentase cakupan kas dan tombol buat Target Tabungan.' : '1. Emergency Fund Assessment: Calculates safety buffer based on dependents and job stability, showing cash coverage percentage and a button to create a Savings Goal.',
+        isId ? '2. Kalkulator Zakat Mal & Profesi: Menghitung kewajiban zakat 2.5% secara dinamis berdasarkan acuan harga emas 85 gram, menarik saldo kas dan aset emas dari aplikasi secara otomatis.' : '2. Wealth & Income Zakat: Calculates 2.5% zakat obligation dynamically against an 85g gold nisab, pulling live app cash and gold assets automatically.',
+        isId ? '3. Rasio Utang DTI & Simulasi KPR: Memastikan total cicilan bulanan tidak melebihi batas aman 30% dari penghasilan bersih bulanan.' : '3. Debt Ratio DTI & Mortgage Simulator: Ensures total monthly debt installments stay within the safe 30% limit of net income.',
+        isId ? '4. Perencana Pensiun FIRE: Mengalkulasi target dana pensiun masa depan menggunakan Aturan 4% (25x pengeluaran tahunan disesuaikan inflasi) serta setoran investasi bulanan yang dibutuhkan.' : '4. FIRE Retirement Planner: Calculates future target pension fund using the 4% Rule (25x inflation-adjusted annual expenses) and required monthly investment.',
+        isId ? '5. Inflasi Pendidikan Anak: Proyeksi kenaikan biaya sekolah/kuliah di masa depan berdasarkan asumsi inflasi pendidikan tahunan.' : '5. Child Education Inflation: Projects future schooling costs based on annual education inflation assumptions.'
+      ]
+    },
+    {
       menu: isId ? 'Log Aktivitas & Keamanan (Audit Trail & Security)' : 'Activity Log & Security',
       icon: 'history',
       description: isId 
@@ -277,66 +327,110 @@ export function Help({ onNavigate }: HelpProps) {
     }
   ];
 
-  const faqs = [
+  const faqGroups = [
     {
-      q: isId ? 'Bagaimana cara kerja Pemindaian Struk AI Gemini 3.6 Flash?' : 'How does Gemini 3.6 Flash AI Receipt Scanning work?',
-      a: isId 
-        ? 'Ketika Anda mengambil foto atau mengunggah gambar struk belanja, model AI Gemini 3.6 Flash di server kami akan menganalisis teks visual. AI membaca nama merchant, total nominal akhir, tanggal belanja, dan secara cerdas memilih kategori pengeluaran yang paling sesuai.'
-        : 'When you capture or upload a receipt image, server-side Gemini 3.6 Flash AI analyzes the visual text. The AI extracts merchant name, total amount, transaction date, and intelligently assigns the matching spending category.'
+      category: isId ? 'Pencatatan Dasar & Arus Kas' : 'Basic Logging & Cash Flow',
+      items: [
+        {
+          q: isId ? 'Apa perbedaan Rekening Bank/E-Wallet (Kas Likuid), Aset Fisik, dan Utang/Piutang?' : 'What is the difference between Liquid Cash, Physical Assets, and Debts/Receivables?',
+          a: isId 
+            ? 'Rekening Kas Likuid (BCA, Mandiri, Cash, GoPay) adalah uang tunai cair untuk belanja sehari-hari. Aset & Barang (tanah, mobil, emas) adalah inventaris kekayaan fisik yang nilainya diperhitungkan ke Net Worth. Utang adalah kewajiban yang harus dibayar, sedangkan Piutang adalah tagihan klaim uang Anda di orang lain.'
+            : 'Liquid Cash Accounts (BCA, Mandiri, Cash, GoPay) hold spendable funds. Physical Assets (land, vehicles, gold) contribute to Net Worth. Debts represent your financial liabilities, while Receivables represent money owed to you by others.'
+        },
+        {
+          q: isId ? 'Bagaimana pencatatan cicilan / pelunasan Utang & Piutang mempengaruhi saldo rekening?' : 'How does debt/receivable payment logging affect bank balances?',
+          a: isId 
+            ? 'Saat Anda mencatat pelunasan Utang, sistem otomatis memotong saldo rekening bank/e-wallet pilihan dan mencatat transaksi Kas Keluar. Sebaliknya, saat mencatat penerimaan cicilan Piutang, saldo rekening bank akan bertambah otomatis sebagai Kas Masuk.'
+            : 'When logging a debt payment, the app automatically deducts funds from your selected bank account and creates an expense record. Conversely, receiving receivable payments increases your account balance and logs an income transaction.'
+        },
+        {
+          q: isId ? 'Bagaimana cara melakukan Rekonsiliasi Saldo Kas & Rekening Bank?' : 'How does Bank Account & Cash Reconciliation work?',
+          a: isId 
+            ? 'Di menu Pengaturan / Rekening, klik tombol "Rekonsiliasi" pada rekening yang ingin disesuaikan. Masukkan saldo fisik riil saat ini (hasil opname kas atau cetak koran). Jika terdapat selisih, sistem akan otomatis membuat transaksi penyesuaian kas (Adjustment) sehingga saldo aplikasi dan saldo nyata selalu sinkron 100%.'
+            : 'In Settings / Accounts, click the "Reconcile" button on any account. Enter the actual real balance (from bank statement or cash audit). If a gap exists, the app generates a balancing adjustment transaction to ensure 100% balance alignment.'
+        }
+      ]
     },
     {
-      q: isId ? 'Apa perbedaan Rekening Bank/E-Wallet (Kas Likuid), Aset Fisik, dan Utang/Piutang?' : 'What is the difference between Liquid Cash, Physical Assets, and Debts/Receivables?',
-      a: isId 
-        ? 'Rekening Kas Likuid (BCA, Mandiri, Cash, GoPay) adalah uang tunai cair untuk belanja sehari-hari. Aset & Barang (tanah, mobil, emas) adalah inventaris kekayaan fisik yang nilainya diperhitungkan ke Net Worth. Utang adalah kewajiban yang harus dibayar, sedangkan Piutang adalah tagihan klaim uang Anda di orang lain.'
-        : 'Liquid Cash Accounts (BCA, Mandiri, Cash, GoPay) hold spendable funds. Physical Assets (land, vehicles, gold) contribute to Net Worth. Debts represent your financial liabilities, while Receivables represent money owed to you by others.'
+      category: isId ? 'Manajemen Aset Fisik' : 'Physical Asset Management',
+      items: [
+        {
+          q: isId ? 'Bagaimana cara melihat Total Modal Aktual (Total Actual Expenditure) untuk suatu Aset?' : 'How to view the Total Actual Expenditure for an Asset?',
+          a: isId
+            ? 'Buka rincian aset. Anda akan melihat kartu "Total Modal Aktual (Beli+Capex+Opex)". Nilai ini adalah jumlah historis murni dari Harga Beli Awal ditambah semua transaksi Capex dan Opex yang tercatat, dan nilai ini tidak ikut terdepresiasi. Nilai ini sangat berguna jika Anda ingin mengetahui seberapa banyak modal yang sudah benar-benar dikeluarkan untuk aset tersebut dari awal (misalnya total pengeluaran untuk membangun toko/rumah).'
+            : 'Open the asset details. You will see a "Total Actual Expenditure" card. This value is the raw historical sum of the Initial Purchase Price plus all logged Capex and Opex transactions, and it does not depreciate. This is useful for knowing exactly how much raw capital you have sunk into the asset from the beginning (e.g., total cost to build a store/house).'
+        },
+        {
+          q: isId ? 'Kapan sebuah transaksi dikategorikan sebagai Capex (Kapitalisasi) vs Opex (Operasional)?' : 'When is a transaction categorized as Capex vs Opex?',
+          a: isId 
+            ? 'Transaksi dikategorikan sebagai Capex (Capital Expenditure) ketika biaya tersebut menambah nilai perolehan (Purchase Price) suatu Aset Fisik atau Sub-Aset, sehingga meningkatkan total kekayaan aset dan memperbarui dasar kalkulasi depresiasinya (misal: merenovasi rumah, upgrade mesin). Sedangkan Opex (Operational Expenditure) adalah pengeluaran rutin yang sekadar menjaga fungsi aset tanpa menambah nilai jual (misal: servis rutin, isi bensin, bayar listrik). Anda dapat memilih opsi "Terkapitalisasi" saat mencatat transaksi pengeluaran yang terhubung ke Aset.'
+            : 'A transaction is categorized as Capex (Capital Expenditure) when the cost increases the acquisition value of a Physical Asset or Sub-Asset, directly boosting your total asset wealth and updating depreciation baselines (e.g., home renovation). Opex (Operational Expenditure) refers to routine expenses to maintain asset function without increasing its book value (e.g., routine servicing). You can check the "Capitalized" option when logging an expense linked to an Asset.'
+        },
+        {
+          q: isId ? 'Apa perbedaan antara Revaluasi Manual dan Depresiasi (Penyusutan) Otomatis?' : 'What is the difference between Manual Revaluation and Auto Depreciation?',
+          a: isId
+            ? 'Revaluasi Manual digunakan untuk mencatat perubahan harga aset yang nilainya fluktuatif (seperti Tanah, Emas, atau Rumah) dengan menekan tombol "+ Tambah Revaluasi" secara berkala. Sedangkan Depresiasi Otomatis cocok untuk aset yang nilainya pasti menurun seiring waktu (Mobil, Laptop, Mesin) dengan mengatur metode Garis Lurus (Straight Line) atau Saldo Menurun (Declining Balance) saat membuat aset. Keduanya akan menyesuaikan "Nilai Efektif Saat Ini" secara otomatis.'
+            : 'Manual Revaluation is used for assets with fluctuating market values (e.g., Land, Gold, House) by clicking "+ Add Revaluation" periodically. Auto Depreciation is for assets that lose value over time (e.g., Cars, Laptops, Machinery) by setting Straight Line or Declining Balance methods during asset creation. Both will automatically adjust the "Current Effective Value".'
+        },
+        {
+          q: isId ? 'Bagaimana perhitungan penyusutan dan pembaruan logika Nilai Aset jika terdapat Sub-Aset dan transaksi Pengeluaran Modal (Capex)?' : 'How does depreciation and Asset Value logic work when there are Sub-Assets and Capital Expenditure (Capex) transactions?',
+          a: isId 
+            ? 'Sistem menghitung nilai secara individual dan bertingkat. Jika Aset Utama menyusut selama 10 tahun dan Sub-Aset (Meja/Peralatan) menyusut selama 5 tahun, sistem akan menyusutkan Sub-Aset tersebut sendiri hingga nilainya 0 pada tahun ke-5, sedangkan bangunan/aset utama tetap mengikuti siklusnya. Capex akan ditambahkan ke nilai aset/sub-aset yang dipilih saat pencatatan transaksi secara spesifik. Total Nilai Efektif Aset Utama di luar adalah akumulasi dari (Nilai Aset Utama + Capex Aset Utama yang telah disusutkan) ditambah (Total Keseluruhan Nilai Sub-Aset + Capex Sub-Aset yang juga telah disusutkan secara independen).'
+            : 'The system calculates values individually and hierarchically. If a Main Asset depreciates over 10 years and a Sub-Asset (e.g., Table) depreciates over 5 years, the Sub-Asset will depreciate independently to 0 by year 5, while the main asset continues its own cycle. Capex is added specifically to the selected asset/sub-asset at the time of the transaction. The final Total Effective Value of the Main Asset is the sum of (Main Asset Value + depreciated Main Capex) plus (Total of all Sub-Asset Values + their independently depreciated Sub Capex).'
+        },
+        {
+          q: isId ? 'Bagaimana perhitungan Satuan Borongan (Kalsel) dan Revaluasi Nilai Aset?' : 'How does traditional Borongan unit conversion and asset revaluation work?',
+          a: isId 
+            ? 'Untuk aset kategori Tanah/Lahan, sistem mengodekan rumus standar Kalimantan Selatan di mana 1 Hektar (10.000 m²) setara dengan 35 Borongan (1 Borongan ≈ 285,7 m²). Harga beli dan nilai efektif saat ini dikalkulasi otomatis dalam rupiah per m² serta rupiah per borongan. Anda juga dapat menambah riwayat Revaluasi harga tanah/bangunan di modal detail aset untuk melacak kenaikan nilai investasi.'
+            : 'For land assets, the app converts area into traditional South Kalimantan Borongan units (1 Hectare = 35 Borongan, 1 Borongan ≈ 285.7 m²). Price per m² and per borongan are calculated automatically. You can also append revaluation records in asset details to track real estate appreciation over time.'
+        }
+      ]
     },
     {
-      q: isId ? 'Bagaimana pencatatan cicilan / pelunasan Utang & Piutang mempengaruhi saldo rekening?' : 'How does debt/receivable payment logging affect bank balances?',
-      a: isId 
-        ? 'Saat Anda mencatat pelunasan Utang, sistem otomatis memotong saldo rekening bank/e-wallet pilihan dan mencatat transaksi Kas Keluar. Sebaliknya, saat mencatat penerimaan cicilan Piutang, saldo rekening bank akan bertambah otomatis sebagai Kas Masuk.'
-        : 'When logging a debt payment, the app automatically deducts funds from your selected bank account and creates an expense record. Conversely, receiving receivable payments increases your account balance and logs an income transaction.'
+      category: isId ? 'AI Gemini & Kalkulator Keuangan' : 'Gemini AI & Financial Calculators',
+      items: [
+        {
+          q: isId ? 'Bagaimana cara kerja Pemindaian Struk AI Gemini 3.6 Flash?' : 'How does Gemini 3.6 Flash AI Receipt Scanning work?',
+          a: isId 
+            ? 'Ketika Anda mengambil foto atau mengunggah gambar struk belanja, model AI Gemini 3.6 Flash di server kami akan menganalisis teks visual. AI membaca nama merchant, total nominal akhir, tanggal belanja, dan secara cerdas memilih kategori pengeluaran yang paling sesuai.'
+            : 'When you capture or upload a receipt image, server-side Gemini 3.6 Flash AI analyzes the visual text. The AI extracts merchant name, total amount, transaction date, and intelligently assigns the matching spending category.'
+        },
+        {
+          q: isId ? 'Bagaimana cara menggunakan Kalkulator & Lab Keuangan (Dana Darurat, Zakat, DTI/KPR, FIRE, Inflasi Pendidikan)?' : 'How to use the Financial Calculators & Lab (Emergency Fund, Zakat, DTI, FIRE, Education Inflation)?',
+          a: isId 
+            ? 'Buka menu "Kalkulator & Lab Keuangan" dari sidebar atau menu navigasi. Pilih tab simulasi yang Anda butuhkan: Dana Darurat (menghitung bantalan kas ideal berdasarkan pengeluaran bulanan), Zakat (menghitung zakat mal & profesi 2.5% berdasarkan nisab emas 85g dan saldo kas/aset otomatis), DTI & KPR (menguji batas aman cicilan 30%), FIRE Dana Pensiun (menghitung target dana pensiun dengan Aturan 4%), atau Inflasi Pendidikan (melihat estimasi biaya sekolah anak di masa depan).'
+            : 'Open "Calculators & Financial Lab" from the sidebar menu. Choose your desired simulation tab: Emergency Fund (calculates ideal buffer based on monthly expenses), Zakat (computes 2.5% wealth zakat against 85g gold nisab using live app cash/assets), Debt Ratio & Mortgage DTI (tests 30% safe debt limit), FIRE Retirement (projects target retirement fund using the 4% rule), or Education Inflation (projects future child schooling cost).'
+        }
+      ]
     },
     {
-      q: isId ? 'Bagaimana cara menggunakan filter Scope Workspace (Semua Workspace, Keluarga, Pribadi)?' : 'How does the Workspace Scope Filter work (All Workspaces, Family, Personal)?',
-      a: isId 
-        ? 'Di bagian atas setiap halaman (Arus Kas, Anggaran, Utang, Tagihan, Target, Aset, Laporan), Anda dapat mengeklik tombol switch filter workspace. Opsi "Semua Workspace" menggabungkan seluruh catatan data dari Dompet Pribadi dan Dompet Keluarga tanpa perlu berganti-ganti workspace.'
-        : 'At the top of each view (Cash Flow, Budgeting, Debts, Bills, Goals, Assets, Reports), click the workspace scope switcher. Selecting "All Workspaces" aggregates data from both Personal and Family wallets into a unified view.'
-    },
-    {
-      q: isId ? 'Bagaimana cara melakukan cadangan data offline (Offline Backup) & ekspor laporan?' : 'How to export offline data backups and financial statements?',
-      a: isId 
-        ? 'Buka menu "Laporan", lalu scroll ke bagian "Ekspor Laporan & Cadangan Data". Pilih bulan, tahun, scope workspace, serta jenis data yang ingin disertakan (Rekening Kas Likuid, Aset Fisik, Utang/Piutang, Arus Kas, Amplop Anggaran). Pilih format CSV (untuk Excel/Spreadsheet) atau JSON (cadangan aplikasi), lalu klik Unduh.'
-        : 'Navigate to "Reports" -> scroll to "Export Statement & Backup". Choose month, year, workspace scope, and dataset checkboxes (Liquid Cash Accounts, Physical Assets, Debts, Cash Flow, Budget Envelopes). Download in CSV spreadsheet or full JSON format.'
-    },
-    {
-      q: isId ? 'Apakah seluruh riwayat perubahan data tercatat di Log Aktivitas?' : 'Are all data changes recorded in the Activity Log?',
-      a: isId 
-        ? 'Ya. Menu Log Aktivitas mencatat seluruh jejak audit (Audit Trail) saat data dibuat, diubah, atau dihapus secara transparan beserta timestamp dan kategorinya. Anda juga dapat mengatur pembersihan log otomatis (Auto Clean) atau mengunduh cadangan JSON di menu Laporan untuk mengamankan data.'
-        : 'Yes. The Activity Log records a full audit trail whenever data is created, edited, or deleted, along with timestamps and entity details. You can also configure Auto Clean retention or export JSON backups in Reports to safeguard your data.'
-    },
-    {
-      q: isId ? 'Apakah data transaksi saya aman dan bisa dikunci dengan PIN?' : 'Is my financial data secure and protected with a PIN lock?',
-      a: isId 
-        ? 'Ya. Data Anda disimpan secara terenkripsi di Firestore dan dilindungi Aturan Keamanan Server (Firestore Rules). Selain itu, Anda dapat mengaktifkan opsi "Keamanan PIN 6-Digit" di menu Pengaturan untuk mengunci layar aplikasi.'
-        : 'Yes. Data is securely stored in encrypted Firestore guarded by server security rules. Furthermore, enable "6-Digit Security PIN" in Settings to lock the application screen.'
-    },
-    {
-      q: isId ? 'Bagaimana perhitungan Satuan Borongan (Kalsel) dan Revaluasi Nilai Aset?' : 'How does traditional Borongan unit conversion and asset revaluation work?',
-      a: isId 
-        ? 'Untuk aset kategori Tanah/Lahan, sistem mengodekan rumus standar Kalimantan Selatan di mana 1 Hektar (10.000 m²) setara dengan 35 Borongan (1 Borongan ≈ 285,7 m²). Harga beli dan nilai efektif saat ini dikalkulasi otomatis dalam rupiah per m² serta rupiah per borongan. Anda juga dapat menambah riwayat Revaluasi harga tanah/bangunan di modal detail aset untuk melacak kenaikan nilai investasi.'
-        : 'For land assets, the app converts area into traditional South Kalimantan Borongan units (1 Hectare = 35 Borongan, 1 Borongan ≈ 285.7 m²). Price per m² and per borongan are calculated automatically. You can also append revaluation records in asset details to track real estate appreciation over time.'
-    },
-    {
-      q: isId ? 'Bagaimana cara melakukan Rekonsiliasi Saldo Kas & Rekening Bank?' : 'How does Bank Account & Cash Reconciliation work?',
-      a: isId 
-        ? 'Di menu Pengaturan / Rekening, klik tombol "Rekonsiliasi" pada rekening yang ingin disesuaikan. Masukkan saldo fisik riil saat ini (hasil opname kas atau cetak koran). Jika terdapat selisih, sistem akan otomatis membuat transaksi penyesuaian kas (Adjustment) sehingga saldo aplikasi dan saldo nyata selalu sinkron 100%.'
-        : 'In Settings / Accounts, click the "Reconcile" button on any account. Enter the actual real balance (from bank statement or cash audit). If a gap exists, the app generates a balancing adjustment transaction to ensure 100% balance alignment.'
-    },
-    {
-      q: isId ? 'Kapan sebuah transaksi dikategorikan sebagai Capex (Kapitalisasi) vs Opex (Operasional)?' : 'When is a transaction categorized as Capex vs Opex?',
-      a: isId 
-        ? 'Transaksi dikategorikan sebagai Capex (Capital Expenditure) ketika biaya tersebut menambah nilai perolehan (Purchase Price) suatu Aset Fisik atau Sub-Aset, sehingga meningkatkan total kekayaan aset dan memperbarui dasar kalkulasi depresiasinya (misal: merenovasi rumah, upgrade mesin). Sedangkan Opex (Operational Expenditure) adalah pengeluaran rutin yang sekadar menjaga fungsi aset tanpa menambah nilai jual (misal: servis rutin, isi bensin, bayar listrik). Anda dapat memilih opsi "Terkapitalisasi" saat mencatat transaksi pengeluaran yang terhubung ke Aset.'
-        : 'A transaction is categorized as Capex (Capital Expenditure) when the cost increases the acquisition value of a Physical Asset or Sub-Asset, directly boosting your total asset wealth and updating depreciation baselines (e.g., home renovation). Opex (Operational Expenditure) refers to routine expenses to maintain asset function without increasing its book value (e.g., routine servicing). You can check the "Capitalized" option when logging an expense linked to an Asset.'
+      category: isId ? 'Sistem, Keamanan & Pencadangan' : 'System, Security & Backups',
+      items: [
+        {
+          q: isId ? 'Bagaimana cara menggunakan filter Scope Workspace (Semua Workspace, Keluarga, Pribadi)?' : 'How does the Workspace Scope Filter work (All Workspaces, Family, Personal)?',
+          a: isId 
+            ? 'Di bagian atas setiap halaman (Arus Kas, Anggaran, Utang, Tagihan, Target, Aset, Laporan), Anda dapat mengeklik tombol switch filter workspace. Opsi "Semua Workspace" menggabungkan seluruh catatan data dari Dompet Pribadi dan Dompet Keluarga tanpa perlu berganti-ganti workspace.'
+            : 'At the top of each view (Cash Flow, Budgeting, Debts, Bills, Goals, Assets, Reports), click the workspace scope switcher. Selecting "All Workspaces" aggregates data from both Personal and Family wallets into a unified view.'
+        },
+        {
+          q: isId ? 'Bagaimana cara melakukan cadangan data offline (Offline Backup) & ekspor laporan?' : 'How to export offline data backups and financial statements?',
+          a: isId 
+            ? 'Buka menu "Laporan", lalu scroll ke bagian "Ekspor Laporan & Cadangan Data". Pilih bulan, tahun, scope workspace, serta jenis data yang ingin disertakan (Rekening Kas Likuid, Aset Fisik, Utang/Piutang, Arus Kas, Amplop Anggaran). Pilih format CSV (untuk Excel/Spreadsheet) atau JSON (cadangan aplikasi), lalu klik Unduh.'
+            : 'Navigate to "Reports" -> scroll to "Export Statement & Backup". Choose month, year, workspace scope, and dataset checkboxes (Liquid Cash Accounts, Physical Assets, Debts, Cash Flow, Budget Envelopes). Download in CSV spreadsheet or full JSON format.'
+        },
+        {
+          q: isId ? 'Apakah seluruh riwayat perubahan data tercatat di Log Aktivitas?' : 'Are all data changes recorded in the Activity Log?',
+          a: isId 
+            ? 'Ya. Menu Log Aktivitas mencatat seluruh jejak audit (Audit Trail) saat data dibuat, diubah, atau dihapus secara transparan beserta timestamp dan kategorinya. Anda juga dapat mengatur pembersihan log otomatis (Auto Clean) atau mengunduh cadangan JSON di menu Laporan untuk mengamankan data.'
+            : 'Yes. The Activity Log records a full audit trail whenever data is created, edited, or deleted, along with timestamps and entity details. You can also configure Auto Clean retention or export JSON backups in Reports to safeguard your data.'
+        },
+        {
+          q: isId ? 'Apakah data transaksi saya aman dan bisa dikunci dengan PIN?' : 'Is my financial data secure and protected with a PIN lock?',
+          a: isId 
+            ? 'Ya. Data Anda disimpan secara terenkripsi di Firestore dan dilindungi Aturan Keamanan Server (Firestore Rules). Selain itu, Anda dapat mengaktifkan opsi "Keamanan PIN 6-Digit" di menu Pengaturan untuk mengunci layar aplikasi.'
+            : 'Yes. Data is securely stored in encrypted Firestore guarded by server security rules. Furthermore, enable "6-Digit Security PIN" in Settings to lock the application screen.'
+        }
+      ]
     }
   ];
 
@@ -701,27 +795,37 @@ export function Help({ onNavigate }: HelpProps) {
             {isId ? 'Pertanyaan yang Sering Diajukan (FAQ)' : 'Frequently Asked Questions'}
           </h3>
 
-          <div className="space-y-3">
-            {faqs.map((faq, idx) => (
-              <div 
-                key={idx} 
-                className="bg-surface border border-outline-variant rounded-2xl overflow-hidden transition-colors"
-              >
-                <button
-                  onClick={() => toggleFaq(idx)}
-                  className="w-full text-left p-5 flex items-center justify-between gap-4 font-bold text-sm text-on-surface hover:bg-surface-container-low transition-colors cursor-pointer"
-                >
-                  <span>{faq.q}</span>
-                  <span className={`material-symbols-outlined text-primary transition-transform duration-200 ${expandedFaq === idx ? 'rotate-180' : ''}`}>
-                    keyboard_arrow_down
-                  </span>
-                </button>
+          <div className="space-y-6">
+            {faqGroups.map((group, groupIdx) => (
+              <div key={groupIdx} className="space-y-3">
+                <h4 className="font-bold text-primary mb-2 uppercase text-[11px] tracking-wider px-2">
+                  {group.category}
+                </h4>
+                {group.items.map((faq, idx) => {
+                  const faqId = `${groupIdx}-${idx}`;
+                  return (
+                    <div 
+                      key={idx} 
+                      className="bg-surface border border-outline-variant rounded-2xl overflow-hidden transition-colors"
+                    >
+                      <button
+                        onClick={() => toggleFaq(faqId)}
+                        className="w-full text-left p-5 flex items-center justify-between gap-4 font-bold text-sm text-on-surface hover:bg-surface-container-low transition-colors cursor-pointer"
+                      >
+                        <span>{faq.q}</span>
+                        <span className={`material-symbols-outlined text-primary transition-transform duration-200 ${expandedFaq === faqId ? 'rotate-180' : ''}`}>
+                          keyboard_arrow_down
+                        </span>
+                      </button>
 
-                {expandedFaq === idx && (
-                  <div className="px-5 pb-5 pt-1 text-xs text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-lowest">
-                    {faq.a}
-                  </div>
-                )}
+                      {expandedFaq === faqId && (
+                        <div className="px-5 pb-5 pt-1 text-xs text-on-surface-variant leading-relaxed border-t border-outline-variant/40 bg-surface-container-lowest">
+                          {faq.a}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>

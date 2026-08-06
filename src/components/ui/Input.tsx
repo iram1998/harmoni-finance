@@ -29,6 +29,11 @@ export function Input({
         )}
         <input
           className={`h-12 bg-surface-container-lowest border rounded-xl px-4 font-body-md text-on-surface focus:outline-none focus:ring-2 transition-all placeholder:text-outline-variant ${icon ? 'pl-10' : ''} ${errorClass} ${className} ${widthClass}`}
+          onWheel={(e) => {
+            if (props.type === 'number') {
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
           {...props}
         />
       </div>

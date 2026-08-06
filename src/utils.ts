@@ -123,32 +123,51 @@ export function calculateAssetDepreciation(
 }
 
 export function getAssetEffectiveValue(asset: Asset, allAssets?: Asset[], allTransactions?: Transaction[]): number {
-  const capitalizedFromTx = allTransactions
-    ? allTransactions.filter(t => t.assetId === asset.id && t.isCapitalization && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
+  let baseVal = 0;
+  let baselineDate = asset.purchaseDate || '';
+  let isBaselineInit = true;
+
+  // 1. Determine the latest baseline value (Revaluation or Purchase Price)
+  if (asset.valuationHistory && asset.valuationHistory.length > 0) {
+    const sortedHistory = [...asset.valuationHistory].sort((a, b) => a.date.localeCompare(b.date));
+    const latestValuation = sortedHistory[sortedHistory.length - 1];
+    baseVal = latestValuation.value;
+    baselineDate = latestValuation.date;
+    isBaselineInit = latestValuation.id.startsWith('val-init');
+  } else {
+    // Fallback if no history
+    baseVal = asset.purchasePrice || asset.currentValue || 0;
+  }
+
+  // 2. Add CAPEX occurring AFTER the baseline date (or ON the baseline date if it's the initial purchase)
+  const capexAfterBaseline = allTransactions
+    ? allTransactions
+        .filter(t => t.assetId === asset.id && t.isCapitalization && t.type === 'expense')
+        .filter(t => isBaselineInit ? t.date >= baselineDate : t.date > baselineDate)
+        .reduce((sum, t) => sum + t.amount, 0)
     : 0;
 
-  const effectiveCost = Math.max(asset.purchasePrice || 0, asset.currentValue || 0, capitalizedFromTx);
+  let effectiveValue = baseVal + capexAfterBaseline;
 
-  let baseVal = Math.max(asset.currentValue || 0, effectiveCost);
-
-  if (asset.useAutoDepreciation && asset.depreciationMethod && asset.depreciationMethod !== 'none' && effectiveCost > 0) {
+  // 3. Apply Depreciation if active
+  if (asset.useAutoDepreciation && asset.depreciationMethod && asset.depreciationMethod !== 'none' && effectiveValue > 0) {
     const dep = calculateAssetDepreciation(
-      effectiveCost,
-      asset.purchaseDate,
+      effectiveValue,
+      baselineDate || asset.purchaseDate,
       asset.depreciationMethod,
       asset.depreciationUsefulLife || 5,
       asset.depreciationSalvageValue || 0
     );
-    baseVal = dep.currentValue;
+    effectiveValue = dep.currentValue;
   }
 
   if (allAssets && allAssets.length > 0) {
     const subAssets = allAssets.filter(a => a.parentAssetId === asset.id);
     const subVal = subAssets.reduce((sum, sa) => sum + getAssetEffectiveValue(sa, allAssets, allTransactions), 0);
-    return baseVal + subVal;
+    return effectiveValue + subVal;
   }
 
-  return baseVal;
+  return effectiveValue;
 }
 
 /**
