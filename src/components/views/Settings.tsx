@@ -69,6 +69,11 @@ export function Settings() {
   });
   const [isCleaningAuditLogs, setIsCleaningAuditLogs] = useState(false);
   
+  // Asset revaluation reminder state
+  const [isAssetRevalReminderEnabled, setIsAssetRevalReminderEnabled] = useState(() => {
+    return localStorage.getItem('harmoni_reval_reminder_enabled') !== 'false';
+  });
+  
   // Category delete state
   const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<any | null>(null);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
@@ -470,6 +475,18 @@ export function Settings() {
         language === 'id' ? 'Auto Clean Nonaktif' : 'Auto Clean Disabled'
       );
     }
+  };
+
+  const handleToggleRevalReminder = (enabled: boolean) => {
+    localStorage.setItem('harmoni_reval_reminder_enabled', enabled ? 'true' : 'false');
+    setIsAssetRevalReminderEnabled(enabled);
+    showToast(
+      language === 'id' 
+        ? (enabled ? 'Pengingat revaluasi berkala tahunan aktif.' : 'Pengingat revaluasi dinonaktifkan.') 
+        : (enabled ? 'Annual revaluation reminder enabled.' : 'Revaluation reminder disabled.'),
+      enabled ? 'success' : 'info',
+      language === 'id' ? 'Pengaturan Disimpan' : 'Settings Updated'
+    );
   };
 
   const handleSaveAutoCleanDays = (val: string) => {
@@ -1017,6 +1034,51 @@ export function Settings() {
               </p>
             </div>
           </div>
+        </div>
+      </Card>
+
+      {/* Asset Revaluation Reminder */}
+      <Card variant="default" className="p-6 border border-outline-variant shadow-sm overflow-hidden animate-fadeIn">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-outline-variant">
+          <span className="material-symbols-outlined text-primary text-2xl">event_upcoming</span>
+          <div>
+            <h3 className="font-headline-sm text-on-surface">
+              {language === 'id' ? 'Pengingat Revaluasi Aset' : 'Asset Revaluation Reminder'}
+            </h3>
+            <p className="font-body-sm text-on-surface-variant">
+              {language === 'id' 
+                ? 'Kelola notifikasi pengingat untuk menilai kembali (revaluasi) aset fisik Anda yang tidak menyusut otomatis' 
+                : 'Manage reminders to re-evaluate physical assets that do not automatically depreciate'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-start justify-between p-4 rounded-xl border border-outline-variant bg-surface-container-low/60 hover:bg-surface-container-low transition-colors duration-200">
+          <div className="flex gap-3.5 max-w-[80%]">
+            <div className="p-2.5 rounded-lg bg-primary-container text-on-primary-container mt-0.5">
+              <span className="material-symbols-outlined text-[20px]">notifications_active</span>
+            </div>
+            <div>
+              <h4 className="font-label-lg text-on-surface">
+                {language === 'id' ? 'Aktifkan Pengingat Tahunan' : 'Enable Annual Reminder'}
+              </h4>
+              <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                {language === 'id' 
+                  ? 'Menampilkan peringatan di Dashboard jika ada aset yang nilainya tidak diperbarui selama lebih dari 1 tahun.' 
+                  : 'Displays an alert on the Dashboard if any asset\'s value has not been updated for more than 1 year.'}
+              </p>
+            </div>
+          </div>
+
+          <label className="relative inline-flex items-center cursor-pointer mt-1 select-none">
+            <input 
+              type="checkbox" 
+              checked={isAssetRevalReminderEnabled} 
+              onChange={(e) => handleToggleRevalReminder(e.target.checked)} 
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+          </label>
         </div>
       </Card>
 

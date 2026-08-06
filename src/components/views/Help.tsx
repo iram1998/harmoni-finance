@@ -65,7 +65,7 @@ export function Help({ onNavigate }: HelpProps) {
     {
       step: '03',
       title: isId ? 'Manajemen Utang & Piutang (Debts & Receivables)' : 'Debts & Receivables Management',
-      subtitle: isId ? 'Pencatatan Kewajiban, Tagihan Piutang, & Pelunasan' : 'Tracking Liabilities, Receivables, & Installments',
+      subtitle: isId ? 'Pencatatan Kewajiban, Tagihan Piutang, & Pelunasan Interaktif' : 'Tracking Liabilities, Receivables, & Installments',
       icon: 'account_balance',
       color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
       navTarget: 'debts',
@@ -73,21 +73,21 @@ export function Help({ onNavigate }: HelpProps) {
         {
           heading: isId ? '1. Mencatat Utang & Piutang Baru' : '1. Logging Debts & Receivables',
           text: isId 
-            ? 'Buka menu "Utang & Piutang" -> klik "+ Tambah Utang / Piutang". Pilih jenis (Utang yang harus Anda bayar atau Piutang yang harus Anda tagih), nominal, pemberi/penerima pinjaman, dan tanggal jatuh tempo.'
+            ? 'Buka menu "Utang & Piutang" -> klik "+ Tambah Utang / Piutang". Pilih jenis (Utang yang Anda bayar atau Piutang yang Anda tagih), nominal, pemberi/penerima pinjaman, dan tanggal jatuh tempo.'
             : 'Open "Debts & Receivables" -> click "+ Add Debt/Receivable". Select type (Debt owed by you or Receivable owed to you), total amount, counterparty, and due date.'
         },
         {
-          heading: isId ? '2. Pelunasan Bertahap & Mutasi Rekening' : '2. Installments & Automatic Account Balance Update',
+          heading: isId ? '2. Pelunasan Bertahap & Pemulihan Saldo Otomatis' : '2. Installments & Automatic Debt Balance Recovery',
           text: isId 
-            ? 'Klik "+ Catat Pelunasan" pada entitas utang/piutang. Membayar utang akan memotong saldo rekening pilihan, sedangkan menerima pelunasan piutang akan menambah saldo rekening secara otomatis.'
-            : 'Click "+ Log Payment" on any record. Paying a debt automatically deducts from your bank account, while receiving a receivable payment increases your account balance.'
+            ? 'Catat cicilan dari menu Utang Piutang atau langsung dari formulir Transaksi dengan memilih "Hubungkan ke Catatan Utang/Piutang". Membayar utang otomatis memotong saldo rekening & mencatat kas keluar, sedangkan menerima piutang menambah saldo rekening. Apabila transaksi cicilan dihapus di menu Arus Kas, sisa saldo utang/piutang otomatis dipulihkan kembali!'
+            : 'Log installments via Debts view or directly from Transaction modal by selecting "Link to Debt/Receivable". Paying debt deducts account balance, receiving repayments adds to balance. Deleting an installment transaction in Cash Flow automatically restores the remaining debt balance!'
         }
       ]
     },
     {
       step: '04',
-      title: isId ? 'Amplop Anggaran & Tagihan Rutin' : 'Envelope Budgeting & Recurring Bills',
-      subtitle: isId ? 'Batas Belanja Bulanan, Safe Spend, & Pengingat PLN/BPJS' : 'Spending Limits, Daily Safe Spend, & Bill Reminders',
+      title: isId ? 'Amplop Anggaran & Pengingat Tagihan Rutin' : 'Envelope Budgeting & Recurring Bills',
+      subtitle: isId ? 'Batas Belanja Bulanan, Safe Spend, & Tagihan Rutin (Sewa Toko, Wi-Fi, PLN)' : 'Spending Limits, Daily Safe Spend, & Recurring Bills',
       icon: 'savings',
       color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
       navTarget: 'budgeting',
@@ -99,10 +99,10 @@ export function Help({ onNavigate }: HelpProps) {
             : 'In "Budgeting", create envelope monthly limits per category. The app calculates Daily Safe Spend targets to prevent overspending.'
         },
         {
-          heading: isId ? '2. Pengingat & Eksekusi Bayar Tagihan' : '2. Bill Reminders & One-Click Payments',
+          heading: isId ? '2. Tagihan Repetitif / Rutin (Sewa Toko, Kontrakan, PLN, Wi-Fi)' : '2. Recurring Bills (Rent, Utilities, Internet)',
           text: isId 
-            ? 'Di menu "Tagihan", daftarkan PLN, Indihome, BPJS, atau cicilan. Klik "Bayar Sekarang" untuk memotong saldo rekening dan mencatat transaksi kas keluar otomatis.'
-            : 'In "Bills", register utilities or subscriptions. Click "Pay Now" to deduct from your selected bank account and log the cash outflow automatically.'
+            ? 'Di menu "Tagihan", daftarkan tagihan rutin (sewa toko, kontrakan, Wi-Fi, PLN/PDAM, BPJS). Ketika Anda mengeklik "Bayar Sekarang", sistem otomatis memotong saldo rekening/E-Wallet pilihan, mencatat transaksi kas keluar di Arus Kas, dan secara otomatis memajukan tanggal jatuh tempo ke periode berikutnya (Bulanan, Mingguan, atau Tahunan).'
+            : 'In "Bills", register recurring bills (store rent, house rent, Wi-Fi, electricity, BPJS). Clicking "Pay Now" automatically deducts from your chosen bank/E-Wallet, records an expense transaction, and rolls the due date forward to the next period (Monthly, Weekly, Yearly).'
         }
       ]
     },
@@ -191,12 +191,12 @@ export function Help({ onNavigate }: HelpProps) {
       menu: isId ? 'Arus Kas (Cash Flow)' : 'Cash Flow',
       icon: 'swap_horiz',
       description: isId 
-        ? 'Catatan buku kas digital lengkap untuk mencatat pengeluaran, pemasukan, dan transfer antar rekening beserta fitur pencarian dan filter scope workspace.'
-        : 'Digital cashbook for recording expenses, incomes, and inter-account transfers with search, category filter, and workspace scope selection.',
+        ? 'Catatan buku kas digital lengkap untuk mencatat pengeluaran, pemasukan, transfer rekening, alokasi Target Tabungan, dan cicilan Utang/Piutang beserta atribut Anggota Keluarga.'
+        : 'Digital cashbook for recording expenses, incomes, inter-account transfers, savings goal deposits, and debt/receivable payments with family member attribution.',
       howToRead: [
-        isId ? '1. Filter Scope Workspace: Bebas berganti antara "Semua Workspace", "Keluarga", atau "Pribadi".' : '1. Workspace Scope Filter: Switch between "All Workspaces", "Family", or "Personal".',
-        isId ? '2. Pencarian & Filter Tipe: Filter cepat berdasarkan kata kunci deskripsi, kategori, atau tipe transaksi (Pemasukan/Pengeluaran).' : '2. Search & Type Filters: Filter instantly by keywords, categories, or transaction types.',
-        isId ? '3. Pengodean Warna: Hijau untuk Pemasukan (+), Merah untuk Pengeluaran (-), dan Biru untuk Transfer antar rekening.' : '3. Color Coding: Green for Income (+), Red for Expenses (-), and Blue for Transfers.'
+        isId ? '1. Tag Anggota Keluarga & Kategori: Transaksi dapat ditandai ke Anggota Keluarga (Ayah, Ibu, Anak) untuk melacak porsi pengeluaran rumah tangga.' : '1. Family Member Tagging: Tag transactions to specific family members to track household expenditure shares.',
+        isId ? '2. Hubungkan ke Utang/Piutang & Target: Pilihan dropdown saat tambah transaksi untuk langsung melunasi utang atau menyetor ke Target Tabungan.' : '2. Debt/Goal Linkage: Select dropdowns when creating transactions to directly pay off debts or deposit into savings goals.',
+        isId ? '3. Pemulihan Otomatis Saat Hapus: Menghapus transaksi cicilan utang di Arus Kas akan otomatis memulihkan sisa saldo utang/piutang ke jumlah sebelumnya.' : '3. Auto Recovery on Delete: Deleting a debt installment transaction automatically restores the debt/receivable balance.'
       ]
     },
     {
@@ -215,12 +215,12 @@ export function Help({ onNavigate }: HelpProps) {
       menu: isId ? 'Utang & Piutang (Debts & Receivables)' : 'Debts & Receivables',
       icon: 'account_balance',
       description: isId 
-        ? 'Modul pencatatan kewajiban utang dan tagihan piutang lengkap dengan tanggal jatuh tempo, status pelunasan, serta riwayat cicilan yang otomatis memperbarui saldo rekening.'
-        : 'Module for managing debt obligations and receivables with due dates, payment status, and installment tracking that automatically syncs bank balances.',
+        ? 'Modul pencatatan kewajiban utang dan tagihan piutang lengkap dengan tanggal jatuh tempo, status pelunasan, riwayat cicilan, serta sinkronisasi dua arah ke Arus Kas.'
+        : 'Module for managing debt obligations and receivables with due dates, payment status, installment history, and two-way sync with Cash Flow.',
       howToRead: [
         isId ? '1. Pemisahan Tab Utang vs Piutang: Tab Utang berisi kewajiban pembayaran Anda, sedangkan Tab Piutang berisi uang yang harus Anda tagih dari pihak lain.' : '1. Debts vs Receivables Tabs: Debt tab lists your obligations, while Receivable tab tracks money owed to you.',
         isId ? '2. Eksekusi "+ Catat Pelunasan": Setiap pembayaran atau penerimaan cicilan akan mencatat transaksi di Arus Kas dan menyesuaikan saldo rekening terpilih.' : '2. "+ Log Payment" Execution: Payments or repayments update Cash Flow records and automatically reflect in your chosen bank account.',
-        isId ? '3. Progress Bar Pelunasan: Menampilkan persentase jumlah sisa utang/piutang dibandingkan dengan total nominal awal.' : '3. Payment Progress Bar: Shows remaining balance percentage against initial principal amount.'
+        isId ? '3. Integritas Data Dihapus: Menghapus transaksi pembayaran utang/piutang di Arus Kas akan mengembalikan sisa saldo kewajiban dan memperbarui status kembali ke aktif.' : '3. Deleted Data Integrity: Deleting debt payment transactions restores remaining debt amounts and resets status to active if necessary.'
       ]
     },
     {
@@ -255,12 +255,12 @@ export function Help({ onNavigate }: HelpProps) {
       menu: isId ? 'Tagihan & Langganan (Bills)' : 'Bills & Subscriptions',
       icon: 'receipt_long',
       description: isId 
-        ? 'Pengelola kewajiban rutin bulanan/tahunan seperti PLN, PDAM, Internet, BPJS, streaming, dan cicilan lengkap dengan pengingat jatuh tempo.'
-        : 'Manager for recurring obligations like utilities, internet, insurance, streaming, and loans with due date alerts.',
+        ? 'Pengelola kewajiban rutin/repetitif bulanan, mingguan, atau tahunan seperti Sewa Toko, Kontrakan, PLN, PDAM, Internet, BPJS, dan streaming.'
+        : 'Manager for recurring/repetitive obligations like store rent, house rent, utilities, internet, insurance, and subscriptions.',
       howToRead: [
-        isId ? '1. Badge Status Jatuh Tempo: Lunas (Hijau), Belum Dibayar (Kuning), Terlambat (Merah).' : '1. Status Badges: Paid (Green), Unpaid (Yellow), Overdue (Red).',
-        isId ? '2. Eksekusi "Bayar Sekarang": Langsung memotong saldo rekening bank/e-wallet dan mencatat transaksi kas keluar.' : '2. "Pay Now" Execution: Immediately deducts from selected bank account and logs transaction.',
-        isId ? '3. Filter Scope Workspace: Memisahkan daftar tagihan antara kebutuhan Pribadi dan Rumah Tangga/Keluarga.' : '3. Workspace Filter: Separates bill lists between Personal and Family obligations.'
+        isId ? '1. Tagihan Rutin Repetitif: Tagihan yang ditandai "Rutin" akan otomatis memajukan tanggal jatuh tempo (Jatuh Tempo Berikutnya) setiap kali dilunasi.' : '1. Recurring Bills: Bills marked as recurring automatically advance their due date to the next cycle upon payment.',
+        isId ? '2. Eksekusi "Bayar Sekarang": Pilih rekening sumber (Bank BCA, Mandiri, E-Wallet) untuk memotong saldo, mencatat transaksi pengeluaran di Arus Kas, dan memperbarui status tagihan.' : '2. "Pay Now" Execution: Select payment account (Bank, E-Wallet) to deduct balance, log cash outflow in Cash Flow, and update bill status.',
+        isId ? '3. Badge Tagihan & Kategori: Kategori pengeluaran (Utilitas, Sewa, Operasional) dan tipe tagihan (Sekali Bayar vs Rutin) ditampilkan dengan badge khusus.' : '3. Category & Type Badges: Expense category (Utilities, Rent, Operations) and bill type (One-time vs Recurring) are displayed with distinct badges.'
       ]
     },
     {
@@ -338,10 +338,34 @@ export function Help({ onNavigate }: HelpProps) {
             : 'Liquid Cash Accounts (BCA, Mandiri, Cash, GoPay) hold spendable funds. Physical Assets (land, vehicles, gold) contribute to Net Worth. Debts represent your financial liabilities, while Receivables represent money owed to you by others.'
         },
         {
+          q: isId ? 'Apa yang terjadi jika transaksi cicilan Utang/Piutang dihapus di Arus Kas?' : 'What happens if a debt/receivable installment transaction is deleted from Cash Flow?',
+          a: isId 
+            ? 'Saat Anda menghapus transaksi pembayaran cicilan utang atau penerimaan piutang di menu Arus Kas, sistem otomatis menambahkan kembali nominal transaksi tersebut ke sisa utang/piutang (Debt Remaining Balance) dan mengubah statusnya kembali ke "Aktif" jika tadinya dianggap Lunas. Saldo rekening bank juga disesuaikan secara presisi.'
+            : 'When you delete a debt installment or receivable repayment transaction in Cash Flow, the app automatically adds the amount back to the debt remaining balance and resets its status to "Active" if it was marked paid. The payment account balance is also adjusted accordingly.'
+        },
+        {
+          q: isId ? 'Bagaimana cara melihat Rincian & Salin Detail Transaksi Lengkap?' : 'How to view Transaction Details & Copy Summary?',
+          a: isId
+            ? 'Klik baris transaksi mana saja di Arus Kas untuk membuka Jendela Rincian Transaksi. Anda dapat melihat informasi lengkap seperti rekening bank, kategori, catatan, anggota keluarga, keterhubungan ke Aset (Capex/Opex), serta kewajiban Utang/Piutang terkait. Gunakan tombol "Salin Detail" untuk menyalin format ringkasan teks atau "Salin ID" untuk verifikasi.'
+            : 'Click any transaction row in Cash Flow to open the Transaction Detail Modal. View full details including account, category, notes, family member, linked Asset (Capex/Opex), and linked Debt/Receivable status. Use "Copy Summary" for formatted text or "Copy ID" for verification.'
+        },
+        {
+          q: isId ? 'Bagaimana cara kerja pembayaran Pengingat Tagihan Rutin (Sewa Toko, PLN, Wi-Fi)?' : 'How does paying Recurring Bill Reminders work?',
+          a: isId 
+            ? 'Ketika Anda mengeklik "Bayar Sekarang" pada Tagihan Rutin (misal Sewa Toko, PLN, Indihome), aplikasi memotong saldo rekening pilihan Anda, membuat transaksi pengeluaran di Arus Kas, dan otomatis memajukan tanggal jatuh tempo (Due Date) ke siklus berikutnya (Bulanan, Mingguan, atau Tahunan).'
+            : 'When you click "Pay Now" on a Recurring Bill (e.g. Store Rent, Electricity, Wi-Fi), the app deducts from your chosen payment account, creates a Cash Flow expense transaction, and automatically rolls the due date forward to the next cycle (Monthly, Weekly, Yearly).'
+        },
+        {
           q: isId ? 'Bagaimana pencatatan cicilan / pelunasan Utang & Piutang mempengaruhi saldo rekening?' : 'How does debt/receivable payment logging affect bank balances?',
           a: isId 
             ? 'Saat Anda mencatat pelunasan Utang, sistem otomatis memotong saldo rekening bank/e-wallet pilihan dan mencatat transaksi Kas Keluar. Sebaliknya, saat mencatat penerimaan cicilan Piutang, saldo rekening bank akan bertambah otomatis sebagai Kas Masuk.'
             : 'When logging a debt payment, the app automatically deducts funds from your selected bank account and creates an expense record. Conversely, receiving receivable payments increases your account balance and logs an income transaction.'
+        },
+        {
+          q: isId ? 'Bagaimana cara menandai transaksi per Anggota Keluarga?' : 'How to tag transactions per Family Member?',
+          a: isId 
+            ? 'Di formulir Tambah/Edit Transaksi pada workspace Keluarga, Anda dapat memilih dropdown "Anggota Keluarga" (misal: Ayah, Ibu, Anak). Ini memudahkan Anda menyaring dan menganalisis porsi pengeluaran masing-masing anggota keluarga di Laporan Keuangan.'
+            : 'In the Add/Edit Transaction form within Family workspace, select the "Family Member" dropdown (e.g. Father, Mother, Child). This allows you to filter and analyze expenditure shares per family member in Financial Reports.'
         },
         {
           q: isId ? 'Bagaimana cara melakukan Rekonsiliasi Saldo Kas & Rekening Bank?' : 'How does Bank Account & Cash Reconciliation work?',

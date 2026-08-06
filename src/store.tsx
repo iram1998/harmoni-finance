@@ -41,7 +41,7 @@ interface FinanceState {
   addBill: (b: Omit<Bill, 'id'>) => Promise<void>;
   updateBill: (id: string, b: Partial<Bill>) => Promise<void>;
   deleteBill: (id: string) => Promise<void>;
-  markBillPaid: (id: string) => Promise<void>;
+  markBillPaid: (id: string, customPaymentAccountId?: string) => Promise<void>;
   customCategories: TransactionCategory[];
   addCategory: (name: string, type: 'income' | 'expense', color?: string) => Promise<void>;
   updateCategory: (id: string, name: string, type: 'income' | 'expense', color?: string) => Promise<void>;
@@ -56,10 +56,21 @@ interface FinanceState {
   deletePaymentAccount: (id: string) => Promise<void>;
   reconcilePaymentAccount: (id: string, realBalance: number, reason: string) => Promise<void>;
   debts: Debt[];
-  addDebt: (name: string, type: 'payable' | 'receivable', amount: number, dueDate?: string, wsId?: WorkspaceType) => Promise<void>;
+  addDebt: (
+    name: string,
+    type: 'payable' | 'receivable',
+    amount: number,
+    dueDate?: string,
+    wsId?: WorkspaceType,
+    startDate?: string,
+    remainingAmount?: number,
+    installmentDay?: number,
+    notes?: string,
+    tenorMonths?: number
+  ) => Promise<void>;
   updateDebt: (id: string, d: Partial<Debt>) => Promise<void>;
   deleteDebt: (id: string) => Promise<void>;
-  payDebt: (debtId: string, paymentAmount: number, paymentAccountId?: string) => Promise<void>;
+  payDebt: (debtId: string, paymentAmount: number, paymentAccountId?: string, paymentDate?: string, note?: string) => Promise<void>;
   assets: Asset[];
   addAsset: (
     name: string,
@@ -318,7 +329,7 @@ const seedDemoActivityLogs = () => [
 
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
-  const [workspace, setWorkspace] = useState<WorkspaceType>('keluarga');
+  const [workspace, setWorkspace] = useState<WorkspaceType>('all');
   const [user, setUser] = useState<User | null>(null);
   const [superAdminId, setSuperAdminId] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -542,7 +553,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(seededKey, 'true');
         // Seed default transactions for new user
         DEFAULT_TRANSACTIONS.forEach((t, idx) => {
-          addDoc(collection(db, 'transactions'), { ...t, userId, createdAt: new Date(Date.now() - idx * 60000).toISOString() });
+          addDoc(collection(db, 'transactions'), { ...t, userId, createdAt: new Date(Date.now() - idx * 60000).toISOString() }).catch(() => {});
         });
       } else {
         const list: Transaction[] = snapshot.docs
@@ -550,6 +561,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           .filter(isDocAllowed) as Transaction[];
         setTransactions(list);
       }
+    }, (err) => {
+      console.warn("Firestore transactions listener notice:", err?.message || err);
     });
 
     // Envelopes listener
@@ -559,7 +572,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         DEFAULT_ENVELOPES.forEach(e => {
-          addDoc(collection(db, 'envelopes'), { ...e, userId });
+          addDoc(collection(db, 'envelopes'), { ...e, userId }).catch(() => {});
         });
       } else {
         const list: Envelope[] = snapshot.docs
@@ -567,6 +580,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           .filter(isDocAllowed) as Envelope[];
         setEnvelopes(list);
       }
+    }, (err) => {
+      console.warn("Firestore envelopes listener notice:", err?.message || err);
     });
 
     // Goals listener
@@ -576,7 +591,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         DEFAULT_GOALS.forEach(g => {
-          addDoc(collection(db, 'goals'), { ...g, userId });
+          addDoc(collection(db, 'goals'), { ...g, userId }).catch(() => {});
         });
       } else {
         const list: Goal[] = snapshot.docs
@@ -584,6 +599,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           .filter(isDocAllowed) as Goal[];
         setGoals(list);
       }
+    }, (err) => {
+      console.warn("Firestore goals listener notice:", err?.message || err);
     });
 
     // Bills listener
@@ -593,7 +610,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         DEFAULT_BILLS.forEach(b => {
-          addDoc(collection(db, 'bills'), { ...b, userId });
+          addDoc(collection(db, 'bills'), { ...b, userId }).catch(() => {});
         });
       } else {
         const list: Bill[] = snapshot.docs
@@ -601,6 +618,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           .filter(isDocAllowed) as Bill[];
         setBills(list);
       }
+    }, (err) => {
+      console.warn("Firestore bills listener notice:", err?.message || err);
     });
 
     // Categories listener
@@ -610,7 +629,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         DEFAULT_CATEGORIES.forEach(c => {
-          addDoc(collection(db, 'categories'), { ...c, userId });
+          addDoc(collection(db, 'categories'), { ...c, userId }).catch(() => {});
         });
       } else {
         const list: TransactionCategory[] = snapshot.docs
@@ -618,6 +637,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           .filter(isDocAllowed) as TransactionCategory[];
         setCustomCategories(list);
       }
+    }, (err) => {
+      console.warn("Firestore categories listener notice:", err?.message || err);
     });
 
     // Family Members listener
@@ -627,7 +648,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         DEFAULT_FAMILY_MEMBERS.forEach(m => {
-          addDoc(collection(db, 'family_members'), { ...m, userId });
+          addDoc(collection(db, 'family_members'), { ...m, userId }).catch(() => {});
         });
       } else {
         const list: FamilyMember[] = snapshot.docs
@@ -635,6 +656,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           .filter(isDocAllowed) as FamilyMember[];
         setFamilyMembers(list);
       }
+    }, (err) => {
+      console.warn("Firestore family listener notice:", err?.message || err);
     });
 
     // Assets listener
@@ -644,7 +667,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         DEFAULT_ASSETS.forEach(a => {
-          addDoc(collection(db, 'assets'), { ...a, userId });
+          addDoc(collection(db, 'assets'), { ...a, userId }).catch(() => {});
         });
       } else {
         const list: Asset[] = snapshot.docs
@@ -652,6 +675,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           .filter(isDocAllowed) as Asset[];
         setAssets(list);
       }
+    }, (err) => {
+      console.warn("Firestore assets listener notice:", err?.message || err);
     });
 
     // Payment Accounts listener
@@ -661,7 +686,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         DEFAULT_PAYMENT_ACCOUNTS.forEach(acc => {
-          addDoc(collection(db, 'payment_accounts'), { ...acc, userId });
+          addDoc(collection(db, 'payment_accounts'), { ...acc, userId }).catch(() => {});
         });
       } else {
         const list: PaymentAccount[] = snapshot.docs
@@ -669,6 +694,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           .filter(isDocAllowed) as PaymentAccount[];
         setPaymentAccounts(list);
       }
+    }, (err) => {
+      console.warn("Firestore payment accounts listener notice:", err?.message || err);
     });
 
     // Debts listener
@@ -678,7 +705,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (snapshot.empty && !localStorage.getItem(seededKey)) {
         localStorage.setItem(seededKey, 'true');
         DEFAULT_DEBTS.forEach(d => {
-          addDoc(collection(db, 'debts'), { ...d, userId });
+          addDoc(collection(db, 'debts'), { ...d, userId }).catch(() => {});
         });
       } else {
         const list: Debt[] = snapshot.docs
@@ -686,6 +713,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           .filter(isDocAllowed) as Debt[];
         setDebts(list);
       }
+    }, (err) => {
+      console.warn("Firestore debts listener notice:", err?.message || err);
     });
 
     // 8. Activity Logs
@@ -696,6 +725,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         .filter(isDocAllowed)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) as ActivityLog[];
       setActivityLogs(list);
+    }, (err) => {
+      console.warn("Firestore activity logs listener notice:", err?.message || err);
     });
 
     return () => {
@@ -712,6 +743,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user, superAdminId]);
 
+  // Helper to remove undefined fields before sending to Firestore
+  const cleanObject = (obj: Record<string, any>) => {
+    const cleaned: Record<string, any> = {};
+    Object.keys(obj).forEach(key => {
+      if (obj[key] !== undefined) {
+        cleaned[key] = obj[key];
+      }
+    });
+    return cleaned;
+  };
+
   // Firestore Write Operations
   const addTransaction = async (t: Omit<Transaction, 'id'>) => {
     if (isDemo) {
@@ -725,7 +767,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (t.goalId) {
         const goal = goals.find(g => g.id === t.goalId);
         if (goal) {
-          const isDeposit = (t.type === 'expense' && t.category === 'Investasi & Tabungan') || t.type === 'income';
+          const isDeposit = t.type === 'expense' || t.type === 'income' || t.category === 'Investasi & Tabungan';
           const adjustment = isDeposit ? t.amount : -t.amount;
           const updatedGoals = goals.map(g => g.id === t.goalId ? { ...g, currentAmount: Math.max(0, g.currentAmount + adjustment) } : g);
           setGoals(updatedGoals);
@@ -744,6 +786,18 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Handle linked debt update
+      if (t.debtId) {
+        const targetDebt = debts.find(d => d.id === t.debtId);
+        if (targetDebt) {
+          const newRemaining = Math.max(0, targetDebt.remainingAmount - t.amount);
+          const newStatus = newRemaining === 0 ? 'paid' : 'active';
+          const updatedDebts = debts.map(d => d.id === t.debtId ? { ...d, remainingAmount: newRemaining, status: newStatus as 'active' | 'paid' } : d);
+          setDebts(updatedDebts);
+          sessionStorage.setItem(`demo_debts_${user?.uid || 'guest'}`, JSON.stringify(updatedDebts));
+        }
+      }
+
       addDemoActivity(
         'CREATE', 
         'TRANSACTION', 
@@ -755,17 +809,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
     if (!user) return;
     const targetUid = getTargetUserId(t.workspaceId);
-    await addDoc(collection(db, 'transactions'), {
+    await addDoc(collection(db, 'transactions'), cleanObject({
       ...t,
       userId: targetUid,
       createdAt: new Date().toISOString()
-    });
+    }));
 
     // Handle linked goal update in DB
     if (t.goalId) {
       const goal = goals.find(g => g.id === t.goalId);
       if (goal) {
-        const isDeposit = (t.type === 'expense' && t.category === 'Investasi & Tabungan') || t.type === 'income';
+        const isDeposit = t.type === 'expense' || t.type === 'income' || t.category === 'Investasi & Tabungan';
         const adjustment = isDeposit ? t.amount : -t.amount;
         await updateDoc(doc(db, 'goals', t.goalId), {
           currentAmount: Math.max(0, goal.currentAmount + adjustment)
@@ -780,6 +834,19 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         const adjustment = t.type === 'income' ? t.amount : -t.amount;
         await updateDoc(doc(db, 'payment_accounts', t.paymentAccountId), {
           balance: acc.balance + adjustment
+        });
+      }
+    }
+
+    // Handle linked debt update in DB
+    if (t.debtId) {
+      const targetDebt = debts.find(d => d.id === t.debtId);
+      if (targetDebt) {
+        const newRemaining = Math.max(0, targetDebt.remainingAmount - t.amount);
+        const newStatus = newRemaining === 0 ? 'paid' : 'active';
+        await updateDoc(doc(db, 'debts', t.debtId), {
+          remainingAmount: newRemaining,
+          status: newStatus
         });
       }
     }
@@ -824,6 +891,18 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
+        // Adjust linked debt remaining amount
+        if (target.debtId) {
+          const debt = debts.find(d => d.id === target.debtId);
+          if (debt) {
+            const restoredRemaining = Math.min(debt.amount, debt.remainingAmount + target.amount);
+            const restoredStatus = restoredRemaining > 0 ? 'active' : 'paid';
+            const updatedDebts = debts.map(d => d.id === target.debtId ? { ...d, remainingAmount: restoredRemaining, status: restoredStatus as 'active' | 'paid' } : d);
+            setDebts(updatedDebts);
+            sessionStorage.setItem(`demo_debts_${user?.uid || 'guest'}`, JSON.stringify(updatedDebts));
+          }
+        }
+
         addDemoActivity(
           'DELETE', 
           'TRANSACTION', 
@@ -861,6 +940,19 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Adjust linked debt remaining amount in DB
+      if (target.debtId) {
+        const debt = debts.find(d => d.id === target.debtId);
+        if (debt) {
+          const restoredRemaining = Math.min(debt.amount, debt.remainingAmount + target.amount);
+          const restoredStatus = restoredRemaining > 0 ? 'active' : 'paid';
+          await updateDoc(doc(db, 'debts', target.debtId), {
+            remainingAmount: restoredRemaining,
+            status: restoredStatus
+          });
+        }
+      }
+
       await logActivity(
         'DELETE', 
         'TRANSACTION', 
@@ -882,6 +974,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       const goalAdjustments: Record<string, number> = {};
       // Group adjustments by paymentAccountId to apply them efficiently
       const payAccAdjustments: Record<string, number> = {};
+      // Group adjustments by debtId
+      const debtAdjustments: Record<string, number> = {};
 
       targets.forEach(target => {
         if (target.goalId) {
@@ -893,6 +987,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         if (target.paymentAccountId) {
           const adjustment = target.type === 'income' ? -target.amount : target.amount;
           payAccAdjustments[target.paymentAccountId] = (payAccAdjustments[target.paymentAccountId] || 0) + adjustment;
+        }
+
+        if (target.debtId) {
+          debtAdjustments[target.debtId] = (debtAdjustments[target.debtId] || 0) + target.amount;
         }
       });
 
@@ -909,6 +1007,20 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       });
       setPaymentAccounts(updatedAccs);
       sessionStorage.setItem(`demo_pa_${user?.uid || 'guest'}`, JSON.stringify(updatedAccs));
+
+      let updatedDebts = [...debts];
+      Object.entries(debtAdjustments).forEach(([debtId, adj]) => {
+        updatedDebts = updatedDebts.map(d => {
+          if (d.id === debtId) {
+            const restoredRemaining = Math.min(d.amount, d.remainingAmount + adj);
+            const restoredStatus = restoredRemaining > 0 ? 'active' : 'paid';
+            return { ...d, remainingAmount: restoredRemaining, status: restoredStatus as 'active' | 'paid' };
+          }
+          return d;
+        });
+      });
+      setDebts(updatedDebts);
+      sessionStorage.setItem(`demo_debts_${user?.uid || 'guest'}`, JSON.stringify(updatedDebts));
 
       if (targets.length > 0) {
         addDemoActivity(
@@ -932,6 +1044,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const goalAdjustments: Record<string, number> = {};
     // Group adjustments by paymentAccountId to apply them efficiently
     const payAccAdjustments: Record<string, number> = {};
+    // Group adjustments by debtId
+    const debtAdjustments: Record<string, number> = {};
 
     targets.forEach(target => {
       if (target.goalId) {
@@ -943,6 +1057,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (target.paymentAccountId) {
         const adjustment = target.type === 'income' ? -target.amount : target.amount;
         payAccAdjustments[target.paymentAccountId] = (payAccAdjustments[target.paymentAccountId] || 0) + adjustment;
+      }
+
+      if (target.debtId) {
+        debtAdjustments[target.debtId] = (debtAdjustments[target.debtId] || 0) + target.amount;
       }
     });
 
@@ -965,6 +1083,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         if (acc) {
           await updateDoc(doc(db, 'payment_accounts', accId), {
             balance: acc.balance + adj
+          });
+        }
+      })
+    );
+
+    // Update debts in DB
+    await Promise.all(
+      Object.entries(debtAdjustments).map(async ([debtId, adj]) => {
+        const debt = debts.find(d => d.id === debtId);
+        if (debt) {
+          const restoredRemaining = Math.min(debt.amount, debt.remainingAmount + adj);
+          const restoredStatus = restoredRemaining > 0 ? 'active' : 'paid';
+          await updateDoc(doc(db, 'debts', debtId), {
+            remainingAmount: restoredRemaining,
+            status: restoredStatus
           });
         }
       })
@@ -1194,10 +1327,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
     if (!user) return;
     const targetUid = getTargetUserId(b.workspaceId);
-    await addDoc(collection(db, 'bills'), {
+    await addDoc(collection(db, 'bills'), cleanObject({
       ...b,
       userId: targetUid
-    });
+    }));
     await logActivity('CREATE', 'BILL', `Tagihan Baru: ${b.name}`, `Nominal Rp ${b.amount.toLocaleString('id-ID')}`, b.workspaceId);
   };
 
@@ -1216,7 +1349,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (b.workspaceId) {
       updatePayload.userId = getTargetUserId(b.workspaceId);
     }
-    await updateDoc(doc(db, 'bills', id), updatePayload);
+    await updateDoc(doc(db, 'bills', id), cleanObject(updatePayload));
     await logActivity('UPDATE', 'BILL', `Ubah Tagihan: ${b.name || ''}`, `Workspace: ${b.workspaceId || ''}`, b.workspaceId || workspace);
   };
 
@@ -1239,51 +1372,97 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const markBillPaid = async (id: string) => {
-    if (isDemo) {
-      const bill = bills.find(b => b.id === id);
-      if (!bill) return;
-      const updatedBills = bills.map(b => b.id === id ? { ...b, isPaid: true } : b);
-      setBills(updatedBills);
-      sessionStorage.setItem(`demo_bills_${user?.uid || 'guest'}`, JSON.stringify(updatedBills));
-
-      const newTxId = 'demo-tx-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
-      const newTx: Transaction = {
-        id: newTxId,
-        workspaceId: bill.workspaceId,
-        type: 'expense',
-        amount: bill.amount,
-        category: bill.name,
-        date: new Date().toISOString(),
-        description: `Pembayaran tagihan: ${bill.name}`,
-        createdAt: new Date().toISOString()
-      };
-      const updatedTx = [newTx, ...transactions];
-      setTransactions(updatedTx);
-      sessionStorage.setItem(`demo_tx_${user?.uid || 'guest'}`, JSON.stringify(updatedTx));
-
-      addDemoActivity('UPDATE', 'BILL', `Pelunasan Tagihan: ${bill.name}`, `Lunas sebesar Rp ${bill.amount.toLocaleString('id-ID')}`, bill.workspaceId);
-      return;
+  const getNextDueDate = (currentDueDate: string, period?: string) => {
+    const date = new Date(currentDueDate);
+    if (isNaN(date.getTime())) {
+      const now = new Date();
+      now.setMonth(now.getMonth() + 1);
+      return now.toISOString().split('T')[0];
     }
-    if (!user) return;
+    if (period === 'weekly') {
+      date.setDate(date.getDate() + 7);
+    } else if (period === 'yearly') {
+      date.setFullYear(date.getFullYear() + 1);
+    } else {
+      date.setMonth(date.getMonth() + 1);
+    }
+    return date.toISOString().split('T')[0];
+  };
+
+  const markBillPaid = async (id: string, customPaymentAccountId?: string) => {
     const bill = bills.find(b => b.id === id);
     if (!bill) return;
 
-    await updateDoc(doc(db, 'bills', id), { isPaid: true });
+    const chosenAccountId = customPaymentAccountId || bill.paymentAccountId;
 
-    const targetUid = getTargetUserId(bill.workspaceId);
-    await addDoc(collection(db, 'transactions'), {
-      userId: targetUid,
+    // Is it a recurring bill?
+    const isRecurring = bill.isRecurring !== false; // default to true or check field
+    const nextDueDate = isRecurring ? getNextDueDate(bill.dueDate, bill.recurringPeriod) : bill.dueDate;
+
+    if (isDemo) {
+      const updatedBills = bills.map(b => {
+        if (b.id === id) {
+          if (isRecurring) {
+            return { ...b, dueDate: nextDueDate, isPaid: false };
+          } else {
+            return { ...b, isPaid: true };
+          }
+        }
+        return b;
+      });
+      setBills(updatedBills);
+      sessionStorage.setItem(`demo_bills_${user?.uid || 'guest'}`, JSON.stringify(updatedBills));
+
+      // Record transaction & deduct account balance
+      await addTransaction({
+        workspaceId: bill.workspaceId,
+        type: 'expense',
+        amount: bill.amount,
+        category: bill.category || 'Utilitas & Tagihan',
+        date: new Date().toISOString(),
+        description: `Pembayaran tagihan: ${bill.name}`,
+        paymentAccountId: chosenAccountId
+      });
+
+      addDemoActivity(
+        'UPDATE', 
+        'BILL', 
+        `Pelunasan Tagihan: ${bill.name}`, 
+        isRecurring ? `Lunas Rp ${bill.amount.toLocaleString('id-ID')} (Jatuh tempo berikutnya: ${nextDueDate})` : `Lunas Rp ${bill.amount.toLocaleString('id-ID')}`, 
+        bill.workspaceId
+      );
+      return;
+    }
+
+    if (!user) return;
+
+    if (isRecurring) {
+      await updateDoc(doc(db, 'bills', id), {
+        dueDate: nextDueDate,
+        isPaid: false
+      });
+    } else {
+      await updateDoc(doc(db, 'bills', id), { isPaid: true });
+    }
+
+    // Record transaction & deduct account balance
+    await addTransaction({
       workspaceId: bill.workspaceId,
       type: 'expense',
       amount: bill.amount,
-      category: bill.name,
+      category: bill.category || 'Utilitas & Tagihan',
       date: new Date().toISOString(),
       description: `Pembayaran tagihan: ${bill.name}`,
-      createdAt: new Date().toISOString()
+      paymentAccountId: chosenAccountId
     });
 
-    await logActivity('UPDATE', 'BILL', `Pelunasan Tagihan: ${bill.name}`, `Lunas sebesar Rp ${bill.amount.toLocaleString('id-ID')}`, bill.workspaceId);
+    await logActivity(
+      'UPDATE', 
+      'BILL', 
+      `Pelunasan Tagihan: ${bill.name}`, 
+      isRecurring ? `Lunas Rp ${bill.amount.toLocaleString('id-ID')} (Jatuh tempo berikutnya: ${nextDueDate})` : `Lunas Rp ${bill.amount.toLocaleString('id-ID')}`, 
+      bill.workspaceId
+    );
   };
 
   const addCategory = async (name: string, type: 'income' | 'expense', color?: string) => {
@@ -1876,18 +2055,45 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const addDebt = async (name: string, type: 'payable' | 'receivable', amount: number, dueDate?: string, wsId?: WorkspaceType) => {
+  const cleanForFirestore = (obj: Record<string, any>) => {
+    const cleaned: Record<string, any> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (val !== undefined) {
+        cleaned[key] = val;
+      }
+    }
+    return cleaned;
+  };
+
+  const addDebt = async (
+    name: string,
+    type: 'payable' | 'receivable',
+    amount: number,
+    dueDate?: string,
+    wsId?: WorkspaceType,
+    startDate?: string,
+    remainingAmount?: number,
+    installmentDay?: number,
+    notes?: string,
+    tenorMonths?: number
+  ) => {
     const targetWs = wsId || workspace;
     const targetUid = user ? getTargetUserId(targetWs) : (user?.uid || 'guest');
+    const actualRemaining = remainingAmount !== undefined ? remainingAmount : amount;
+    const status: 'active' | 'paid' = actualRemaining <= 0 ? 'paid' : 'active';
     const newD: Omit<Debt, 'id'> = {
       userId: targetUid,
       workspaceId: targetWs,
       name,
       type,
       amount,
-      remainingAmount: amount,
-      dueDate,
-      status: 'active',
+      remainingAmount: actualRemaining,
+      dueDate: dueDate || undefined,
+      startDate: startDate || undefined,
+      installmentDay: installmentDay || undefined,
+      tenorMonths: tenorMonths || undefined,
+      notes: notes || undefined,
+      status,
       createdAt: new Date().toISOString()
     };
     if (isDemo) {
@@ -1899,19 +2105,33 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     if (!user) return;
-    await addDoc(collection(db, 'debts'), { ...newD, userId: targetUid });
+    const payload = cleanForFirestore({ ...newD, userId: targetUid });
+    await addDoc(collection(db, 'debts'), payload);
     await logActivity('CREATE', 'DEBT', `Tambah ${type === 'payable' ? 'Utang' : 'Piutang'}: ${name}`, `Nominal Rp ${amount.toLocaleString('id-ID')}`, targetWs);
   };
 
   const updateDebt = async (id: string, d: Partial<Debt>) => {
+    const target = debts.find(item => item.id === id);
+    if (!target) return;
+    const merged = { ...target, ...d };
+    if (merged.remainingAmount <= 0) {
+      merged.status = 'paid';
+    } else if (merged.status === 'paid' && merged.remainingAmount > 0) {
+      merged.status = 'active';
+    }
+
     if (isDemo) {
-      const updated = debts.map(item => item.id === id ? { ...item, ...d } : item);
+      const updated = debts.map(item => item.id === id ? merged : item);
       setDebts(updated);
       sessionStorage.setItem(`demo_debts_${user?.uid || 'guest'}`, JSON.stringify(updated));
+      addDemoActivity('UPDATE', 'DEBT', `Edit ${merged.type === 'payable' ? 'Utang' : 'Piutang'}: ${merged.name}`, `Sisa Rp ${merged.remainingAmount.toLocaleString('id-ID')}`, merged.workspaceId);
       return;
     }
     if (!user) return;
-    await updateDoc(doc(db, 'debts', id), d);
+    const { id: _docId, ...docData } = merged;
+    const payload = cleanForFirestore(docData);
+    await updateDoc(doc(db, 'debts', id), payload);
+    await logActivity('UPDATE', 'DEBT', `Edit ${merged.type === 'payable' ? 'Utang' : 'Piutang'}: ${merged.name}`, `Sisa Rp ${merged.remainingAmount.toLocaleString('id-ID')}`, merged.workspaceId);
   };
 
   const deleteDebt = async (id: string) => {
@@ -1932,26 +2152,35 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const payDebt = async (debtId: string, paymentAmount: number, paymentAccountId?: string) => {
+  const payDebt = async (
+    debtId: string,
+    paymentAmount: number,
+    paymentAccountId?: string,
+    paymentDate?: string,
+    note?: string
+  ) => {
     const target = debts.find(d => d.id === debtId);
     if (!target || paymentAmount <= 0) return;
     const newRemaining = Math.max(0, target.remainingAmount - paymentAmount);
     const newStatus = newRemaining === 0 ? 'paid' : 'active';
+    const isPayable = target.type === 'payable';
+    const txDate = paymentDate ? new Date(paymentDate).toISOString() : new Date().toISOString();
+    const extraDesc = note ? ` (${note})` : '';
 
     if (isDemo) {
       const updated = debts.map(d => d.id === debtId ? { ...d, remainingAmount: newRemaining, status: newStatus as 'active' | 'paid' } : d);
       setDebts(updated);
       sessionStorage.setItem(`demo_debts_${user?.uid || 'guest'}`, JSON.stringify(updated));
       
-      const isPayable = target.type === 'payable';
       await addTransaction({
         workspaceId: target.workspaceId,
         type: isPayable ? 'expense' : 'income',
         amount: paymentAmount,
         category: 'Cicilan & Utang',
-        date: new Date().toISOString(),
-        description: isPayable ? `Pembayaran Cicilan Utang: ${target.name}` : `Penerimaan Pelunasan Piutang: ${target.name}`,
-        paymentAccountId
+        date: txDate,
+        description: isPayable ? `Pembayaran Cicilan Utang: ${target.name}${extraDesc}` : `Penerimaan Pelunasan Piutang: ${target.name}${extraDesc}`,
+        paymentAccountId,
+        debtId: debtId
       });
       addDemoActivity('UPDATE', 'DEBT', `Pembayaran ${isPayable ? 'Utang' : 'Piutang'}: ${target.name}`, `Pembayaran sebesar Rp ${paymentAmount.toLocaleString('id-ID')}`, target.workspaceId);
       return;
@@ -1963,15 +2192,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       status: newStatus
     });
 
-    const isPayable = target.type === 'payable';
     await addTransaction({
       workspaceId: target.workspaceId,
       type: isPayable ? 'expense' : 'income',
       amount: paymentAmount,
       category: 'Cicilan & Utang',
-      date: new Date().toISOString(),
-      description: isPayable ? `Pembayaran Cicilan Utang: ${target.name}` : `Penerimaan Pelunasan Piutang: ${target.name}`,
-      paymentAccountId
+      date: txDate,
+      description: isPayable ? `Pembayaran Cicilan Utang: ${target.name}${extraDesc}` : `Penerimaan Pelunasan Piutang: ${target.name}${extraDesc}`,
+      paymentAccountId,
+      debtId: debtId
     });
 
     await logActivity('UPDATE', 'DEBT', `Pembayaran ${isPayable ? 'Utang' : 'Piutang'}: ${target.name}`, `Pembayaran sebesar Rp ${paymentAmount.toLocaleString('id-ID')}`, target.workspaceId);

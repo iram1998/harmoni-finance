@@ -16,6 +16,7 @@ export interface Transaction {
   goalId?: string;
   paymentAccountId?: string;
   assetId?: string;
+  debtId?: string;
   isCapitalization?: boolean;
 }
 
@@ -43,6 +44,10 @@ export interface Bill {
   amount: number;
   dueDate: string;
   isPaid: boolean;
+  isRecurring?: boolean;
+  recurringPeriod?: 'monthly' | 'weekly' | 'yearly' | 'once';
+  category?: string;
+  paymentAccountId?: string;
 }
 
 export interface TransactionCategory {
@@ -116,6 +121,10 @@ export interface Debt {
   amount: number;
   remainingAmount: number;
   dueDate?: string;
+  startDate?: string;
+  installmentDay?: number;
+  tenorMonths?: number;
+  notes?: string;
   status: 'active' | 'paid';
   createdAt?: string;
 }

@@ -20,11 +20,12 @@ export function TransactionDetailModal({
   onDelete,
 }: TransactionDetailModalProps) {
   const { language } = useThemeLanguage();
-  const { paymentAccounts, goals, familyMembers, deleteTransaction, assets } = useFinance();
+  const { paymentAccounts, goals, familyMembers, deleteTransaction, assets, debts } = useFinance();
   const { showToast } = useToast();
   const isId = language === 'id';
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
+  const [copiedSummary, setCopiedSummary] = useState(false);
 
   if (!isOpen || !transaction) return null;
 
@@ -38,6 +39,9 @@ export function TransactionDetailModal({
 
   // Find linked goal
   const goal = goals?.find(g => g.id === transaction.goalId);
+
+  // Find linked debt / receivable
+  const linkedDebt = debts?.find(d => d.id === transaction.debtId);
 
   // Find linked family member
   const member = familyMembers?.find(m => m.id === transaction.familyMember || m.name === transaction.familyMember);
@@ -75,6 +79,18 @@ export function TransactionDetailModal({
       setCopiedId(true);
       showToast(isId ? 'ID Transaksi berhasil disalin!' : 'Transaction ID copied!', 'success');
       setTimeout(() => setCopiedId(false), 2000);
+    }
+  };
+
+  const handleCopySummary = () => {
+    if (transaction) {
+      const summaryText = isId
+        ? `[Detail Transaksi]\nTanggal: ${formattedDate}\nTipe: ${isIncome ? 'Pemasukan' : 'Pengeluaran'}\nKategori: ${transaction.category}\nNominal: ${formatCurrency(transaction.amount)}\nRekening: ${account ? account.name : '-'}\nKeterangan: ${transaction.description || '-'}\nWorkspace: ${transaction.workspaceId === 'pribadi' ? 'Pribadi' : 'Keluarga'}`
+        : `[Transaction Details]\nDate: ${formattedDate}\nType: ${isIncome ? 'Income' : 'Expense'}\nCategory: ${transaction.category}\nAmount: ${formatCurrency(transaction.amount)}\nAccount: ${account ? account.name : '-'}\nNotes: ${transaction.description || '-'}\nWorkspace: ${transaction.workspaceId || 'family'}`;
+      navigator.clipboard.writeText(summaryText);
+      setCopiedSummary(true);
+      showToast(isId ? 'Ringkasan transaksi berhasil disalin!' : 'Transaction summary copied!', 'success');
+      setTimeout(() => setCopiedSummary(false), 2000);
     }
   };
 
@@ -246,6 +262,46 @@ export function TransactionDetailModal({
               </p>
             </div>
           )}
+
+          {/* Linked Debt / Receivable Info Callout */}
+          {linkedDebt && (
+            <div className="bg-purple-500/10 p-3.5 rounded-xl border border-purple-500/30 space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-xs font-bold text-purple-800 dark:text-purple-300 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px]">credit_score</span>
+                  {isId ? 'Terhubung ke Catatan Utang / Piutang' : 'Linked Debt / Receivable'}
+                </span>
+                <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                  linkedDebt.type === 'payable'
+                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                }`}>
+                  {linkedDebt.type === 'payable' 
+                    ? (isId ? 'Kewajiban Utang' : 'Payable Debt') 
+                    : (isId ? 'Hak Piutang' : 'Receivable')}
+                </span>
+              </div>
+
+              <div className="text-xs bg-surface/80 p-2.5 rounded-lg border border-purple-500/20">
+                <span className="font-bold text-on-surface text-sm block">{linkedDebt.name}</span>
+                <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-on-surface-variant mt-1">
+                  <span>
+                    {linkedDebt.type === 'payable' ? (isId ? 'Pemberi Pinjaman: ' : 'Lender: ') : (isId ? 'Peminjam: ' : 'Borrower: ')}
+                    <strong className="text-on-surface">{linkedDebt.lender || linkedDebt.borrower || '-'}</strong>
+                  </span>
+                  <span className="font-bold text-primary">
+                    {isId ? 'Sisa:' : 'Remaining:'} {formatCurrency(linkedDebt.remainingAmount)} / {formatCurrency(linkedDebt.amount)}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-on-surface-variant leading-relaxed pt-0.5">
+                {isId 
+                  ? `Transaksi cicilan ini mengurangi sisa kewajiban. Jika dihapus, sisa utang/piutang sebesar ${formatCurrency(transaction.amount)} akan otomatis dipulihkan.`
+                  : `This installment payment reduces remaining debt balance. Deleting this transaction will automatically restore ${formatCurrency(transaction.amount)}.`}
+              </p>
+            </div>
+          )}
           
           {/* Key Quick Info Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -375,19 +431,30 @@ export function TransactionDetailModal({
           </div>
 
           {/* ID Transaksi & Copy */}
-          <div className="flex items-center justify-between p-3 bg-surface-container rounded-xl border border-outline-variant text-xs">
-            <div className="min-w-0 pr-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-surface-container rounded-xl border border-outline-variant text-xs">
+            <div className="min-w-0 flex-1">
               <span className="text-[10px] text-on-surface-variant uppercase font-semibold block">ID Transaksi</span>
               <span className="font-mono text-on-surface text-[11px] truncate block select-all">{transaction.id}</span>
             </div>
-            <button
-              onClick={handleCopyId}
-              type="button"
-              className="px-2.5 py-1.5 rounded-lg bg-surface border border-outline-variant hover:bg-surface-container-high active:scale-95 text-on-surface font-semibold text-xs transition-all flex items-center gap-1 shrink-0 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-sm">{copiedId ? 'check' : 'content_copy'}</span>
-              <span>{copiedId ? (isId ? 'Tersalin' : 'Copied') : (isId ? 'Salin ID' : 'Copy ID')}</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={handleCopySummary}
+                type="button"
+                className="px-2.5 py-1.5 rounded-lg bg-surface border border-outline-variant hover:bg-surface-container-high active:scale-95 text-on-surface font-semibold text-xs transition-all flex items-center gap-1 cursor-pointer"
+                title={isId ? 'Salin Ringkasan Transaksi Lengkap' : 'Copy Transaction Summary'}
+              >
+                <span className="material-symbols-outlined text-sm">{copiedSummary ? 'check' : 'description'}</span>
+                <span>{copiedSummary ? (isId ? 'Ringkasan Tersalin' : 'Summary Copied') : (isId ? 'Salin Detail' : 'Copy Summary')}</span>
+              </button>
+              <button
+                onClick={handleCopyId}
+                type="button"
+                className="px-2.5 py-1.5 rounded-lg bg-surface border border-outline-variant hover:bg-surface-container-high active:scale-95 text-on-surface font-semibold text-xs transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">{copiedId ? 'check' : 'content_copy'}</span>
+                <span>{copiedId ? (isId ? 'Tersalin' : 'Copied') : (isId ? 'Salin ID' : 'Copy ID')}</span>
+              </button>
+            </div>
           </div>
 
         </div>

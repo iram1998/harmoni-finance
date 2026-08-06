@@ -38,7 +38,7 @@ const INCOME_CATEGORIES = [
 ];
 
 export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
-  const { workspace, addTransaction, customCategories, familyMembers, transactionDefaultCategory, goals, paymentAccounts, envelopes, assets } = useFinance();
+  const { workspace, addTransaction, customCategories, familyMembers, transactionDefaultCategory, goals, paymentAccounts, envelopes, assets, debts } = useFinance();
   const { language, t } = useThemeLanguage();
   const { showToast } = useToast();
   const [targetWorkspace, setTargetWorkspace] = useState<WorkspaceType>(workspace === 'all' ? 'keluarga' : workspace);
@@ -52,6 +52,7 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
   const [linkedGoalId, setLinkedGoalId] = useState<string>('');
   const [paymentAccountId, setPaymentAccountId] = useState<string>('');
   const [linkedAssetId, setLinkedAssetId] = useState<string>('');
+  const [linkedDebtId, setLinkedDebtId] = useState<string>('');
   const [isCapitalization, setIsCapitalization] = useState<boolean>(true);
   const [expenseCategoryMode, setExpenseCategoryMode] = useState<'envelope' | 'custom'>('envelope');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -137,6 +138,7 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
       setScannedSummary(null);
       setLinkedGoalId('');
       setLinkedAssetId('');
+      setLinkedDebtId('');
       setIsCapitalization(true);
     }
   }, [isOpen]);
@@ -306,6 +308,7 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
         ...(type === 'income' ? { incomeCategory } : {}),
         ...(selectedFamilyMember ? { familyMember: selectedFamilyMember } : {}),
         ...(linkedGoalId ? { goalId: linkedGoalId } : {}),
+        ...(linkedDebtId ? { debtId: linkedDebtId } : {}),
         ...(type === 'expense' && linkedAssetId ? { assetId: linkedAssetId, isCapitalization } : {})
       });
       
@@ -324,6 +327,7 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
       setSelectedFamilyMember('');
       setDate(new Date().toISOString().split('T')[0]);
       setLinkedGoalId('');
+      setLinkedDebtId('');
       onClose();
     } catch (err: any) {
       console.error("Error adding transaction:", err);
@@ -751,12 +755,12 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
               }}
               icon="savings"
             >
-              <option value="">{isId ? '-- Tidak Dihubungkan --' : '-- Not Linked --'}</option>
+              <option value="">{isId ? '-- Tidak Dihubungkan ke Target Tabungan --' : '-- Not Linked to Goal --'}</option>
               {goals
-                .filter(g => g.workspaceId === workspace)
+                .filter(g => workspace === 'all' ? true : (g.workspaceId || 'keluarga') === targetWorkspace || (g.workspaceId || 'keluarga') === workspace)
                 .map(g => (
                   <option key={g.id} value={g.id}>
-                    {g.name} (Terkumpul: Rp {g.currentAmount.toLocaleString('id-ID')} / Rp {g.targetAmount.toLocaleString('id-ID')})
+                    🎯 {g.name} (Terkumpul: Rp {g.currentAmount.toLocaleString('id-ID')} / Rp {g.targetAmount.toLocaleString('id-ID')}) [{(g.workspaceId || 'keluarga') === 'pribadi' ? 'Pribadi' : 'Keluarga'}]
                   </option>
                 ))}
             </Select>
@@ -813,6 +817,46 @@ export function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Hubungkan ke Catatan Utang / Piutang */}
+          {debts && debts.filter(d => d.status !== 'paid').length > 0 && (
+            <Select
+              label={isId ? 'Hubungkan ke Catatan Utang / Piutang (Opsional)' : 'Link to Debt / Receivable (Optional)'}
+              value={linkedDebtId}
+              onChange={e => {
+                const selectedId = e.target.value;
+                setLinkedDebtId(selectedId);
+                if (selectedId) {
+                  const targetDebt = debts.find(d => d.id === selectedId);
+                  if (targetDebt) {
+                    if (targetDebt.type === 'payable') {
+                      setType('expense');
+                      setCategory('Cicilan & Utang');
+                    } else {
+                      setType('income');
+                      setCategory('Cicilan & Utang');
+                    }
+                    if (!description) {
+                      setDescription(targetDebt.type === 'payable'
+                        ? (isId ? `Pembayaran Cicilan Utang: ${targetDebt.name}` : `Debt installment payment: ${targetDebt.name}`)
+                        : (isId ? `Penerimaan Pelunasan Piutang: ${targetDebt.name}` : `Receivable settlement: ${targetDebt.name}`)
+                      );
+                    }
+                  }
+                }
+              }}
+              icon="account_balance"
+            >
+              <option value="">{isId ? '-- Tidak Dihubungkan ke Utang/Piutang --' : '-- Not Linked to Debt --'}</option>
+              {debts
+                .filter(d => d.status !== 'paid')
+                .map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.type === 'payable' ? '💸 Utang' : '💰 Piutang'}: {d.name} (Sisa: Rp {d.remainingAmount.toLocaleString('id-ID')})
+                  </option>
+                ))}
+            </Select>
           )}
 
           {familyMembers && familyMembers.length > 0 && (

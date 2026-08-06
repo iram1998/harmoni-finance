@@ -16,6 +16,7 @@ interface DashboardProps {
 export function Dashboard({ setCurrentView }: DashboardProps = {}) {
   const [isLoading, setIsLoading] = useState(true);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+  const [dismissedStaleAssetAlerts, setDismissedStaleAssetAlerts] = useState<string[]>([]);
   const [isFullTrendChartOpen, setIsFullTrendChartOpen] = useState(false);
   const [isFullCategoryChartOpen, setIsFullCategoryChartOpen] = useState(false);
   const [isFabOpen, setIsFabOpen] = useState(false);
@@ -105,6 +106,25 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
   const wsEnvelopes = envelopes.filter(e => workspace === 'all' ? true : (e.workspaceId || 'keluarga') === workspace).slice(0, 3);
   const wsBills = bills.filter(b => (workspace === 'all' ? true : (b.workspaceId || 'keluarga') === workspace) && !b.isPaid).slice(0, 2);
   const wsGoals = goals.filter(g => workspace === 'all' ? true : (g.workspaceId || 'keluarga') === workspace).slice(0, 2);
+
+  // Asset Revaluation Reminder Logic
+  const isAssetRevalReminderEnabled = localStorage.getItem('harmoni_reval_reminder_enabled') !== 'false';
+  const staleAssets = wsAssets.filter(asset => {
+    if (!isAssetRevalReminderEnabled) return false;
+    if (asset.useAutoDepreciation) return false;
+    if (asset.depreciationMethod && asset.depreciationMethod !== 'none') return false; // automatically calculated
+    if (asset.status !== 'owned') return false;
+    
+    const latestValuationDate = asset.valuationHistory && asset.valuationHistory.length > 0 
+      ? new Date(asset.valuationHistory[asset.valuationHistory.length - 1].date)
+      : new Date(asset.purchaseDate);
+      
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    
+    return latestValuationDate < oneYearAgo;
+  });
+  const visibleStaleAssets = staleAssets.filter(asset => !dismissedStaleAssetAlerts.includes(asset.id));
 
   // Group expenses by category for pie chart (excluding internal transfers)
   const expenseByCategory = wsTransactions
@@ -266,6 +286,80 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
                       <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
                         <div className={`${barColor} h-full rounded-full transition-all duration-500`} style={{ width: `${Math.min(alert.ratio * 100, 100)}%` }}></div>
                       </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Stale Assets Revaluation Notification Banner */}
+        {visibleStaleAssets.length > 0 && (
+          <div className="animate-fadeIn p-5 rounded-2xl border flex flex-col gap-4 shadow-sm relative overflow-hidden bg-surface-container border-outline-variant mb-6">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
+            
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-blue-500/10 text-blue-600">
+                  <span className="material-symbols-outlined font-bold animate-pulse">
+                    event_upcoming
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-label-lg font-bold text-on-surface flex items-center gap-2 flex-wrap">
+                    {language === 'id' ? 'Pengingat Revaluasi Aset' : 'Asset Revaluation Reminder'}
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-blue-500/10 text-blue-600">
+                      {visibleStaleAssets.length} {language === 'id' ? 'Aset' : 'Assets'}
+                    </span>
+                  </h3>
+                  <p className="font-body-sm text-on-surface-variant">
+                    {language === 'id' 
+                      ? 'Ada aset yang nilainya belum diperbarui lebih dari setahun.' 
+                      : 'Some assets have not been re-evaluated in over a year.'}
+                  </p>
+                </div>
+              </div>
+              
+              {setCurrentView && (
+                <button 
+                  onClick={() => setCurrentView('assets')}
+                  className="font-label-sm text-primary hover:underline flex items-center gap-1 bg-primary/10 px-3 py-1.5 rounded-lg active:scale-95 transition-all font-semibold self-start sm:self-center shrink-0"
+                >
+                  <span className="material-symbols-outlined text-[16px]">home_work</span>
+                  {language === 'id' ? 'Cek Aset' : 'Check Assets'}
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-outline-variant/30">
+              {visibleStaleAssets.map(asset => {
+                const latestValuationDate = asset.valuationHistory && asset.valuationHistory.length > 0 
+                  ? new Date(asset.valuationHistory[asset.valuationHistory.length - 1].date)
+                  : new Date(asset.purchaseDate);
+                  
+                return (
+                  <div key={`stale-${asset.id}`} className="p-3.5 bg-surface border border-outline-variant/50 rounded-xl hover:bg-surface-container-high transition-colors flex flex-col justify-between relative group">
+                    <div className="flex justify-between items-start gap-4 mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="material-symbols-outlined text-lg text-blue-600">
+                          update
+                        </span>
+                        <span className="font-label-md font-bold text-on-surface truncate">{asset.name}</span>
+                      </div>
+                      
+                      <button 
+                        onClick={() => setDismissedStaleAssetAlerts(prev => [...prev, asset.id])}
+                        className="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-outline-variant/20"
+                        title={t('dismiss')}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">close</span>
+                      </button>
+                    </div>
+                    <div className="font-body-sm text-on-surface-variant mb-3 leading-relaxed">
+                      {language === 'id' 
+                        ? `Nilai terakhir: ${formatCurrency(asset.currentValue)} pada ${latestValuationDate.toLocaleDateString('id-ID')}` 
+                        : `Last valued at: ${formatCurrency(asset.currentValue)} on ${latestValuationDate.toLocaleDateString('en-US')}`}
                     </div>
                   </div>
                 );
@@ -667,8 +761,8 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
           </Card>
         </div>
 
-        {/* Recent Transactions Widget */}
-        <div className="col-span-12">
+        {/* Recent Transactions & Top Assets Row */}
+        <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card variant="default" className="p-6 flex flex-col shadow-sm">
             <CardHeader className="p-0 mb-4 flex justify-between items-center border-b border-outline-variant pb-4">
               <div>
@@ -677,7 +771,7 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
               </div>
               {setCurrentView && (
                 <button 
-                  onClick={() => setCurrentView('cash_flow')}
+                  onClick={() => setCurrentView('cash-flow')}
                   className="text-xs text-primary font-bold hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-all cursor-pointer active:scale-95"
                 >
                   {language === 'id' ? 'Lihat Semua' : 'View All'}
@@ -727,10 +821,72 @@ export function Dashboard({ setCurrentView }: DashboardProps = {}) {
               </div>
             </CardContent>
           </Card>
+
+          <Card variant="default" className="p-6 flex flex-col shadow-sm">
+            <CardHeader className="p-0 mb-4 flex justify-between items-center border-b border-outline-variant pb-4">
+              <div>
+                <CardTitle className="text-lg font-bold text-on-surface">{language === 'id' ? 'Ringkasan Aset Fisik' : 'Physical Assets Summary'}</CardTitle>
+                <p className="font-body-sm text-on-surface-variant mt-0.5">{language === 'id' ? '5 aset dengan nilai tertinggi Anda.' : 'Your top 5 highest value assets.'}</p>
+              </div>
+              {setCurrentView && (
+                <button 
+                  onClick={() => setCurrentView('assets')}
+                  className="text-xs text-primary font-bold hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-all cursor-pointer active:scale-95"
+                >
+                  {language === 'id' ? 'Lihat Semua' : 'View All'}
+                </button>
+              )}
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="flex flex-col divide-y divide-outline-variant/40">
+                {wsAssets.length > 0 ? (
+                  wsAssets
+                    .map(a => ({ ...a, effectiveValue: getAssetEffectiveValue(a, assets, transactions) }))
+                    .sort((a, b) => b.effectiveValue - a.effectiveValue)
+                    .slice(0, 5)
+                    .map(asset => {
+                      const getIcon = (type: string) => {
+                        switch (type) {
+                          case 'property': return 'home_work';
+                          case 'vehicle': return 'directions_car';
+                          case 'electronics': return 'devices';
+                          case 'jewelry': return 'diamond';
+                          default: return 'inventory_2';
+                        }
+                      };
+                      return (
+                        <div key={asset.id} className="flex items-center justify-between py-3 hover:bg-surface-container-lowest transition-colors px-2 rounded-lg cursor-default">
+                          <div className="flex items-center gap-4 min-w-0">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-amber-100 text-amber-700">
+                              <span className="material-symbols-outlined text-[20px]">{getIcon(asset.type)}</span>
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-label-md text-on-surface font-bold truncate">
+                                {asset.name}
+                              </span>
+                              <span className="font-body-sm text-on-surface-variant truncate text-[11px] mt-0.5">
+                                {language === 'id' ? 'Beli:' : 'Bought:'} {new Date(asset.purchaseDate).getFullYear()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="font-label-lg font-bold shrink-0 ml-2 text-on-surface">
+                            {formatCurrency(asset.effectiveValue)}
+                          </div>
+                        </div>
+                      );
+                    })
+                ) : (
+                  <div className="py-8 text-center text-on-surface-variant font-body-sm bg-surface-container-lowest rounded-xl border border-dashed border-outline-variant">
+                    {language === 'id' ? 'Belum ada aset fisik tercatat.' : 'No physical assets logged.'}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Envelope Budgeting */}
-        <div className="col-span-12 bg-surface border border-outline-variant rounded-2xl p-5 md:p-6 shadow-sm">
+        <div className="lg:col-span-3 bg-surface border border-outline-variant rounded-2xl p-5 md:p-6 shadow-sm">
             <div className="flex justify-between items-center mb-4 md:mb-6 border-b border-outline-variant pb-4">
               <div>
                 <h3 className="font-headline-sm text-on-surface">{t('budgetEnvelopes')}</h3>

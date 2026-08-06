@@ -261,8 +261,22 @@ export function Bills() {
                     </div>
                   </div>
 
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {bill.category && (
+                      <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-surface-container-high text-on-surface-variant">
+                        {bill.category}
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary-container/40 text-primary">
+                      {bill.isRecurring === false ? 'Sekali Bayar' : `🔁 Rutin ${bill.recurringPeriod === 'weekly' ? 'Mingguan' : bill.recurringPeriod === 'yearly' ? 'Tahunan' : 'Bulanan'}`}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-surface-container-high text-on-surface-variant capitalize">
+                      {bill.workspaceId || 'keluarga'}
+                    </span>
+                  </div>
+
                   <h4 className="font-headline-sm font-semibold text-on-surface mb-1">{bill.name}</h4>
-                  <p className="font-display-sm font-bold text-primary mb-3">{formatCurrency(bill.amount)}</p>
+                  <p className="font-display-sm font-bold text-primary mb-2">{formatCurrency(bill.amount)}</p>
                 </div>
 
                 <div className="pt-3 border-t border-outline-variant/60 flex items-center justify-between gap-2 mt-2">

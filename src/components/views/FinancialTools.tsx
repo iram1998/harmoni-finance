@@ -20,7 +20,7 @@ export function FinancialTools({ setCurrentView }: FinancialToolsProps) {
   // --- 1. EMERGENCY FUND STATE ---
   // Calculate average monthly expense automatically from transactions
   const defaultMonthlyExpense = useMemo(() => {
-    const wsExpenses = (transactions || []).filter(t => t.workspaceId === workspace && t.type === 'expense');
+    const wsExpenses = (transactions || []).filter(t => (workspace === 'all' ? true : (t.workspaceId || 'keluarga') === workspace) && t.type === 'expense');
     if (wsExpenses.length === 0) return 5000000;
     const totalSpent = wsExpenses.reduce((sum, t) => sum + t.amount, 0);
     // Rough estimate based on average or min 3jt
@@ -34,7 +34,7 @@ export function FinancialTools({ setCurrentView }: FinancialToolsProps) {
   // Liquid Cash Balance from active accounts
   const totalLiquidCash = useMemo(() => {
     return (accounts || [])
-      .filter(a => a.workspaceId === workspace)
+      .filter(a => workspace === 'all' ? true : (a.workspaceId || 'keluarga') === workspace)
       .reduce((sum, a) => sum + a.balance, 0);
   }, [accounts, workspace]);
 
