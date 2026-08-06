@@ -130,13 +130,24 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
       <nav className={`fixed left-0 top-0 h-full bg-[#162442] border-r border-[#22355c] shadow-2xl hidden md:flex flex-col p-4 gap-4 z-50 transition-all duration-300 ease-in-out print:hidden ${isSidebarOpen ? 'w-[280px]' : 'w-[88px]'}`}>
         <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} mb-6 mt-2 px-2 pb-4 border-b border-[#22355c]`}>
           {isSidebarOpen && (
-            <div className="flex items-center gap-3 overflow-hidden">
-              <span className="material-symbols-outlined text-blue-400 text-3xl" style={{fontVariationSettings: "'FILL' 1"}}>account_balance_wallet</span>
-              <h1 className="font-headline-md font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 tracking-tight whitespace-nowrap">NOHARFIN</h1>
+            <div 
+              onClick={() => setCurrentView('landing')}
+              className="flex items-center gap-3 overflow-hidden cursor-pointer group"
+              title={isId ? 'Kembali ke Landing Page' : 'Go to Landing Page'}
+            >
+              <span className="material-symbols-outlined text-blue-400 text-3xl group-hover:scale-110 transition-transform" style={{fontVariationSettings: "'FILL' 1"}}>account_balance_wallet</span>
+              <h1 className="font-headline-md font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-pink-300 tracking-tight whitespace-nowrap">NOHARFIN</h1>
             </div>
           )}
           {!isSidebarOpen && (
-             <span className="material-symbols-outlined text-blue-400 text-3xl" style={{fontVariationSettings: "'FILL' 1"}}>account_balance_wallet</span>
+             <span 
+              onClick={() => setCurrentView('landing')}
+              className="material-symbols-outlined text-blue-400 text-3xl cursor-pointer hover:scale-110 transition-transform" 
+              style={{fontVariationSettings: "'FILL' 1"}}
+              title={isId ? 'Kembali ke Landing Page' : 'Go to Landing Page'}
+             >
+               account_balance_wallet
+             </span>
           )}
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -210,6 +221,15 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
             </Button>
             
             <div className="flex gap-2 items-center pl-2 border-l border-outline-variant">
+              {/* Landing Page Icon Button */}
+              <button 
+                onClick={() => setCurrentView('landing')}
+                className={`w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-low border border-outline-variant hover:border-emerald-500 hover:text-emerald-500 text-on-surface transition-all active:scale-95 shadow-sm ${currentView === 'landing' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : ''}`}
+                title={isId ? 'Halaman Info & Maskot' : 'Information & Mascot'}
+              >
+                <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400">storefront</span>
+              </button>
+
               {/* Language Switcher Button */}
               <button 
                 onClick={toggleLanguage}
@@ -342,6 +362,14 @@ export function Layout({ children, currentView, setCurrentView }: { children: Re
             </div>
             
             <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setCurrentView('landing')}
+                className={`w-8 h-8 flex items-center justify-center rounded-full bg-surface-container border border-outline-variant text-emerald-600 dark:text-emerald-400 ${currentView === 'landing' ? 'bg-emerald-500/10 border-emerald-500' : ''}`}
+                title={isId ? 'Halaman Info & Maskot' : 'Information & Mascot'}
+              >
+                <span className="material-symbols-outlined text-sm">storefront</span>
+              </button>
+
               <button 
                 onClick={toggleLanguage}
                 className="h-8 px-2.5 flex items-center gap-1 rounded-full bg-surface-container border border-outline-variant text-on-surface font-label-sm"

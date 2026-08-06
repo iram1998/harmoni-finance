@@ -23,32 +23,37 @@ import { Debts } from './components/views/Debts';
 import { FinancialTools } from './components/views/FinancialTools';
 import { PrivacyPolicy } from './components/views/PrivacyPolicy';
 import { TermsOfService } from './components/views/TermsOfService';
+import { LandingPage } from './components/views/LandingPage';
 import { SecurityLockScreen } from './components/SecurityLockScreen';
 import { DemoLimitModal } from './components/DemoLimitModal';
 import { WelcomeGuideModal } from './components/WelcomeGuideModal';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState('dashboard');
+  const [currentView, setCurrentView] = useState('landing');
 
   return (
     <SecurityLockScreen>
-      <Layout currentView={currentView} setCurrentView={setCurrentView}>
-        {currentView === 'dashboard' && <Dashboard setCurrentView={setCurrentView} />}
-        {currentView === 'cash-flow' && <CashFlow />}
-        {currentView === 'budgeting' && <Budgeting />}
-        {currentView === 'assets' && <Assets />}
-        {currentView === 'debts' && <Debts />}
-        {currentView === 'bills' && <Bills />}
-        {currentView === 'goals' && <Goals />}
-        {currentView === 'reports' && <Reports />}
-        {currentView === 'financial-tools' && <FinancialTools setCurrentView={setCurrentView} />}
-        {currentView === 'activity-logs' && <ActivityLogView />}
-        {currentView === 'help' && <Help onNavigate={setCurrentView} />}
-        {currentView === 'settings' && <Settings />}
-        {currentView === 'profile' && <Profile />}
-        {currentView === 'privacy-policy' && <PrivacyPolicy onBack={() => setCurrentView('dashboard')} />}
-        {currentView === 'terms-of-service' && <TermsOfService onBack={() => setCurrentView('dashboard')} />}
-      </Layout>
+      {currentView === 'landing' ? (
+        <LandingPage onNavigate={setCurrentView} />
+      ) : (
+        <Layout currentView={currentView} setCurrentView={setCurrentView}>
+          {currentView === 'dashboard' && <Dashboard setCurrentView={setCurrentView} />}
+          {currentView === 'cash-flow' && <CashFlow />}
+          {currentView === 'budgeting' && <Budgeting />}
+          {currentView === 'assets' && <Assets />}
+          {currentView === 'debts' && <Debts />}
+          {currentView === 'bills' && <Bills />}
+          {currentView === 'goals' && <Goals />}
+          {currentView === 'reports' && <Reports />}
+          {currentView === 'financial-tools' && <FinancialTools setCurrentView={setCurrentView} />}
+          {currentView === 'activity-logs' && <ActivityLogView />}
+          {currentView === 'help' && <Help onNavigate={setCurrentView} />}
+          {currentView === 'settings' && <Settings />}
+          {currentView === 'profile' && <Profile />}
+          {currentView === 'privacy-policy' && <PrivacyPolicy onBack={() => setCurrentView('dashboard')} />}
+          {currentView === 'terms-of-service' && <TermsOfService onBack={() => setCurrentView('dashboard')} />}
+        </Layout>
+      )}
       <DemoLimitModal />
       <WelcomeGuideModal onNavigateHelp={(view) => setCurrentView(view)} />
     </SecurityLockScreen>
